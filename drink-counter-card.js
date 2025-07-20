@@ -69,6 +69,15 @@ class DrinkCounterCard extends LitElement {
       user: this.selectedUser,
       drink: drink,
     });
+
+    const users = this.config.users || this._autoUsers || [];
+    const user = users.find(u => (u.slug || u.name) === this.selectedUser);
+    const entity = user?.drinks?.[drink];
+    if (entity) {
+      this.hass.callService('homeassistant', 'update_entity', {
+        entity_id: entity,
+      });
+    }
   }
 
   updated(changedProps) {
