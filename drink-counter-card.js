@@ -1,4 +1,4 @@
-// Drink Counter Card v1.1.3
+// Drink Counter Card v1.1.4
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
 
 class DrinkCounterCard extends LitElement {
@@ -8,11 +8,11 @@ class DrinkCounterCard extends LitElement {
     selectedUser: { state: true },
     _autoUsers: { state: true },
     _autoPrices: { state: true },
-    showRemoveMenu: { state: true },
+    selectedRemoveDrink: { state: true },
     _disabled: { state: true },
   };
 
-  showRemoveMenu = false;
+  selectedRemoveDrink = '';
 
   setConfig(config) {
     this.config = config;
@@ -54,6 +54,9 @@ class DrinkCounterCard extends LitElement {
     });
 
     const drinks = Object.keys(user.drinks).sort((a,b) => a.localeCompare(b));
+    if (!this.selectedRemoveDrink && drinks.length > 0) {
+      this.selectedRemoveDrink = drinks[0];
+    }
 
     return html`
       <ha-card>
@@ -65,10 +68,10 @@ class DrinkCounterCard extends LitElement {
             </select>
           </div>
           <div class="remove-container">
-            <button @click=${this._toggleRemoveMenu.bind(this)}>Getränk entfernen</button>
-            ${this.showRemoveMenu ? html`<ul class="remove-menu">
-              ${drinks.map(d => html`<li @click=${() => this._removeDrink(d)}>${d.charAt(0).toUpperCase() + d.slice(1)}</li>`)}
-            </ul>` : ''}
+            <select @change=${this._selectRemoveDrink.bind(this)}>
+              ${drinks.map(d => html`<option value="${d}" ?selected=${d===this.selectedRemoveDrink}>${d.charAt(0).toUpperCase() + d.slice(1)}</option>`)}
+            </select>
+            <button @click=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${this._disabled}>-1</button>
           </div>
         </div>
           <table>
@@ -82,6 +85,10 @@ class DrinkCounterCard extends LitElement {
 
   _selectUser(ev) {
     this.selectedUser = ev.target.value;
+  }
+
+  _selectRemoveDrink(ev) {
+    this.selectedRemoveDrink = ev.target.value;
   }
 
   _addDrink(drink) {
@@ -110,11 +117,17 @@ class DrinkCounterCard extends LitElement {
     }
   }
 
-  _toggleRemoveMenu() {
-    this.showRemoveMenu = !this.showRemoveMenu;
-  }
-
   _removeDrink(drink) {
+    if (this._disabled || !drink) {
+      return;
+    }
+    this._disabled = true;
+    this.requestUpdate();
+    setTimeout(() => {
+      this._disabled = false;
+      this.requestUpdate();
+    }, 1000);
+
     const displayDrink = drink.charAt(0).toUpperCase() + drink.slice(1);
     this.hass.callService('drink_counter', 'remove_drink', {
       user: this.selectedUser,
@@ -129,7 +142,6 @@ class DrinkCounterCard extends LitElement {
         entity_id: entity,
       });
     }
-    this.showRemoveMenu = false;
   }
 
   updated(changedProps) {
@@ -217,26 +229,9 @@ class DrinkCounterCard extends LitElement {
       padding: 4px;
     }
     .remove-container {
-      position: relative;
-    }
-    .remove-menu {
-      position: absolute;
-      right: 0;
-      top: 100%;
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      background: var(--card-background-color, white);
-      border: 1px solid var(--divider-color);
-      z-index: 1;
-    }
-    .remove-menu li {
-      padding: 4px 8px;
-      cursor: pointer;
-    }
-    .remove-menu li:hover {
-      background: var(--primary-color);
-      color: var(--text-primary-color);
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
     tfoot td {
       font-weight: bold;
