@@ -12,12 +12,15 @@ class DrinkCounterCard extends LitElement {
     _disabled: { state: true },
   };
 
-  selectedUser = '';
   selectedRemoveDrink = '';
 
   setConfig(config) {
     this.config = config;
     this._disabled = false;
+    if (config.users && Array.isArray(config.users)) {
+      // Prefer the configured name to preserve capitalization
+      this.selectedUser = config.users[0]?.name || config.users[0]?.slug;
+    }
   }
 
 
@@ -25,33 +28,36 @@ class DrinkCounterCard extends LitElement {
   render() {
     if (!this.hass || !this.config) return html``;
     const users = this.config.users || this._autoUsers || [];
+    if (!this.selectedUser && users.length > 0) {
+      // Default to the display name if available
+      this.selectedUser = users[0].name || users[0].slug;
+    }
     const user = users.find(u => (u.name || u.slug) === this.selectedUser);
+    if (!user) return html`<ha-card>Unknown user</ha-card>`;
     const prices = this.config.prices || this._autoPrices || {};
     let total = 0;
-    const rows = user
-      ? Object.entries(user.drinks)
-          .sort((a, b) => a[0].localeCompare(b[0]))
-          .map(([drink, entity]) => {
-            const count = Number(this.hass.states[entity]?.state || 0);
-            const price = Number(prices[drink] || 0);
-            const priceStr = price.toFixed(2);
-            const cost = count * price;
-            total += cost;
-            const costStr = cost.toFixed(2);
-            const displayDrink = drink.charAt(0).toUpperCase() + drink.slice(1);
-            return html`<tr>
-              <td><button @click=${() => this._addDrink(drink)} ?disabled=${this._disabled}>+1</button></td>
-              <td>${displayDrink}</td>
-              <td>${count}</td>
-              <td>${priceStr}</td>
-              <td>${costStr}</td>
-            </tr>`;
-          })
-      : [];
+    const rows = Object.entries(user.drinks)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([drink, entity]) => {
+        const count = Number(this.hass.states[entity]?.state || 0);
+        const price = Number(prices[drink] || 0);
+        const priceStr = price.toFixed(2) + ' €';
+        const cost = count * price;
+        total += cost;
+        const costStr = cost.toFixed(2) + ' €';
+        const displayDrink = drink.charAt(0).toUpperCase() + drink.slice(1);
+        return html`<tr>
+          <td><button @click=${() => this._addDrink(drink)} ?disabled=${this._disabled}>+1</button></td>
+          <td>${displayDrink}</td>
+          <td>${count}</td>
+          <td>${priceStr}</td>
+          <td>${costStr}</td>
+        </tr>`;
+      });
 
-    const drinks = user ? Object.keys(user.drinks).sort((a,b) => a.localeCompare(b)) : [];
-    if (!drinks.includes(this.selectedRemoveDrink)) {
-      this.selectedRemoveDrink = '';
+    const drinks = Object.keys(user.drinks).sort((a,b) => a.localeCompare(b));
+    if (!this.selectedRemoveDrink && drinks.length > 0) {
+      this.selectedRemoveDrink = drinks[0];
     }
 
     const totalStr = total.toFixed(2) + ' €';
@@ -61,25 +67,21 @@ class DrinkCounterCard extends LitElement {
           <div class="user-select">
             <label for="user">Name:</label>
             <select id="user" @change=${this._selectUser.bind(this)}>
-              <option value="" disabled ?selected=${!this.selectedUser}>Bitte wählen</option>
               ${users.map(u => html`<option value="${u.name || u.slug}" ?selected=${(u.name || u.slug)===this.selectedUser}>${u.name}</option>`)}
             </select>
           </div>
           <div class="remove-container">
-            <select @change=${this._selectRemoveDrink.bind(this)} ?disabled=${!user}>
-              <option value="" disabled ?selected=${!this.selectedRemoveDrink}>Getränk</option>
+            <select @change=${this._selectRemoveDrink.bind(this)}>
               ${drinks.map(d => html`<option value="${d}" ?selected=${d===this.selectedRemoveDrink}>${d.charAt(0).toUpperCase() + d.slice(1)}</option>`)}
             </select>
-            <button @click=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${this._disabled || !this.selectedRemoveDrink}>-1</button>
+            <button @click=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${this._disabled}>-1</button>
           </div>
         </div>
-        ${user ? html`
           <table>
-            <thead><tr><th></th><th>Getränk</th><th>Anzahl</th><th>Preis</th><th>Summe</th></tr></thead>
-            <tbody>${rows}</tbody>
-            <tfoot><tr><td colspan="4"><b>Gesamt</b></td><td>${totalStr}</td></tr></tfoot>
-          </table>
-        ` : html``}
+          <thead><tr><th></th><th>Getränk</th><th>Anzahl</th><th>Preis</th><th>Summe</th></tr></thead>
+          <tbody>${rows}</tbody>
+          <tfoot><tr><td colspan="4"><b>Gesamt</b></td><td>${totalStr}</td></tr></tfoot>
+        </table>
       </ha-card>
     `;
   }
