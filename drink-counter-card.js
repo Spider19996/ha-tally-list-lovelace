@@ -1,4 +1,4 @@
-// Drink Counter Card v1.2.0
+// Drink Counter Card v1.3.0
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
 
 class DrinkCounterCard extends LitElement {
@@ -16,7 +16,7 @@ class DrinkCounterCard extends LitElement {
   selectedRemoveDrink = '';
 
   setConfig(config) {
-    this.config = config;
+    this.config = { lock_ms: 1000, ...config };
     this._disabled = false;
     if (config.users && Array.isArray(config.users)) {
       // Prefer the configured name to preserve capitalization
@@ -118,10 +118,11 @@ class DrinkCounterCard extends LitElement {
     }
     this._disabled = true;
     this.requestUpdate();
+    const delay = Number(this.config.lock_ms ?? 1000);
     setTimeout(() => {
       this._disabled = false;
       this.requestUpdate();
-    }, 1000);
+    }, delay);
     const displayDrink = drink.charAt(0).toUpperCase() + drink.slice(1);
     this.hass.callService('drink_counter', 'add_drink', {
       user: this.selectedUser,
@@ -144,10 +145,11 @@ class DrinkCounterCard extends LitElement {
     }
     this._disabled = true;
     this.requestUpdate();
+    const delay = Number(this.config.lock_ms ?? 1000);
     setTimeout(() => {
       this._disabled = false;
       this.requestUpdate();
-    }, 1000);
+    }, delay);
 
     const displayDrink = drink.charAt(0).toUpperCase() + drink.slice(1);
     this.hass.callService('drink_counter', 'remove_drink', {
@@ -221,6 +223,15 @@ class DrinkCounterCard extends LitElement {
     if (!state) return 0;
     const val = parseFloat(state.state);
     return isNaN(val) ? 0 : val;
+  }
+
+  static async getConfigElement() {
+    await import('./drink-counter-card-editor.js');
+    return document.createElement('drink-counter-card-editor');
+  }
+
+  static getStubConfig() {
+    return { lock_ms: 1000 };
   }
 
   static styles = css`
