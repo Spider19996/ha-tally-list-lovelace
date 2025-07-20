@@ -70,9 +70,10 @@ class DrinkCounterCard extends LitElement {
   }
 
   _addDrink(drink) {
+    const displayDrink = drink.charAt(0).toUpperCase() + drink.slice(1);
     this.hass.callService('drink_counter', 'add_drink', {
       user: this.selectedUser,
-      drink: drink,
+      drink: displayDrink,
     });
 
     const users = this.config.users || this._autoUsers || [];

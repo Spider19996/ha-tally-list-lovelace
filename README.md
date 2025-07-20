@@ -31,3 +31,12 @@ type: custom:drink-counter-card
 The dropdown lists all users detected from the integration and calculates totals using the stored price list. No manual configuration is required.
 The selected user's **display name** is sent to the `drink_counter.add_drink` service, so capitalization is preserved.
 
+Pressing **Add** on the Water row triggers a service call like:
+
+```yaml
+action: drink_counter.add_drink
+data:
+  user: Robin
+  drink: Wasser
+```
+
