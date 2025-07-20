@@ -1,4 +1,4 @@
-// Drink Counter Card v1.1.4
+// Drink Counter Card v1.2.0
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
 
 class DrinkCounterCard extends LitElement {
@@ -8,6 +8,7 @@ class DrinkCounterCard extends LitElement {
     selectedUser: { state: true },
     _autoUsers: { state: true },
     _autoPrices: { state: true },
+    _freeAmount: { state: true },
     selectedRemoveDrink: { state: true },
     _disabled: { state: true },
   };
@@ -35,6 +36,7 @@ class DrinkCounterCard extends LitElement {
     const user = users.find(u => (u.name || u.slug) === this.selectedUser);
     if (!user) return html`<ha-card>Unknown user</ha-card>`;
     const prices = this.config.prices || this._autoPrices || {};
+    const freeAmount = Number(this.config.free_amount ?? this._freeAmount ?? 0);
     let total = 0;
     const rows = Object.entries(user.drinks)
       .sort((a, b) => a[0].localeCompare(b[0]))
@@ -61,6 +63,9 @@ class DrinkCounterCard extends LitElement {
     }
 
     const totalStr = total.toFixed(2) + ' €';
+    const freeAmountStr = freeAmount.toFixed(2) + ' €';
+    const due = Math.max(total - freeAmount, 0);
+    const dueStr = due.toFixed(2) + ' €';
     return html`
       <ha-card>
         <div class="controls">
@@ -80,7 +85,11 @@ class DrinkCounterCard extends LitElement {
           <table>
           <thead><tr><th></th><th>Getränk</th><th>Anzahl</th><th>Preis</th><th>Summe</th></tr></thead>
           <tbody>${rows}</tbody>
-          <tfoot><tr><td colspan="4"><b>Gesamt</b></td><td>${totalStr}</td></tr></tfoot>
+          <tfoot>
+            <tr><td colspan="4"><b>Gesamt</b></td><td>${totalStr}</td></tr>
+            ${freeAmount > 0 ? html`<tr><td colspan="4"><b>Freibetrag</b></td><td>- ${freeAmountStr}</td></tr>` : ''}
+            <tr><td colspan="4"><b>Zu zahlen</b></td><td>${dueStr}</td></tr>
+          </tfoot>
         </table>
       </ha-card>
     `;
@@ -155,6 +164,9 @@ class DrinkCounterCard extends LitElement {
       if (!this.config.prices) {
         this._autoPrices = this._gatherPrices();
       }
+      if (!this.config.free_amount) {
+        this._freeAmount = this._gatherFreeAmount();
+      }
     }
   }
 
@@ -193,6 +205,13 @@ class DrinkCounterCard extends LitElement {
       }
     }
     return prices;
+  }
+
+  _gatherFreeAmount() {
+    const state = this.hass.states['sensor.preisliste_free_amount'];
+    if (!state) return 0;
+    const val = parseFloat(state.state);
+    return isNaN(val) ? 0 : val;
   }
 
   static styles = css`
