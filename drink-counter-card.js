@@ -41,10 +41,10 @@ class DrinkCounterCard extends LitElement {
       .map(([drink, entity]) => {
         const count = Number(this.hass.states[entity]?.state || 0);
         const price = Number(prices[drink] || 0);
-        const priceStr = price.toFixed(2);
+        const priceStr = price.toFixed(2) + ' €';
         const cost = count * price;
         total += cost;
-        const costStr = cost.toFixed(2);
+        const costStr = cost.toFixed(2) + ' €';
         const displayDrink = drink.charAt(0).toUpperCase() + drink.slice(1);
         return html`<tr>
           <td><button @click=${() => this._addDrink(drink)} ?disabled=${this._disabled}>+1</button></td>
@@ -60,7 +60,7 @@ class DrinkCounterCard extends LitElement {
       this.selectedRemoveDrink = drinks[0];
     }
 
-    const totalStr = total.toFixed(2);
+    const totalStr = total.toFixed(2) + ' €';
     return html`
       <ha-card>
         <div class="controls">
