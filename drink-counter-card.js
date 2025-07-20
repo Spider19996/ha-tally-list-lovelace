@@ -87,8 +87,10 @@ class DrinkCounterCard extends LitElement {
           <tbody>${rows}</tbody>
           <tfoot>
             <tr><td colspan="4"><b>Gesamt</b></td><td>${totalStr}</td></tr>
-            ${freeAmount > 0 ? html`<tr><td colspan="4"><b>Freibetrag</b></td><td>- ${freeAmountStr}</td></tr>` : ''}
-            <tr><td colspan="4"><b>Zu zahlen</b></td><td>${dueStr}</td></tr>
+            ${freeAmount > 0 ? html`
+              <tr><td colspan="4"><b>Freibetrag</b></td><td>- ${freeAmountStr}</td></tr>
+              <tr><td colspan="4"><b>Zu zahlen</b></td><td>${dueStr}</td></tr>
+            ` : ''}
           </tfoot>
         </table>
       </ha-card>
