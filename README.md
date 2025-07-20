@@ -29,4 +29,5 @@ type: custom:drink-counter-card
 ```
 
 The dropdown lists all users detected from the integration and calculates totals using the stored price list. No manual configuration is required.
+The selected user's **display name** is sent to the `drink_counter.add_drink` service, so capitalization is preserved.
 
