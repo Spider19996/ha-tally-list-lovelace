@@ -64,7 +64,14 @@ class DrinkCounterCard extends LitElement {
 
     const totalStr = total.toFixed(2) + ' €';
     const freeAmountStr = freeAmount.toFixed(2) + ' €';
-    const due = Math.max(total - freeAmount, 0);
+    let due;
+    if (user.amount_due_entity) {
+      const dueState = this.hass.states[user.amount_due_entity];
+      const val = parseFloat(dueState?.state);
+      due = isNaN(val) ? Math.max(total - freeAmount, 0) : val;
+    } else {
+      due = Math.max(total - freeAmount, 0);
+    }
     const dueStr = due.toFixed(2) + ' €';
     return html`
       <ha-card>
@@ -187,7 +194,7 @@ class DrinkCounterCard extends LitElement {
             drinks[drink] = e2;
           }
         }
-        users.push({ name: name || slug, slug, drinks });
+        users.push({ name: name || slug, slug, drinks, amount_due_entity: entity });
       }
     }
     return users;
