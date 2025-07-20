@@ -54,7 +54,7 @@ class DrinkCounterCard extends LitElement {
       this.selectedRemoveDrink = '';
     }
 
-    const totalStr = total.toFixed(2);
+    const totalStr = total.toFixed(2) + ' €';
     return html`
       <ha-card>
         <div class="controls">
