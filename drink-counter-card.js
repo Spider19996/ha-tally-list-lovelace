@@ -249,6 +249,10 @@ class DrinkCounterCard extends LitElement {
       height: 32px;
       box-sizing: border-box;
     }
+    .remove-container button {
+      height: 32px;
+      width: 32px;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
