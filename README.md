@@ -55,3 +55,9 @@ When sensors named `sensor.<name>_amount_due` are present, their values are used
 
 If the free amount equals **0 €**, the card hides the **Freibetrag** and **Zu zahlen** rows and only shows the **Gesamt** line.
 
+## UI configuration
+
+The card can now be configured directly in the Lovelace UI. It offers a single option:
+
+* **Sperrzeit (ms)** – How long the buttons stay disabled after pressing **+1** or **-1**. The default is `1000` milliseconds.
+
