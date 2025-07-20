@@ -122,17 +122,21 @@ class DrinkCounterCard extends LitElement {
   static styles = css`
     ha-card {
       padding: 16px;
+      text-align: center;
     }
     .user-select {
       margin-bottom: 8px;
+      text-align: center;
     }
     table {
       width: 100%;
       border-collapse: collapse;
     }
-    th, td {
+    th,
+    td {
       padding: 4px;
       border-bottom: 1px solid var(--divider-color);
+      text-align: center;
     }
     button {
       padding: 4px;
