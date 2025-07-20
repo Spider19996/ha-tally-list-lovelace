@@ -1,4 +1,4 @@
-// Drink Counter Card v1.1.2
+// Drink Counter Card v1.1.3
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
 
 class DrinkCounterCard extends LitElement {
@@ -9,12 +9,14 @@ class DrinkCounterCard extends LitElement {
     _autoUsers: { state: true },
     _autoPrices: { state: true },
     showRemoveMenu: { state: true },
+    _disabled: { state: true },
   };
 
   showRemoveMenu = false;
 
   setConfig(config) {
     this.config = config;
+    this._disabled = false;
     if (config.users && Array.isArray(config.users)) {
       // Prefer the configured name to preserve capitalization
       this.selectedUser = config.users[0]?.name || config.users[0]?.slug;
@@ -43,7 +45,7 @@ class DrinkCounterCard extends LitElement {
       total += cost;
       const displayDrink = drink.charAt(0).toUpperCase() + drink.slice(1);
       return html`<tr>
-        <td><button @click=${() => this._addDrink(drink)}>Add</button></td>
+        <td><button @click=${() => this._addDrink(drink)} ?disabled=${this._disabled}>+1</button></td>
         <td>${displayDrink}</td>
         <td>${count}</td>
         <td>${price}</td>
@@ -83,6 +85,15 @@ class DrinkCounterCard extends LitElement {
   }
 
   _addDrink(drink) {
+    if (this._disabled) {
+      return;
+    }
+    this._disabled = true;
+    this.requestUpdate();
+    setTimeout(() => {
+      this._disabled = false;
+      this.requestUpdate();
+    }, 1000);
     const displayDrink = drink.charAt(0).toUpperCase() + drink.slice(1);
     this.hass.callService('drink_counter', 'add_drink', {
       user: this.selectedUser,
