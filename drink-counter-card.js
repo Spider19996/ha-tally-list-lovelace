@@ -1,4 +1,4 @@
-// Drink Counter Card v1.0.0
+// Drink Counter Card v1.1.0
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
 
 class DrinkCounterCard extends LitElement {
@@ -34,7 +34,13 @@ class DrinkCounterCard extends LitElement {
       const price = Number(prices[drink] || 0);
       const cost = count * price;
       total += cost;
-      return html`<tr><td>${drink}</td><td>${count}</td><td>${price}</td><td>${cost.toFixed(2)}</td></tr>`;
+      return html`<tr>
+        <td>${drink}</td>
+        <td>${count}</td>
+        <td>${price}</td>
+        <td>${cost.toFixed(2)}</td>
+        <td><button @click=${() => this._addDrink(drink)}>Add</button></td>
+      </tr>`;
     });
 
     return html`
@@ -46,9 +52,9 @@ class DrinkCounterCard extends LitElement {
           </select>
         </div>
         <table>
-          <thead><tr><th>Getränk</th><th>Anzahl</th><th>Preis</th><th>Summe</th></tr></thead>
+          <thead><tr><th>Getränk</th><th>Anzahl</th><th>Preis</th><th>Summe</th><th></th></tr></thead>
           <tbody>${rows}</tbody>
-          <tfoot><tr><td colspan="3"><b>Gesamt</b></td><td>${total.toFixed(2)}</td></tr></tfoot>
+          <tfoot><tr><td colspan="4"><b>Gesamt</b></td><td>${total.toFixed(2)}</td></tr></tfoot>
         </table>
       </ha-card>
     `;
@@ -56,6 +62,13 @@ class DrinkCounterCard extends LitElement {
 
   _selectUser(ev) {
     this.selectedUser = ev.target.value;
+  }
+
+  _addDrink(drink) {
+    this.hass.callService('drink_counter', 'add_drink', {
+      user: this.selectedUser,
+      drink: drink,
+    });
   }
 
   updated(changedProps) {
@@ -120,6 +133,9 @@ class DrinkCounterCard extends LitElement {
     th, td {
       padding: 4px;
       border-bottom: 1px solid var(--divider-color);
+    }
+    button {
+      padding: 4px;
     }
     tfoot td {
       font-weight: bold;
