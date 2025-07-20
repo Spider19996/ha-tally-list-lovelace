@@ -40,3 +40,13 @@ data:
   drink: Wasser
 ```
 
+The top-right **Getränk entfernen** button opens a menu to subtract a drink. Selecting
+**Wasser** sends:
+
+```yaml
+action: drink_counter.remove_drink
+data:
+  user: Robin
+  drink: Wasser
+```
+
