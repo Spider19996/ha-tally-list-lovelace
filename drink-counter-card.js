@@ -234,11 +234,6 @@ class DrinkCounterCard extends LitElement {
     button {
       padding: 4px;
     }
-    .remove-container {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
     tfoot td {
       font-weight: bold;
     }
