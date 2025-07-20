@@ -1,4 +1,4 @@
-// Drink Counter Card v1.2.0
+// Drink Counter Card v1.3.1
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
 
 class DrinkCounterCard extends LitElement {
@@ -16,7 +16,7 @@ class DrinkCounterCard extends LitElement {
   selectedRemoveDrink = '';
 
   setConfig(config) {
-    this.config = config;
+    this.config = { lock_ms: 1000, ...config };
     this._disabled = false;
     if (config.users && Array.isArray(config.users)) {
       // Prefer the configured name to preserve capitalization
@@ -118,10 +118,11 @@ class DrinkCounterCard extends LitElement {
     }
     this._disabled = true;
     this.requestUpdate();
+    const delay = Number(this.config.lock_ms ?? 1000);
     setTimeout(() => {
       this._disabled = false;
       this.requestUpdate();
-    }, 1000);
+    }, delay);
     const displayDrink = drink.charAt(0).toUpperCase() + drink.slice(1);
     this.hass.callService('drink_counter', 'add_drink', {
       user: this.selectedUser,
@@ -144,10 +145,11 @@ class DrinkCounterCard extends LitElement {
     }
     this._disabled = true;
     this.requestUpdate();
+    const delay = Number(this.config.lock_ms ?? 1000);
     setTimeout(() => {
       this._disabled = false;
       this.requestUpdate();
-    }, 1000);
+    }, delay);
 
     const displayDrink = drink.charAt(0).toUpperCase() + drink.slice(1);
     this.hass.callService('drink_counter', 'remove_drink', {
@@ -223,6 +225,14 @@ class DrinkCounterCard extends LitElement {
     return isNaN(val) ? 0 : val;
   }
 
+  static async getConfigElement() {
+    return document.createElement('drink-counter-card-editor');
+  }
+
+  static getStubConfig() {
+    return { lock_ms: 1000 };
+  }
+
   static styles = css`
     ha-card {
       padding: 16px;
@@ -273,4 +283,52 @@ class DrinkCounterCard extends LitElement {
 }
 
 customElements.define('drink-counter-card', DrinkCounterCard);
+
+class DrinkCounterCardEditor extends LitElement {
+  static properties = {
+    _config: {},
+  };
+
+  setConfig(config) {
+    this._config = { lock_ms: 1000, ...config };
+  }
+
+  render() {
+    if (!this._config) return html``;
+    return html`
+      <div class="form">
+        <label>Sperrzeit (ms)</label>
+        <input
+          type="number"
+          .value=${this._config.lock_ms}
+          @input=${this._valueChanged}
+        />
+      </div>
+    `;
+  }
+
+  _valueChanged(ev) {
+    const value = Number(ev.target.value);
+    this._config = { ...this._config, lock_ms: isNaN(value) ? 1000 : value };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  static styles = css`
+    .form {
+      padding: 16px;
+    }
+    input {
+      width: 100%;
+      box-sizing: border-box;
+    }
+  `;
+}
+
+customElements.define('drink-counter-card-editor', DrinkCounterCardEditor);
 
