@@ -13,7 +13,8 @@ class DrinkCounterCard extends LitElement {
   setConfig(config) {
     this.config = config;
     if (config.users && Array.isArray(config.users)) {
-      this.selectedUser = config.users[0]?.slug || config.users[0]?.name;
+      // Prefer the configured name to preserve capitalization
+      this.selectedUser = config.users[0]?.name || config.users[0]?.slug;
     }
   }
 
@@ -23,9 +24,10 @@ class DrinkCounterCard extends LitElement {
     if (!this.hass || !this.config) return html``;
     const users = this.config.users || this._autoUsers || [];
     if (!this.selectedUser && users.length > 0) {
-      this.selectedUser = users[0].slug || users[0].name;
+      // Default to the display name if available
+      this.selectedUser = users[0].name || users[0].slug;
     }
-    const user = users.find(u => (u.slug || u.name) === this.selectedUser);
+    const user = users.find(u => (u.name || u.slug) === this.selectedUser);
     if (!user) return html`<ha-card>Unknown user</ha-card>`;
     const prices = this.config.prices || this._autoPrices || {};
     let total = 0;
@@ -49,7 +51,7 @@ class DrinkCounterCard extends LitElement {
         <div class="user-select">
           <label for="user">Name:</label>
           <select id="user" @change=${this._selectUser.bind(this)}>
-            ${users.map(u => html`<option value="${u.slug || u.name}" ?selected=${(u.slug || u.name)===this.selectedUser}>${u.name}</option>`)}
+            ${users.map(u => html`<option value="${u.name || u.slug}" ?selected=${(u.name || u.slug)===this.selectedUser}>${u.name}</option>`)}
           </select>
         </div>
           <table>
@@ -72,7 +74,7 @@ class DrinkCounterCard extends LitElement {
     });
 
     const users = this.config.users || this._autoUsers || [];
-    const user = users.find(u => (u.slug || u.name) === this.selectedUser);
+    const user = users.find(u => (u.name || u.slug) === this.selectedUser);
     const entity = user?.drinks?.[drink];
     if (entity) {
       this.hass.callService('homeassistant', 'update_entity', {
