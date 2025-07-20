@@ -28,19 +28,5 @@ A simple Lovelace card for showing and updating drink counts per user. Select a 
 type: custom:drink-counter-card
 ```
 
-### Manual configuration
-
-```yaml
-type: custom:drink-counter-card
-users:
-  - name: Alice
-    drinks:
-      beer: sensor.alice_beer_count
-      water: sensor.alice_water_count
-prices:
-  beer: 2.5
-  water: 1.0
-```
-
-When configured automatically the dropdown lists all users detected from the integration and calculates totals using the stored price list.
+The dropdown lists all users detected from the integration and calculates totals using the stored price list. No manual configuration is required.
 
