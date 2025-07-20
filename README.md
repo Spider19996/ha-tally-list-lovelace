@@ -4,6 +4,15 @@ A simple Lovelace card for showing drink counts per user. Select a name and the 
 
 ## Installation
 
+### Via HACS
+
+1. Add this repository as a **Custom Repository** in HACS using the
+   **Lovelace** category.
+2. Install the **Drink Counter Card** from the HACS store.
+3. HACS will keep the card up to date.
+
+### Manual
+
 1. Copy `drink-counter-card.js` to your Home Assistant `www` directory.
 2. Add the following to your Lovelace resources:
    ```yaml
