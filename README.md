@@ -51,4 +51,5 @@ data:
 ```
 
 If `sensor.preisliste_free_amount` exists, its value is deducted from every user's total. The table displays this free amount and shows the final **Zu zahlen** sum.
+When sensors named `sensor.<name>_amount_due` are present, their values are used directly for the **Zu zahlen** row instead of calculating it from the drink counts.
 
