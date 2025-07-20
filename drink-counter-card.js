@@ -5,29 +5,28 @@ class DrinkCounterCard extends LitElement {
     hass: {},
     config: {},
     selectedUser: { state: true },
+    _autoUsers: { state: true },
+    _autoPrices: { state: true },
   };
 
   setConfig(config) {
-    if (!config.users || !Array.isArray(config.users)) {
-      throw new Error("The 'users' property is required and must be an array.");
-    }
-    if (!config.prices || typeof config.prices !== 'object') {
-      throw new Error("The 'prices' property is required and must be an object.");
-    }
     this.config = config;
-    this.selectedUser = config.users[0]?.name;
+    if (config.users && Array.isArray(config.users)) {
+      this.selectedUser = config.users[0]?.name;
+    }
   }
 
-  get userData() {
-    if (!this.config) return null;
-    return this.config.users.find(u => u.name === this.selectedUser);
-  }
+
 
   render() {
     if (!this.hass || !this.config) return html``;
-    const user = this.userData;
+    const users = this.config.users || this._autoUsers || [];
+    if (!this.selectedUser && users.length > 0) {
+      this.selectedUser = users[0].name;
+    }
+    const user = users.find(u => u.name === this.selectedUser);
     if (!user) return html`<ha-card>Unknown user</ha-card>`;
-    const prices = this.config.prices;
+    const prices = this.config.prices || this._autoPrices || {};
     let total = 0;
     const rows = Object.entries(user.drinks).map(([drink, entity]) => {
       const count = Number(this.hass.states[entity]?.state || 0);
@@ -42,7 +41,7 @@ class DrinkCounterCard extends LitElement {
         <div class="user-select">
           <label for="user">Name:</label>
           <select id="user" @change=${this._selectUser.bind(this)}>
-            ${this.config.users.map(u => html`<option value="${u.name}" ?selected=${u.name===this.selectedUser}>${u.name}</option>`)}
+            ${users.map(u => html`<option value="${u.name}" ?selected=${u.name===this.selectedUser}>${u.name}</option>`)}
           </select>
         </div>
         <table>
@@ -56,6 +55,54 @@ class DrinkCounterCard extends LitElement {
 
   _selectUser(ev) {
     this.selectedUser = ev.target.value;
+  }
+
+  updated(changedProps) {
+    if (changedProps.has('hass')) {
+      if (!this.config.users) {
+        this._autoUsers = this._gatherUsers();
+      }
+      if (!this.config.prices) {
+        this._autoPrices = this._gatherPrices();
+      }
+    }
+  }
+
+  _gatherUsers() {
+    const users = [];
+    const states = this.hass.states;
+    for (const [entity, state] of Object.entries(states)) {
+      const match = entity.match(/^sensor\.([a-z0-9_]+)_amount_due$/);
+      if (match) {
+        const slug = match[1];
+        const name = (state.attributes.friendly_name || '').replace(' Amount Due', '');
+        const drinks = {};
+        const prefix = `sensor.${slug}_`;
+        for (const [e2] of Object.entries(states)) {
+          const m2 = e2.startsWith(prefix) && e2.endsWith('_count') && e2.match(/^sensor\.[a-z0-9_]+_([^_]+)_count$/);
+          if (m2) {
+            const drink = m2[1];
+            drinks[drink] = e2;
+          }
+        }
+        users.push({ name: name || slug, drinks });
+      }
+    }
+    return users;
+  }
+
+  _gatherPrices() {
+    const prices = {};
+    const states = this.hass.states;
+    for (const [entity, state] of Object.entries(states)) {
+      const match = entity.match(/^sensor\.preisliste_([^_]+)_price$/);
+      if (match) {
+        const drink = match[1];
+        const price = parseFloat(state.state);
+        prices[drink] = isNaN(price) ? 0 : price;
+      }
+    }
+    return prices;
   }
 
   static styles = css`
