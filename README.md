@@ -1,6 +1,6 @@
 # ha-drink-counter-lovelace
 
-A simple Lovelace card for showing and updating drink counts per user. Select a name and the card displays how many drinks of each type that user has consumed and the amount owed. Each drink row provides an **Add** button on the left to increment the counter. The table refreshes automatically after adding a drink. The card can automatically read all users and drink prices from the **Drink Counter** integration.
+A simple Lovelace card for showing and updating drink counts per user. Select a name and the card displays how many drinks of each type that user has consumed and the amount owed. Each drink row provides an **+1** button on the left to increment the counter. The table refreshes automatically after adding a drink. The card can automatically read all users and drink prices from the **Drink Counter** integration.
 
 ## Installation
 
@@ -31,7 +31,7 @@ type: custom:drink-counter-card
 The dropdown lists all users detected from the integration and calculates totals using the stored price list. No manual configuration is required.
 The selected user's **display name** is sent to the `drink_counter.add_drink` service, so capitalization is preserved.
 
-Pressing **Add** on the Water row triggers a service call like:
+Pressing **+1** on the Water row triggers a service call like:
 
 ```yaml
 action: drink_counter.add_drink
