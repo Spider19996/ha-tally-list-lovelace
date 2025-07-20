@@ -49,7 +49,7 @@ class DrinkCounterCard extends LitElement {
         const costStr = cost.toFixed(2) + ' €';
         const displayDrink = drink.charAt(0).toUpperCase() + drink.slice(1);
         return html`<tr>
-          <td><button @click=${() => this._addDrink(drink)} ?disabled=${this._disabled}>+1</button></td>
+          <td><button class="add-button" @click=${() => this._addDrink(drink)} ?disabled=${this._disabled}>+1</button></td>
           <td>${displayDrink}</td>
           <td>${count}</td>
           <td>${priceStr}</td>
@@ -250,6 +250,10 @@ class DrinkCounterCard extends LitElement {
       box-sizing: border-box;
     }
     .remove-container button {
+      height: 32px;
+      width: 32px;
+    }
+    .add-button {
       height: 32px;
       width: 32px;
     }
