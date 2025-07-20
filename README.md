@@ -1,6 +1,6 @@
 # ha-drink-counter-lovelace
 
-A simple Lovelace card for showing and updating drink counts per user. Select a name and the card displays how many drinks of each type that user has consumed and the amount owed. Each drink row provides an **Add** button on the left to increment the counter. The card can automatically read all users and drink prices from the **Drink Counter** integration.
+A simple Lovelace card for showing and updating drink counts per user. Select a name and the card displays how many drinks of each type that user has consumed and the amount owed. Each drink row provides an **Add** button on the left to increment the counter. The table refreshes automatically after adding a drink. The card can automatically read all users and drink prices from the **Drink Counter** integration.
 
 ## Installation
 
