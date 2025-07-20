@@ -1,6 +1,6 @@
 # ha-drink-counter-lovelace
 
-A simple Lovelace card for showing drink counts per user. Select a name and the card displays how many drinks of each type that user has consumed and the amount owed based on configurable prices.
+A simple Lovelace card for showing drink counts per user. Select a name and the card displays how many drinks of each type that user has consumed and the amount owed. The card can automatically read all users and drink prices from the **Drink Counter** integration.
 
 ## Installation
 
@@ -13,21 +13,25 @@ A simple Lovelace card for showing drink counts per user. Select a name and the 
 
 ## Example
 
+### Automatic configuration
+
+```yaml
+type: custom:drink-counter-card
+```
+
+### Manual configuration
+
 ```yaml
 type: custom:drink-counter-card
 users:
   - name: Alice
     drinks:
-      beer: sensor.alice_beer
-      water: sensor.alice_water
-  - name: Bob
-    drinks:
-      beer: sensor.bob_beer
-      water: sensor.bob_water
+      beer: sensor.alice_beer_count
+      water: sensor.alice_water_count
 prices:
   beer: 2.5
   water: 1.0
 ```
 
-This configuration creates a dropdown with *Alice* and *Bob*. The card uses the defined sensors to read drink counts and multiplies them by the given prices to show totals.
+When configured automatically the dropdown lists all users detected from the integration and calculates totals using the stored price list.
 
