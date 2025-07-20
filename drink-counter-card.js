@@ -18,8 +18,8 @@ class DrinkCounterCard extends LitElement {
     this.config = config;
     this._disabled = false;
     if (config.users && Array.isArray(config.users)) {
-      // Do not auto-select a user, require manual selection
-      this.selectedUser = '';
+      // Prefer the configured name to preserve capitalization
+      this.selectedUser = config.users[0]?.name || config.users[0]?.slug;
     }
   }
 
@@ -28,7 +28,12 @@ class DrinkCounterCard extends LitElement {
   render() {
     if (!this.hass || !this.config) return html``;
     const users = this.config.users || this._autoUsers || [];
+    if (!this.selectedUser && users.length > 0) {
+      // Default to the display name if available
+      this.selectedUser = users[0].name || users[0].slug;
+    }
     const user = users.find(u => (u.name || u.slug) === this.selectedUser);
+    if (!user) return html`<ha-card>Unknown user</ha-card>`;
     const prices = this.config.prices || this._autoPrices || {};
     let total = 0;
     const rows = Object.entries(user.drinks)
@@ -42,7 +47,7 @@ class DrinkCounterCard extends LitElement {
         const costStr = cost.toFixed(2) + ' €';
         const displayDrink = drink.charAt(0).toUpperCase() + drink.slice(1);
         return html`<tr>
-          <td><button @click=${() => this._addDrink(drink)} ?disabled=${this._disabled || !this.selectedUser}>+1</button></td>
+          <td><button @click=${() => this._addDrink(drink)} ?disabled=${this._disabled}>+1</button></td>
           <td>${displayDrink}</td>
           <td>${count}</td>
           <td>${priceStr}</td>
@@ -50,7 +55,10 @@ class DrinkCounterCard extends LitElement {
         </tr>`;
       });
 
-    const drinks = user ? Object.keys(user.drinks).sort((a,b) => a.localeCompare(b)) : [];
+    const drinks = Object.keys(user.drinks).sort((a,b) => a.localeCompare(b));
+    if (!this.selectedRemoveDrink && drinks.length > 0) {
+      this.selectedRemoveDrink = drinks[0];
+    }
 
     const totalStr = total.toFixed(2) + ' €';
     return html`
@@ -59,30 +67,27 @@ class DrinkCounterCard extends LitElement {
           <div class="user-select">
             <label for="user">Name:</label>
             <select id="user" @change=${this._selectUser.bind(this)}>
-              <option value="" ?selected=${!this.selectedUser}></option>
               ${users.map(u => html`<option value="${u.name || u.slug}" ?selected=${(u.name || u.slug)===this.selectedUser}>${u.name}</option>`)}
             </select>
           </div>
           <div class="remove-container">
-            <select @change=${this._selectRemoveDrink.bind(this)} ?disabled=${!user}>
-              <option value="" ?selected=${!this.selectedRemoveDrink}></option>
+            <select @change=${this._selectRemoveDrink.bind(this)}>
               ${drinks.map(d => html`<option value="${d}" ?selected=${d===this.selectedRemoveDrink}>${d.charAt(0).toUpperCase() + d.slice(1)}</option>`)}
             </select>
-            <button @click=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${this._disabled || !this.selectedRemoveDrink}>-1</button>
+            <button @click=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${this._disabled}>-1</button>
           </div>
         </div>
-        ${user ? html`<table>
+          <table>
           <thead><tr><th></th><th>Getränk</th><th>Anzahl</th><th>Preis</th><th>Summe</th></tr></thead>
           <tbody>${rows}</tbody>
           <tfoot><tr><td colspan="4"><b>Gesamt</b></td><td>${totalStr}</td></tr></tfoot>
-        </table>` : html`<div>Bitte Nutzer auswählen</div>`}
+        </table>
       </ha-card>
     `;
   }
 
   _selectUser(ev) {
     this.selectedUser = ev.target.value;
-    this.selectedRemoveDrink = '';
   }
 
   _selectRemoveDrink(ev) {
@@ -90,7 +95,7 @@ class DrinkCounterCard extends LitElement {
   }
 
   _addDrink(drink) {
-    if (this._disabled || !this.selectedUser) {
+    if (this._disabled) {
       return;
     }
     this._disabled = true;
@@ -116,7 +121,7 @@ class DrinkCounterCard extends LitElement {
   }
 
   _removeDrink(drink) {
-    if (this._disabled || !drink || !this.selectedUser) {
+    if (this._disabled || !drink) {
       return;
     }
     this._disabled = true;
