@@ -1,4 +1,4 @@
-// Drink Counter Card v1.1.1
+// Drink Counter Card v1.1.2
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
 
 class DrinkCounterCard extends LitElement {
@@ -137,6 +137,15 @@ class DrinkCounterCard extends LitElement {
     .user-select {
       margin-bottom: 8px;
       text-align: center;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+    }
+    .user-select select {
+      padding: 8px;
+      min-width: 120px;
+      font-size: 1rem;
     }
     table {
       width: 100%;
