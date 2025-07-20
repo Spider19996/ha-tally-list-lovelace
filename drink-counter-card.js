@@ -1,3 +1,4 @@
+// Drink Counter Card v1.0.0
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
 
 class DrinkCounterCard extends LitElement {
