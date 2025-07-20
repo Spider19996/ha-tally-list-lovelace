@@ -215,7 +215,7 @@ class DrinkCounterCard extends LitElement {
       padding: 4px 8px;
       min-width: 120px;
       font-size: 1rem;
-      height: 36px;
+      height: 32px;
       box-sizing: border-box;
     }
     table {
