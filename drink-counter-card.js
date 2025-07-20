@@ -34,9 +34,10 @@ class DrinkCounterCard extends LitElement {
       const price = Number(prices[drink] || 0);
       const cost = count * price;
       total += cost;
+      const displayDrink = drink.charAt(0).toUpperCase() + drink.slice(1);
       return html`<tr>
         <td><button @click=${() => this._addDrink(drink)}>Add</button></td>
-        <td>${drink}</td>
+        <td>${displayDrink}</td>
         <td>${count}</td>
         <td>${price}</td>
         <td>${cost.toFixed(2)}</td>
