@@ -1,4 +1,4 @@
-// Drink Counter Card v1.0.0
+// Drink Counter Card v1.1.1
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
 
 class DrinkCounterCard extends LitElement {
@@ -13,7 +13,7 @@ class DrinkCounterCard extends LitElement {
   setConfig(config) {
     this.config = config;
     if (config.users && Array.isArray(config.users)) {
-      this.selectedUser = config.users[0]?.name;
+      this.selectedUser = config.users[0]?.slug || config.users[0]?.name;
     }
   }
 
@@ -23,9 +23,9 @@ class DrinkCounterCard extends LitElement {
     if (!this.hass || !this.config) return html``;
     const users = this.config.users || this._autoUsers || [];
     if (!this.selectedUser && users.length > 0) {
-      this.selectedUser = users[0].name;
+      this.selectedUser = users[0].slug || users[0].name;
     }
-    const user = users.find(u => u.name === this.selectedUser);
+    const user = users.find(u => (u.slug || u.name) === this.selectedUser);
     if (!user) return html`<ha-card>Unknown user</ha-card>`;
     const prices = this.config.prices || this._autoPrices || {};
     let total = 0;
@@ -34,7 +34,13 @@ class DrinkCounterCard extends LitElement {
       const price = Number(prices[drink] || 0);
       const cost = count * price;
       total += cost;
-      return html`<tr><td>${drink}</td><td>${count}</td><td>${price}</td><td>${cost.toFixed(2)}</td></tr>`;
+      return html`<tr>
+        <td><button @click=${() => this._addDrink(drink)}>Add</button></td>
+        <td>${drink}</td>
+        <td>${count}</td>
+        <td>${price}</td>
+        <td>${cost.toFixed(2)}</td>
+      </tr>`;
     });
 
     return html`
@@ -42,13 +48,13 @@ class DrinkCounterCard extends LitElement {
         <div class="user-select">
           <label for="user">Name:</label>
           <select id="user" @change=${this._selectUser.bind(this)}>
-            ${users.map(u => html`<option value="${u.name}" ?selected=${u.name===this.selectedUser}>${u.name}</option>`)}
+            ${users.map(u => html`<option value="${u.slug || u.name}" ?selected=${(u.slug || u.name)===this.selectedUser}>${u.name}</option>`)}
           </select>
         </div>
-        <table>
-          <thead><tr><th>Getränk</th><th>Anzahl</th><th>Preis</th><th>Summe</th></tr></thead>
+          <table>
+          <thead><tr><th></th><th>Getränk</th><th>Anzahl</th><th>Preis</th><th>Summe</th></tr></thead>
           <tbody>${rows}</tbody>
-          <tfoot><tr><td colspan="3"><b>Gesamt</b></td><td>${total.toFixed(2)}</td></tr></tfoot>
+          <tfoot><tr><td colspan="4"><b>Gesamt</b></td><td>${total.toFixed(2)}</td></tr></tfoot>
         </table>
       </ha-card>
     `;
@@ -56,6 +62,13 @@ class DrinkCounterCard extends LitElement {
 
   _selectUser(ev) {
     this.selectedUser = ev.target.value;
+  }
+
+  _addDrink(drink) {
+    this.hass.callService('drink_counter', 'add_drink', {
+      user: this.selectedUser,
+      drink: drink,
+    });
   }
 
   updated(changedProps) {
@@ -86,7 +99,7 @@ class DrinkCounterCard extends LitElement {
             drinks[drink] = e2;
           }
         }
-        users.push({ name: name || slug, drinks });
+        users.push({ name: name || slug, slug, drinks });
       }
     }
     return users;
@@ -120,6 +133,9 @@ class DrinkCounterCard extends LitElement {
     th, td {
       padding: 4px;
       border-bottom: 1px solid var(--divider-color);
+    }
+    button {
+      padding: 4px;
     }
     tfoot td {
       font-weight: bold;
