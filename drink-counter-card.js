@@ -8,7 +8,10 @@ class DrinkCounterCard extends LitElement {
     selectedUser: { state: true },
     _autoUsers: { state: true },
     _autoPrices: { state: true },
+    showRemoveMenu: { state: true },
   };
+
+  showRemoveMenu = false;
 
   setConfig(config) {
     this.config = config;
@@ -48,13 +51,23 @@ class DrinkCounterCard extends LitElement {
       </tr>`;
     });
 
+    const drinks = Object.keys(user.drinks).sort((a,b) => a.localeCompare(b));
+
     return html`
       <ha-card>
-        <div class="user-select">
-          <label for="user">Name:</label>
-          <select id="user" @change=${this._selectUser.bind(this)}>
-            ${users.map(u => html`<option value="${u.name || u.slug}" ?selected=${(u.name || u.slug)===this.selectedUser}>${u.name}</option>`)}
-          </select>
+        <div class="controls">
+          <div class="user-select">
+            <label for="user">Name:</label>
+            <select id="user" @change=${this._selectUser.bind(this)}>
+              ${users.map(u => html`<option value="${u.name || u.slug}" ?selected=${(u.name || u.slug)===this.selectedUser}>${u.name}</option>`)}
+            </select>
+          </div>
+          <div class="remove-container">
+            <button @click=${this._toggleRemoveMenu.bind(this)}>Getränk entfernen</button>
+            ${this.showRemoveMenu ? html`<ul class="remove-menu">
+              ${drinks.map(d => html`<li @click=${() => this._removeDrink(d)}>${d.charAt(0).toUpperCase() + d.slice(1)}</li>`)}
+            </ul>` : ''}
+          </div>
         </div>
           <table>
           <thead><tr><th></th><th>Getränk</th><th>Anzahl</th><th>Preis</th><th>Summe</th></tr></thead>
@@ -84,6 +97,28 @@ class DrinkCounterCard extends LitElement {
         entity_id: entity,
       });
     }
+  }
+
+  _toggleRemoveMenu() {
+    this.showRemoveMenu = !this.showRemoveMenu;
+  }
+
+  _removeDrink(drink) {
+    const displayDrink = drink.charAt(0).toUpperCase() + drink.slice(1);
+    this.hass.callService('drink_counter', 'remove_drink', {
+      user: this.selectedUser,
+      drink: displayDrink,
+    });
+
+    const users = this.config.users || this._autoUsers || [];
+    const user = users.find(u => (u.name || u.slug) === this.selectedUser);
+    const entity = user?.drinks?.[drink];
+    if (entity) {
+      this.hass.callService('homeassistant', 'update_entity', {
+        entity_id: entity,
+      });
+    }
+    this.showRemoveMenu = false;
   }
 
   updated(changedProps) {
@@ -139,8 +174,13 @@ class DrinkCounterCard extends LitElement {
       padding: 16px;
       text-align: center;
     }
-    .user-select {
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       margin-bottom: 8px;
+    }
+    .user-select {
       text-align: center;
       display: flex;
       justify-content: center;
@@ -164,6 +204,28 @@ class DrinkCounterCard extends LitElement {
     }
     button {
       padding: 4px;
+    }
+    .remove-container {
+      position: relative;
+    }
+    .remove-menu {
+      position: absolute;
+      right: 0;
+      top: 100%;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      background: var(--card-background-color, white);
+      border: 1px solid var(--divider-color);
+      z-index: 1;
+    }
+    .remove-menu li {
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+    .remove-menu li:hover {
+      background: var(--primary-color);
+      color: var(--text-primary-color);
     }
     tfoot td {
       font-weight: bold;
