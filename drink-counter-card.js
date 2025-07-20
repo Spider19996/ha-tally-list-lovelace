@@ -192,9 +192,9 @@ class DrinkCounterCard extends LitElement {
       margin-bottom: 8px;
     }
     .user-select {
-      text-align: center;
+      text-align: left;
       display: flex;
-      justify-content: center;
+      justify-content: flex-start;
       align-items: center;
       gap: 8px;
     }
