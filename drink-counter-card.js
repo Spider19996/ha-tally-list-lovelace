@@ -210,10 +210,11 @@ class DrinkCounterCard extends LitElement {
       align-items: center;
       gap: 8px;
     }
-    .user-select select {
-      padding: 8px;
-      min-width: 120px;
-      font-size: 1rem;
+    .user-select select,
+    .remove-container select {
+      padding: 12px;
+      min-width: 140px;
+      font-size: 1.2rem;
     }
     .remove-container select {
       padding: 8px;
