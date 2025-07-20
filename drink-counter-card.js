@@ -31,7 +31,9 @@ class DrinkCounterCard extends LitElement {
     if (!user) return html`<ha-card>Unknown user</ha-card>`;
     const prices = this.config.prices || this._autoPrices || {};
     let total = 0;
-    const rows = Object.entries(user.drinks).map(([drink, entity]) => {
+    const rows = Object.entries(user.drinks)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([drink, entity]) => {
       const count = Number(this.hass.states[entity]?.state || 0);
       const price = Number(prices[drink] || 0);
       const cost = count * price;
