@@ -50,3 +50,5 @@ data:
   drink: Wasser
 ```
 
+If `sensor.preisliste_free_amount` exists, its value is deducted from every user's total. The table displays this free amount and shows the final **Zu zahlen** sum.
+
