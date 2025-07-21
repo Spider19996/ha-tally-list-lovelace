@@ -1,6 +1,14 @@
 // Drink Counter Card v1.3.4
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
 
+window.customCards = window.customCards || [];
+window.customCards.push({
+  type: 'drink-counter-card',
+  name: 'Drink Counter Card',
+  preview: true,
+  description: 'Displays drink counts per user with quick add/remove buttons.',
+});
+
 class DrinkCounterCard extends LitElement {
   static properties = {
     hass: {},
