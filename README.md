@@ -26,6 +26,18 @@ After the resource is available, open the Lovelace dashboard, click **Add Card**
 and select **Drink Counter Card** from the list. The built-in editor lets you
 adjust the lock time without writing YAML.
 
+### Price ranking
+
+To display all users ordered by how much they owe, add a card of type
+`custom:drink-counter-ranking-card`:
+
+```yaml
+type: custom:drink-counter-ranking-card
+```
+
+The card lists every detected user and sorts them from the highest amount due to
+the lowest.
+
 ## Example
 
 ### Automatic configuration
