@@ -1,5 +1,6 @@
 // Drink Counter Card v1.3.5
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
+import "./drink-ranking-card.js";
 
 window.customCards = window.customCards || [];
 window.customCards.push({
@@ -24,7 +25,7 @@ class DrinkCounterCard extends LitElement {
   selectedRemoveDrink = '';
 
   setConfig(config) {
-    this.config = { lock_ms: 1000, max_width: '', ...config };
+    this.config = { lock_ms: 1000, max_width: '', widget: 'counter', ...config };
     this._disabled = false;
     const width = this._normalizeWidth(this.config.max_width);
     if (width) {
@@ -45,14 +46,24 @@ class DrinkCounterCard extends LitElement {
   render() {
     if (!this.hass || !this.config) return html``;
     const users = this.config.users || this._autoUsers || [];
+    const prices = this.config.prices || this._autoPrices || {};
+    const freeAmount = Number(this.config.free_amount ?? this._freeAmount ?? 0);
+
+    if (this.config.widget === 'ranking') {
+      return html`<drink-ranking-card
+        .hass=${this.hass}
+        .users=${users}
+        .prices=${prices}
+        .freeAmount=${freeAmount}
+      ></drink-ranking-card>`;
+    }
+
     if (!this.selectedUser && users.length > 0) {
       // Default to the display name if available
       this.selectedUser = users[0].name || users[0].slug;
     }
     const user = users.find(u => (u.name || u.slug) === this.selectedUser);
     if (!user) return html`<ha-card>Unknown user</ha-card>`;
-    const prices = this.config.prices || this._autoPrices || {};
-    const freeAmount = Number(this.config.free_amount ?? this._freeAmount ?? 0);
     let total = 0;
     const rows = Object.entries(user.drinks)
       .sort((a, b) => a[0].localeCompare(b[0]))
@@ -255,7 +266,7 @@ class DrinkCounterCard extends LitElement {
   }
 
   static getStubConfig() {
-    return { lock_ms: 1000, max_width: '' };
+    return { lock_ms: 1000, max_width: '', widget: 'counter' };
   }
 
   static styles = css`
@@ -331,7 +342,7 @@ class DrinkCounterCardEditor extends LitElement {
   };
 
   setConfig(config) {
-    this._config = { lock_ms: 1000, max_width: '', ...config };
+    this._config = { lock_ms: 1000, max_width: '', widget: 'counter', ...config };
   }
 
   render() {
@@ -353,6 +364,13 @@ class DrinkCounterCardEditor extends LitElement {
           @input=${this._widthChanged}
         />
       </div>
+      <div class="form">
+        <label>Widget</label>
+        <select @change=${this._widgetChanged} .value=${this._config.widget}>
+          <option value="counter">Counter</option>
+          <option value="ranking">Ranking</option>
+        </select>
+      </div>
     `;
   }
 
@@ -372,6 +390,17 @@ class DrinkCounterCardEditor extends LitElement {
     const raw = ev.target.value.trim();
     const width = raw ? `${raw}px` : '';
     this._config = { ...this._config, max_width: width };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  _widgetChanged(ev) {
+    this._config = { ...this._config, widget: ev.target.value };
     this.dispatchEvent(
       new CustomEvent('config-changed', {
         detail: { config: this._config },

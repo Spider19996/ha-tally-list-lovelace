@@ -66,4 +66,5 @@ The card can now be configured directly in the Lovelace UI. It offers the follow
 
 * **Sperrzeit (ms)** – How long the buttons stay disabled after pressing **+1** or **-1**. The default is `1000` milliseconds.
 * **Maximale Breite (px)** – Optional width limit for the card in pixels. Enter a number and the `px` unit is added automatically. Useful when using panel views to prevent the layout from stretching too wide.
+* **Widget** – Selects between the standard counter view or the ranking table.
 
