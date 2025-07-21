@@ -242,6 +242,8 @@ class DrinkCounterCard extends LitElement {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
       margin-bottom: 8px;
     }
     .user-select {
@@ -258,6 +260,11 @@ class DrinkCounterCard extends LitElement {
       font-size: 1rem;
       height: 32px;
       box-sizing: border-box;
+    }
+    .remove-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
     .remove-container button {
       height: 32px;
