@@ -31,10 +31,10 @@ class DrinkCounterCardEditor extends LitElement {
         />
       </div>
       <div class="form">
-        <label>Maximale Breite</label>
+        <label>Maximale Breite (px)</label>
         <input
-          type="text"
-          .value=${this._config.max_width ?? ''}
+          type="number"
+          .value=${(this._config.max_width ?? '').replace(/px$/, '')}
           @input=${this._widthChanged}
         />
       </div>
@@ -48,11 +48,9 @@ class DrinkCounterCardEditor extends LitElement {
   }
 
   _widthChanged(ev) {
-    let value = ev.target.value.trim();
-    if (/^\d+$/.test(value)) {
-      value = `${value}px`;
-    }
-    this._config = { ...this._config, max_width: value };
+    const raw = ev.target.value.trim();
+    const width = raw ? `${raw}px` : '';
+    this._config = { ...this._config, max_width: width };
     fireEvent(this, 'config-changed', { config: this._config });
   }
 

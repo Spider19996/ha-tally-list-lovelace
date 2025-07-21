@@ -1,4 +1,4 @@
-// Drink Counter Card v1.3.4
+// Drink Counter Card v1.3.5
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
 
 window.customCards = window.customCards || [];
@@ -346,10 +346,10 @@ class DrinkCounterCardEditor extends LitElement {
         />
       </div>
       <div class="form">
-        <label>Maximale Breite</label>
+        <label>Maximale Breite (px)</label>
         <input
-          type="text"
-          .value=${this._config.max_width ?? ''}
+          type="number"
+          .value=${(this._config.max_width ?? '').replace(/px$/, '')}
           @input=${this._widthChanged}
         />
       </div>
@@ -369,11 +369,9 @@ class DrinkCounterCardEditor extends LitElement {
   }
 
   _widthChanged(ev) {
-    let value = ev.target.value.trim();
-    if (/^\d+$/.test(value)) {
-      value = `${value}px`;
-    }
-    this._config = { ...this._config, max_width: value };
+    const raw = ev.target.value.trim();
+    const width = raw ? `${raw}px` : '';
+    this._config = { ...this._config, max_width: width };
     this.dispatchEvent(
       new CustomEvent('config-changed', {
         detail: { config: this._config },
