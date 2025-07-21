@@ -1,4 +1,4 @@
-// Drink Counter Card v1.3.3
+// Drink Counter Card v1.3.4
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
 
 window.customCards = window.customCards || [];
@@ -26,10 +26,13 @@ class DrinkCounterCard extends LitElement {
   setConfig(config) {
     this.config = { lock_ms: 1000, max_width: '', ...config };
     this._disabled = false;
-    if (this.config.max_width) {
-      this.style.setProperty('--dcc-max-width', this.config.max_width);
+    const width = this._normalizeWidth(this.config.max_width);
+    if (width) {
+      this.style.setProperty('--dcc-max-width', width);
+      this.config.max_width = width;
     } else {
       this.style.removeProperty('--dcc-max-width');
+      this.config.max_width = '';
     }
     if (config.users && Array.isArray(config.users)) {
       // Prefer the configured name to preserve capitalization
@@ -86,9 +89,8 @@ class DrinkCounterCard extends LitElement {
       due = Math.max(total - freeAmount, 0);
     }
     const dueStr = due.toFixed(2) + ' €';
-    const cardStyle = this.config.max_width
-      ? `max-width:${this.config.max_width};margin:0 auto;`
-      : '';
+    const width = this._normalizeWidth(this.config.max_width);
+    const cardStyle = width ? `max-width:${width};margin:0 auto;` : '';
     return html`
       <ha-card style="${cardStyle}">
         <div class="controls">
@@ -241,6 +243,13 @@ class DrinkCounterCard extends LitElement {
     return isNaN(val) ? 0 : val;
   }
 
+  _normalizeWidth(value) {
+    if (!value && value !== 0) return '';
+    const str = String(value).trim();
+    if (str === '') return '';
+    return /^\d+$/.test(str) ? `${str}px` : str;
+  }
+
   static async getConfigElement() {
     return document.createElement('drink-counter-card-editor');
   }
@@ -360,7 +369,10 @@ class DrinkCounterCardEditor extends LitElement {
   }
 
   _widthChanged(ev) {
-    const value = ev.target.value;
+    let value = ev.target.value.trim();
+    if (/^\d+$/.test(value)) {
+      value = `${value}px`;
+    }
     this._config = { ...this._config, max_width: value };
     this.dispatchEvent(
       new CustomEvent('config-changed', {

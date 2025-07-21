@@ -48,7 +48,10 @@ class DrinkCounterCardEditor extends LitElement {
   }
 
   _widthChanged(ev) {
-    const value = ev.target.value;
+    let value = ev.target.value.trim();
+    if (/^\d+$/.test(value)) {
+      value = `${value}px`;
+    }
     this._config = { ...this._config, max_width: value };
     fireEvent(this, 'config-changed', { config: this._config });
   }
