@@ -16,7 +16,7 @@ class DrinkCounterCardEditor extends LitElement {
   };
 
   setConfig(config) {
-    this._config = { lock_ms: 1000, max_width: '', ...config };
+    this._config = { lock_ms: 1000, max_width: '', view: 'counter', ...config };
   }
 
   render() {
@@ -29,6 +29,13 @@ class DrinkCounterCardEditor extends LitElement {
           .value=${this._config.lock_ms}
           @input=${this._lockChanged}
         />
+      </div>
+      <div class="form">
+        <label>Widget</label>
+        <select .value=${this._config.view} @change=${this._viewChanged}>
+          <option value="counter">Zähler</option>
+          <option value="ranking">Ranking</option>
+        </select>
       </div>
       <div class="form">
         <label>Maximale Breite (px)</label>
@@ -47,6 +54,12 @@ class DrinkCounterCardEditor extends LitElement {
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
+  _viewChanged(ev) {
+    const value = ev.target.value;
+    this._config = { ...this._config, view: value };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
   _widthChanged(ev) {
     const raw = ev.target.value.trim();
     const width = raw ? `${raw}px` : '';
@@ -58,7 +71,8 @@ class DrinkCounterCardEditor extends LitElement {
     .form {
       padding: 16px;
     }
-    input {
+    input,
+    select {
       width: 100%;
       box-sizing: border-box;
     }
