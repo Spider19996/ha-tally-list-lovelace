@@ -18,7 +18,6 @@ A simple Lovelace card for showing and updating drink counts per user. Select a 
    ```yaml
   - url: /local/drink-counter-card.js
     type: module
-  ```
 
 ### Add to Lovelace
 
