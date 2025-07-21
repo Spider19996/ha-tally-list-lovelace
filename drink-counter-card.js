@@ -1,4 +1,4 @@
-// Drink Counter Card v1.3.2
+// Drink Counter Card v1.3.3
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
 
 window.customCards = window.customCards || [];
@@ -27,11 +27,9 @@ class DrinkCounterCard extends LitElement {
     this.config = { lock_ms: 1000, max_width: '', ...config };
     this._disabled = false;
     if (this.config.max_width) {
-      this.style.maxWidth = this.config.max_width;
-      this.style.margin = '0 auto';
+      this.style.setProperty('--dcc-max-width', this.config.max_width);
     } else {
-      this.style.removeProperty('max-width');
-      this.style.removeProperty('margin');
+      this.style.removeProperty('--dcc-max-width');
     }
     if (config.users && Array.isArray(config.users)) {
       // Prefer the configured name to preserve capitalization
@@ -88,8 +86,11 @@ class DrinkCounterCard extends LitElement {
       due = Math.max(total - freeAmount, 0);
     }
     const dueStr = due.toFixed(2) + ' €';
+    const cardStyle = this.config.max_width
+      ? `max-width:${this.config.max_width};margin:0 auto;`
+      : '';
     return html`
-      <ha-card>
+      <ha-card style="${cardStyle}">
         <div class="controls">
           <div class="user-select">
             <label for="user">Name:</label>
@@ -255,6 +256,8 @@ class DrinkCounterCard extends LitElement {
     ha-card {
       padding: 16px;
       text-align: center;
+      margin: 0 auto;
+      max-width: var(--dcc-max-width, none);
     }
     .controls {
       display: flex;
