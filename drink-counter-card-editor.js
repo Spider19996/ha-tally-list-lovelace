@@ -16,7 +16,7 @@ class DrinkCounterCardEditor extends LitElement {
   };
 
   setConfig(config) {
-    this._config = { lock_ms: 1000, ...config };
+    this._config = { lock_ms: 1000, max_width: '', ...config };
   }
 
   render() {
@@ -27,15 +27,32 @@ class DrinkCounterCardEditor extends LitElement {
         <input
           type="number"
           .value=${this._config.lock_ms}
-          @input=${this._valueChanged}
+          @input=${this._lockChanged}
+        />
+      </div>
+      <div class="form">
+        <label>Maximale Breite</label>
+        <input
+          type="text"
+          .value=${this._config.max_width ?? ''}
+          @input=${this._widthChanged}
         />
       </div>
     `;
   }
 
-  _valueChanged(ev) {
+  _lockChanged(ev) {
     const value = Number(ev.target.value);
     this._config = { ...this._config, lock_ms: isNaN(value) ? 1000 : value };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _widthChanged(ev) {
+    let value = ev.target.value.trim();
+    if (/^\d+$/.test(value)) {
+      value = `${value}px`;
+    }
+    this._config = { ...this._config, max_width: value };
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
