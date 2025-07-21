@@ -57,7 +57,8 @@ If the free amount equals **0 €**, the card hides the **Freibetrag** and **Z
 
 ## UI configuration
 
-The card can now be configured directly in the Lovelace UI. It offers a single option:
+The card can now be configured directly in the Lovelace UI. It offers the following options:
 
 * **Sperrzeit (ms)** – How long the buttons stay disabled after pressing **+1** or **-1**. The default is `1000` milliseconds.
+* **Maximale Breite** – Optional CSS width limit for the card. Useful when using panel views to prevent the layout from stretching too wide.
 
