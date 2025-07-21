@@ -16,9 +16,15 @@ A simple Lovelace card for showing and updating drink counts per user. Select a 
 1. Copy `drink-counter-card.js` to your Home Assistant `www` directory.
 2. Add the following to your Lovelace resources:
    ```yaml
-   - url: /local/drink-counter-card.js
-     type: module
-   ```
+  - url: /local/drink-counter-card.js
+    type: module
+  ```
+
+### Add to Lovelace
+
+After the resource is available, open the Lovelace dashboard, click **Add Card**
+and select **Drink Counter Card** from the list. The built-in editor lets you
+adjust the lock time without writing YAML.
 
 ## Example
 
