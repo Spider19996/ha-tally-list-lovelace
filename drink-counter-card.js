@@ -1,6 +1,5 @@
 // Drink Counter Card v1.3.5
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
-import { renderRanking } from './ranking-view.js';
 
 window.customCards = window.customCards || [];
 window.customCards.push({
@@ -25,7 +24,7 @@ class DrinkCounterCard extends LitElement {
   selectedRemoveDrink = '';
 
   setConfig(config) {
-    this.config = { lock_ms: 1000, max_width: '', view: 'counter', ...config };
+    this.config = { lock_ms: 1000, max_width: '', ...config };
     this._disabled = false;
     const width = this._normalizeWidth(this.config.max_width);
     if (width) {
@@ -45,17 +44,6 @@ class DrinkCounterCard extends LitElement {
 
   render() {
     if (!this.hass || !this.config) return html``;
-    if (this.config.view === 'ranking') {
-      const width = this._normalizeWidth(this.config.max_width);
-      return renderRanking({
-        hass: this.hass,
-        config: this.config,
-        autoUsers: this._autoUsers,
-        autoPrices: this._autoPrices,
-        freeAmount: this._freeAmount,
-        width,
-      });
-    }
     const users = this.config.users || this._autoUsers || [];
     if (!this.selectedUser && users.length > 0) {
       // Default to the display name if available
@@ -133,7 +121,6 @@ class DrinkCounterCard extends LitElement {
       </ha-card>
     `;
   }
-
 
   _selectUser(ev) {
     this.selectedUser = ev.target.value;
@@ -268,7 +255,7 @@ class DrinkCounterCard extends LitElement {
   }
 
   static getStubConfig() {
-    return { lock_ms: 1000, max_width: '', view: 'counter' };
+    return { lock_ms: 1000, max_width: '' };
   }
 
   static styles = css`
@@ -344,7 +331,7 @@ class DrinkCounterCardEditor extends LitElement {
   };
 
   setConfig(config) {
-    this._config = { lock_ms: 1000, max_width: '', view: 'counter', ...config };
+    this._config = { lock_ms: 1000, max_width: '', ...config };
   }
 
   render() {
@@ -357,13 +344,6 @@ class DrinkCounterCardEditor extends LitElement {
           .value=${this._config.lock_ms}
           @input=${this._lockChanged}
         />
-      </div>
-      <div class="form">
-        <label>Widget</label>
-        <select .value=${this._config.view} @change=${this._viewChanged}>
-          <option value="counter">Zähler</option>
-          <option value="ranking">Ranking</option>
-        </select>
       </div>
       <div class="form">
         <label>Maximale Breite (px)</label>
@@ -379,18 +359,6 @@ class DrinkCounterCardEditor extends LitElement {
   _lockChanged(ev) {
     const value = Number(ev.target.value);
     this._config = { ...this._config, lock_ms: isNaN(value) ? 1000 : value };
-    this.dispatchEvent(
-      new CustomEvent('config-changed', {
-        detail: { config: this._config },
-        bubbles: true,
-        composed: true,
-      })
-    );
-  }
-
-  _viewChanged(ev) {
-    const value = ev.target.value;
-    this._config = { ...this._config, view: value };
     this.dispatchEvent(
       new CustomEvent('config-changed', {
         detail: { config: this._config },
@@ -417,8 +385,7 @@ class DrinkCounterCardEditor extends LitElement {
     .form {
       padding: 16px;
     }
-    input,
-    select {
+    input {
       width: 100%;
       box-sizing: border-box;
     }
