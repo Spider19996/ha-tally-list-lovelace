@@ -13,7 +13,7 @@ A simple Lovelace card for showing and updating drink counts per user. Select a 
 
 ### Manual
 
-1. Copy `drink-counter-card.js` **and** `ranking-view.js` to your Home Assistant `www` directory.
+1. Copy `drink-counter-card.js` to your Home Assistant `www` directory.
 2. Add the following to your Lovelace resources:
    ```yaml
   - url: /local/drink-counter-card.js
@@ -61,15 +61,10 @@ When sensors named `sensor.<name>_amount_due` are present, their values are used
 
 If the free amount equals **0 €**, the card hides the **Freibetrag** and **Zu zahlen** rows and only shows the **Gesamt** line.
 
-## Ranking view
-
-Selecting **Ranking** from the card options shows a table of all users ordered by how much they need to pay.
-
 ## UI configuration
 
 The card can now be configured directly in the Lovelace UI. It offers the following options:
 
 * **Sperrzeit (ms)** – How long the buttons stay disabled after pressing **+1** or **-1**. The default is `1000` milliseconds.
 * **Maximale Breite (px)** – Optional width limit for the card in pixels. Enter a number and the `px` unit is added automatically. Useful when using panel views to prevent the layout from stretching too wide.
-* **Widget** – Choose between the standard drink counter or the ranking table.
 
