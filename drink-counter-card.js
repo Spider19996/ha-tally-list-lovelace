@@ -1,4 +1,4 @@
-// Drink Counter Card v1.3.1
+// Drink Counter Card v1.3.2
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
 
 class DrinkCounterCard extends LitElement {
@@ -16,8 +16,15 @@ class DrinkCounterCard extends LitElement {
   selectedRemoveDrink = '';
 
   setConfig(config) {
-    this.config = { lock_ms: 1000, ...config };
+    this.config = { lock_ms: 1000, max_width: '', ...config };
     this._disabled = false;
+    if (this.config.max_width) {
+      this.style.maxWidth = this.config.max_width;
+      this.style.margin = '0 auto';
+    } else {
+      this.style.removeProperty('max-width');
+      this.style.removeProperty('margin');
+    }
     if (config.users && Array.isArray(config.users)) {
       // Prefer the configured name to preserve capitalization
       this.selectedUser = config.users[0]?.name || config.users[0]?.slug;
@@ -230,10 +237,13 @@ class DrinkCounterCard extends LitElement {
   }
 
   static getStubConfig() {
-    return { lock_ms: 1000 };
+    return { lock_ms: 1000, max_width: '' };
   }
 
   static styles = css`
+    :host {
+      display: block;
+    }
     ha-card {
       padding: 16px;
       text-align: center;
@@ -301,7 +311,7 @@ class DrinkCounterCardEditor extends LitElement {
   };
 
   setConfig(config) {
-    this._config = { lock_ms: 1000, ...config };
+    this._config = { lock_ms: 1000, max_width: '', ...config };
   }
 
   render() {
@@ -312,15 +322,35 @@ class DrinkCounterCardEditor extends LitElement {
         <input
           type="number"
           .value=${this._config.lock_ms}
-          @input=${this._valueChanged}
+          @input=${this._lockChanged}
+        />
+      </div>
+      <div class="form">
+        <label>Maximale Breite</label>
+        <input
+          type="text"
+          .value=${this._config.max_width ?? ''}
+          @input=${this._widthChanged}
         />
       </div>
     `;
   }
 
-  _valueChanged(ev) {
+  _lockChanged(ev) {
     const value = Number(ev.target.value);
     this._config = { ...this._config, lock_ms: isNaN(value) ? 1000 : value };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  _widthChanged(ev) {
+    const value = ev.target.value;
+    this._config = { ...this._config, max_width: value };
     this.dispatchEvent(
       new CustomEvent('config-changed', {
         detail: { config: this._config },
