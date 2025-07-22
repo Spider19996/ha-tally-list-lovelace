@@ -58,8 +58,10 @@ class TallyListCard extends LitElement {
       return html`<ha-card>Kein Zugriff auf Nutzer</ha-card>`;
     }
     if (!this.selectedUser || !users.some(u => (u.name || u.slug) === this.selectedUser)) {
-      // Default to the display name if available
-      this.selectedUser = users[0].name || users[0].slug;
+      const uid = this.hass.user?.id;
+      const own = users.find(u => u.user_id === uid);
+      // Prefer the current user when available, otherwise pick the first entry
+      this.selectedUser = (own?.name || own?.slug) ?? (users[0].name || users[0].slug);
     }
     const user = users.find(u => (u.name || u.slug) === this.selectedUser);
     if (!user) return html`<ha-card>Unbekannter Benutzer</ha-card>`;
