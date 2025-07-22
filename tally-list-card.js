@@ -1,5 +1,6 @@
 // Tally List Card v1.4.0
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
+const CARD_VERSION = '1.4.0';
 
 window.customCards = window.customCards || [];
 window.customCards.push({
@@ -385,6 +386,7 @@ class TallyListCardEditor extends LitElement {
           @input=${this._widthChanged}
         />
       </div>
+      <div class="version">Version: ${CARD_VERSION}</div>
     `;
   }
 
@@ -420,6 +422,11 @@ class TallyListCardEditor extends LitElement {
     input {
       width: 100%;
       box-sizing: border-box;
+    }
+    .version {
+      padding: 0 16px 16px;
+      text-align: center;
+      color: var(--secondary-text-color);
     }
   `;
 }
