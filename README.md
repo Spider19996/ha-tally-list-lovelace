@@ -34,6 +34,7 @@ type: custom:tally-list-card
 ```
 
 The dropdown lists all users detected from the integration and calculates totals using the stored price list. No manual configuration is required. Normal users can only select themselves, while admins may choose any person.
+
 When a `person.<slug>` entity exists, its friendly name is used in the dropdown; otherwise the name comes from the tally sensors. Users are sorted alphabetically and the currently logged in user always appears first. The selected user's **display name** is sent to the `tally_list.add_drink` service, so capitalization is preserved.
 
 Pressing **+1** on the Water row triggers a service call like:
@@ -66,4 +67,5 @@ The card can now be configured directly in the Lovelace UI. It offers the follow
 
 * **Sperrzeit (ms)** – How long the buttons stay disabled after pressing **+1** or **-1**. The default is `1000` milliseconds.
 * **Maximale Breite (px)** – Optional width limit for the card in pixels. Enter a number and the `px` unit is added automatically. Useful when using panel views to prevent the layout from stretching too wide.
+* **Version** – Displays the installed card version.
 
