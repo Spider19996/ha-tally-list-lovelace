@@ -1,13 +1,13 @@
 {
-  "name": "ha-drink-counter-lovelace",
+  "name": "ha-tally-list-lovelace",
   "version": "1.4.0",
-  "description": "A simple Lovelace card for showing and updating drink counts per user",
-  "main": "drink-counter-card.js",
+  "description": "A simple Lovelace card for showing and updating tally counts per user",
+  "main": "tally-list-card.js",
   "type": "module",
   "keywords": [
     "home assistant",
     "lovelace",
-    "drink counter",
+    "tally list",
     "custom card"
   ],
   "private": true
