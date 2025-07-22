@@ -240,7 +240,15 @@ class TallyListCard extends LitElement {
             drinks[drink] = e2;
           }
         }
-        const person = states[`person.${slug}`];
+        let person = states[`person.${slug}`];
+        if (!person) {
+          for (const [pEntity, pState] of Object.entries(states)) {
+            if (pEntity.startsWith('person.') && this._slugify(pState.attributes?.friendly_name || '') === slug) {
+              person = pState;
+              break;
+            }
+          }
+        }
         const user_id = person?.attributes?.user_id || null;
         const personName = person?.attributes?.friendly_name;
         const name = personName || sensorName || slug;
@@ -271,13 +279,28 @@ class TallyListCard extends LitElement {
     return isNaN(val) ? 0 : val;
   }
 
+  _slugify(str) {
+    if (!str) return '';
+    return str
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+  }
+
   _currentPersonSlugs() {
     const userId = this.hass.user?.id;
     if (!userId) return [];
     const slugs = [];
     for (const [entity, state] of Object.entries(this.hass.states)) {
       if (entity.startsWith('person.') && state.attributes.user_id === userId) {
-        slugs.push(entity.substring('person.'.length));
+        const slug = entity.substring('person.'.length);
+        slugs.push(slug);
+        const alt = this._slugify(state.attributes.friendly_name || '');
+        if (alt && alt !== slug) {
+          slugs.push(alt);
+        }
       }
     }
     return slugs;
