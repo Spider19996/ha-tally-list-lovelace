@@ -57,11 +57,20 @@ class TallyListCard extends LitElement {
     if (users.length === 0) {
       return html`<ha-card>Kein Zugriff auf Nutzer</ha-card>`;
     }
+    const uid = this.hass.user?.id;
+    const slugsOfUser = this._currentPersonSlugs();
+    const own = users.find(u => u.user_id === uid || slugsOfUser.includes(u.slug));
+    users = [...users].sort((a, b) => {
+      const nA = a.name || a.slug;
+      const nB = b.name || b.slug;
+      return nA.localeCompare(nB);
+    });
+    if (own) {
+      users = [own, ...users.filter(u => u !== own)];
+    }
     if (!this.selectedUser || !users.some(u => (u.name || u.slug) === this.selectedUser)) {
-      const uid = this.hass.user?.id;
-      const own = users.find(u => u.user_id === uid);
       // Prefer the current user when available, otherwise pick the first entry
-      this.selectedUser = (own?.name || own?.slug) ?? (users[0].name || users[0].slug);
+      this.selectedUser = own ? (own.name || own.slug) : (users[0].name || users[0].slug);
     }
     const user = users.find(u => (u.name || u.slug) === this.selectedUser);
     if (!user) return html`<ha-card>Unbekannter Benutzer</ha-card>`;
@@ -220,7 +229,7 @@ class TallyListCard extends LitElement {
       const match = entity.match(/^sensor\.([a-z0-9_]+)_amount_due$/);
       if (match) {
         const slug = match[1];
-        const name = (state.attributes.friendly_name || '').replace(' Amount Due', '');
+        const sensorName = (state.attributes.friendly_name || '').replace(' Amount Due', '');
         const drinks = {};
         const prefix = `sensor.${slug}_`;
         for (const [e2] of Object.entries(states)) {
@@ -232,7 +241,9 @@ class TallyListCard extends LitElement {
         }
         const person = states[`person.${slug}`];
         const user_id = person?.attributes?.user_id || null;
-        users.push({ name: name || slug, slug, drinks, amount_due_entity: entity, user_id });
+        const personName = person?.attributes?.friendly_name;
+        const name = personName || sensorName || slug;
+        users.push({ name, slug, drinks, amount_due_entity: entity, user_id });
       }
     }
     return users;

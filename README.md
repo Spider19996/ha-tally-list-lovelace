@@ -34,7 +34,7 @@ type: custom:tally-list-card
 ```
 
 The dropdown lists all users detected from the integration and calculates totals using the stored price list. No manual configuration is required. Normal users can only select themselves, while admins may choose any person.
-The selected user's **display name** is sent to the `tally_list.add_drink` service, so capitalization is preserved.
+When a `person.<slug>` entity exists, its friendly name is used in the dropdown; otherwise the name comes from the tally sensors. Users are sorted alphabetically and the currently logged in user always appears first. The selected user's **display name** is sent to the `tally_list.add_drink` service, so capitalization is preserved.
 
 Pressing **+1** on the Water row triggers a service call like:
 
