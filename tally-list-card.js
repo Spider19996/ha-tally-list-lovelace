@@ -225,7 +225,7 @@ class TallyListCard extends LitElement {
       const match = entity.match(/^sensor\.([a-z0-9_]+)_amount_due$/);
       if (match) {
         const slug = match[1];
-        const name = (state.attributes.friendly_name || '').replace(' Amount Due', '');
+        const sensorName = (state.attributes.friendly_name || '').replace(' Amount Due', '');
         const drinks = {};
         const prefix = `sensor.${slug}_`;
         for (const [e2] of Object.entries(states)) {
@@ -237,7 +237,9 @@ class TallyListCard extends LitElement {
         }
         const person = states[`person.${slug}`];
         const user_id = person?.attributes?.user_id || null;
-        users.push({ name: name || slug, slug, drinks, amount_due_entity: entity, user_id });
+        const personName = person?.attributes?.friendly_name;
+        const name = personName || sensorName || slug;
+        users.push({ name, slug, drinks, amount_due_entity: entity, user_id });
       }
     }
     return users;
