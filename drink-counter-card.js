@@ -1,4 +1,4 @@
-// Drink Counter Card v1.3.5
+// Drink Counter Card v1.4.0
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
 
 window.customCards = window.customCards || [];
@@ -44,11 +44,20 @@ class DrinkCounterCard extends LitElement {
 
   render() {
     if (!this.hass || !this.config) return html``;
-    const users = this.config.users || this._autoUsers || [];
+    let users = this.config.users || this._autoUsers || [];
     if (users.length === 0) {
       return html`<ha-card>Drink Counter Integration nicht gefunden. Bitte richte die Integration ein.</ha-card>`;
     }
-    if (!this.selectedUser && users.length > 0) {
+    const isAdmin = this.hass.user?.is_admin;
+    if (!isAdmin) {
+      const allowedSlugs = this._currentPersonSlugs();
+      const uid = this.hass.user?.id;
+      users = users.filter(u => u.user_id === uid || allowedSlugs.includes(u.slug));
+    }
+    if (users.length === 0) {
+      return html`<ha-card>Kein Zugriff auf Nutzer</ha-card>`;
+    }
+    if (!this.selectedUser || !users.some(u => (u.name || u.slug) === this.selectedUser)) {
       // Default to the display name if available
       this.selectedUser = users[0].name || users[0].slug;
     }
@@ -219,7 +228,9 @@ class DrinkCounterCard extends LitElement {
             drinks[drink] = e2;
           }
         }
-        users.push({ name: name || slug, slug, drinks, amount_due_entity: entity });
+        const person = states[`person.${slug}`];
+        const user_id = person?.attributes?.user_id || null;
+        users.push({ name: name || slug, slug, drinks, amount_due_entity: entity, user_id });
       }
     }
     return users;
@@ -244,6 +255,18 @@ class DrinkCounterCard extends LitElement {
     if (!state) return 0;
     const val = parseFloat(state.state);
     return isNaN(val) ? 0 : val;
+  }
+
+  _currentPersonSlugs() {
+    const userId = this.hass.user?.id;
+    if (!userId) return [];
+    const slugs = [];
+    for (const [entity, state] of Object.entries(this.hass.states)) {
+      if (entity.startsWith('person.') && state.attributes.user_id === userId) {
+        slugs.push(entity.substring('person.'.length));
+      }
+    }
+    return slugs;
   }
 
   _normalizeWidth(value) {
