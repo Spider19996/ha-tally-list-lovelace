@@ -34,12 +34,12 @@ type: custom:tally-list-card
 ```
 
 The dropdown lists all users detected from the integration and calculates totals using the stored price list. No manual configuration is required. Normal users can only select themselves, while admins may choose any person.
-The selected user's **display name** is sent to the `drink_counter.add_drink` service, so capitalization is preserved.
+The selected user's **display name** is sent to the `tally_list.add_drink` service, so capitalization is preserved.
 
 Pressing **+1** on the Water row triggers a service call like:
 
 ```yaml
-action: drink_counter.add_drink
+action: tally_list.add_drink
 data:
   user: Robin
   drink: Wasser
@@ -49,7 +49,7 @@ The top-right **Getränk entfernen** button opens a menu to subtract a drink. Se
 **Wasser** sends:
 
 ```yaml
-action: drink_counter.remove_drink
+action: tally_list.remove_drink
 data:
   user: Robin
   drink: Wasser

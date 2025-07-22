@@ -154,7 +154,7 @@ class TallyListCard extends LitElement {
       this.requestUpdate();
     }, delay);
     const displayDrink = drink.charAt(0).toUpperCase() + drink.slice(1);
-    this.hass.callService('drink_counter', 'add_drink', {
+    this.hass.callService('tally_list', 'add_drink', {
       user: this.selectedUser,
       drink: displayDrink,
     });
@@ -182,7 +182,7 @@ class TallyListCard extends LitElement {
     }, delay);
 
     const displayDrink = drink.charAt(0).toUpperCase() + drink.slice(1);
-    this.hass.callService('drink_counter', 'remove_drink', {
+    this.hass.callService('tally_list', 'remove_drink', {
       user: this.selectedUser,
       drink: displayDrink,
     });
