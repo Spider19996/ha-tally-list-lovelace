@@ -34,10 +34,7 @@ class TallyListCard extends LitElement {
       this.style.removeProperty('--dcc-max-width');
       this.config.max_width = '';
     }
-    if (config.users && Array.isArray(config.users)) {
-      // Prefer the configured name to preserve capitalization
-      this.selectedUser = config.users[0]?.name || config.users[0]?.slug;
-    }
+    // selectedUser will be determined during render when hass is available
   }
 
 
