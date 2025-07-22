@@ -45,12 +45,15 @@ class DrinkCounterCard extends LitElement {
   render() {
     if (!this.hass || !this.config) return html``;
     const users = this.config.users || this._autoUsers || [];
+    if (users.length === 0) {
+      return html`<ha-card>Drink Counter Integration nicht gefunden. Bitte richte die Integration ein.</ha-card>`;
+    }
     if (!this.selectedUser && users.length > 0) {
       // Default to the display name if available
       this.selectedUser = users[0].name || users[0].slug;
     }
     const user = users.find(u => (u.name || u.slug) === this.selectedUser);
-    if (!user) return html`<ha-card>Unknown user</ha-card>`;
+    if (!user) return html`<ha-card>Unbekannter Benutzer</ha-card>`;
     const prices = this.config.prices || this._autoPrices || {};
     const freeAmount = Number(this.config.free_amount ?? this._freeAmount ?? 0);
     let total = 0;
