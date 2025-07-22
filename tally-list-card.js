@@ -57,11 +57,15 @@ class TallyListCard extends LitElement {
     if (users.length === 0) {
       return html`<ha-card>Kein Zugriff auf Nutzer</ha-card>`;
     }
+    const uid = this.hass.user?.id;
+    const own = users.find(u => u.user_id === uid);
+    users = [...users].sort((a, b) => (a.name || a.slug).localeCompare(b.name || b.slug));
+    if (own) {
+      users = [own, ...users.filter(u => u !== own)];
+    }
     if (!this.selectedUser || !users.some(u => (u.name || u.slug) === this.selectedUser)) {
-      const uid = this.hass.user?.id;
-      const own = users.find(u => u.user_id === uid);
       // Prefer the current user when available, otherwise pick the first entry
-      this.selectedUser = (own?.name || own?.slug) ?? (users[0].name || users[0].slug);
+      this.selectedUser = own ? (own.name || own.slug) : (users[0].name || users[0].slug);
     }
     const user = users.find(u => (u.name || u.slug) === this.selectedUser);
     if (!user) return html`<ha-card>Unbekannter Benutzer</ha-card>`;
