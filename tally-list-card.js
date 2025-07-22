@@ -58,8 +58,17 @@ class TallyListCard extends LitElement {
       const uid = this.hass.user?.id;
       let own = users.find(u => u.user_id === uid);
       if (!own) {
+        const slugs = this._currentPersonSlugs();
+        own = users.find(u => slugs.includes(u.slug));
+      }
+      if (!own) {
         const uname = (this.hass.user?.name || '').toLowerCase();
-        own = users.find(u => (u.name || '').toLowerCase() === uname || u.slug === uname);
+        const unameSlug = uname.replace(/\s+/g, '_');
+        own = users.find(
+          u => (u.name || '').toLowerCase() === uname ||
+               u.slug.toLowerCase() === unameSlug ||
+               u.slug.toLowerCase() === uname
+        );
       }
       // Prefer the current user when available, otherwise pick the first entry
       this.selectedUser = (own?.name || own?.slug) ?? (users[0].name || users[0].slug);
