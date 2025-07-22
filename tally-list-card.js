@@ -1,15 +1,15 @@
-// Drink Counter Card v1.4.0
+// Tally List Card v1.4.0
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
 
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type: 'drink-counter-card',
-  name: 'Drink Counter Card',
+  type: 'tally-list-card',
+  name: 'Tally List Card',
   preview: true,
   description: 'Displays drink counts per user with quick add/remove buttons.',
 });
 
-class DrinkCounterCard extends LitElement {
+class TallyListCard extends LitElement {
   static properties = {
     hass: {},
     config: {},
@@ -46,7 +46,7 @@ class DrinkCounterCard extends LitElement {
     if (!this.hass || !this.config) return html``;
     let users = this.config.users || this._autoUsers || [];
     if (users.length === 0) {
-      return html`<ha-card>Drink Counter Integration nicht gefunden. Bitte richte die Integration ein.</ha-card>`;
+      return html`<ha-card>Strichliste-Integration nicht gefunden. Bitte richte die Integration ein.</ha-card>`;
     }
     const isAdmin = this.hass.user?.is_admin;
     if (!isAdmin) {
@@ -277,7 +277,7 @@ class DrinkCounterCard extends LitElement {
   }
 
   static async getConfigElement() {
-    return document.createElement('drink-counter-card-editor');
+    return document.createElement('tally-list-card-editor');
   }
 
   static getStubConfig() {
@@ -349,9 +349,9 @@ class DrinkCounterCard extends LitElement {
   `;
 }
 
-customElements.define('drink-counter-card', DrinkCounterCard);
+customElements.define('tally-list-card', TallyListCard);
 
-class DrinkCounterCardEditor extends LitElement {
+class TallyListCardEditor extends LitElement {
   static properties = {
     _config: {},
   };
@@ -418,5 +418,5 @@ class DrinkCounterCardEditor extends LitElement {
   `;
 }
 
-customElements.define('drink-counter-card-editor', DrinkCounterCardEditor);
+customElements.define('tally-list-card-editor', TallyListCardEditor);
 

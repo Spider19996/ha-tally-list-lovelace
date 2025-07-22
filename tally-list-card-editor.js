@@ -10,7 +10,7 @@ function fireEvent(node, type, detail = {}, options = {}) {
   );
 }
 
-class DrinkCounterCardEditor extends LitElement {
+class TallyListCardEditor extends LitElement {
   static properties = {
     _config: {},
   };
@@ -65,4 +65,4 @@ class DrinkCounterCardEditor extends LitElement {
   `;
 }
 
-customElements.define('drink-counter-card-editor', DrinkCounterCardEditor);
+customElements.define('tally-list-card-editor', TallyListCardEditor);
