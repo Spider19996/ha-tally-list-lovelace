@@ -480,6 +480,27 @@ class TallyDueRankingCard extends LitElement {
     _sortBy: { state: true },
   };
 
+  static styles = [
+    TallyListCard.styles,
+    css`
+      .controls {
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+        flex-wrap: wrap;
+      }
+      .controls select {
+        padding: 4px 8px;
+        min-width: 160px;
+        font-size: 1rem;
+        height: 32px;
+        box-sizing: border-box;
+      }
+    `,
+  ];
+
   setConfig(config) {
     this.config = { max_width: '', sort_by: 'due_desc', sort_menu: false, ...config };
     this._sortBy = this.config.sort_by;
