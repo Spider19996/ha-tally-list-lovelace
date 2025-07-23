@@ -1,6 +1,6 @@
-// Tally List Card v1.4.0
+// Tally List Card v1.6.0
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
-const CARD_VERSION = '1.4.0';
+const CARD_VERSION = '1.6.0';
 
 window.customCards = window.customCards || [];
 window.customCards.push({
@@ -476,10 +476,12 @@ class TallyDueRankingCard extends LitElement {
     _autoUsers: { state: true },
     _autoPrices: { state: true },
     _freeAmount: { state: true },
+    _sortBy: { state: true },
   };
 
   setConfig(config) {
-    this.config = { max_width: '', ...config };
+    this.config = { max_width: '', sort_by: 'due_desc', sort_menu: false, ...config };
+    this._sortBy = this.config.sort_by;
     const width = this._normalizeWidth(this.config.max_width);
     if (width) {
       this.style.setProperty('--dcc-max-width', width);
@@ -524,12 +526,34 @@ class TallyDueRankingCard extends LitElement {
       }
       return { name: u.name || u.slug, due };
     });
-    ranking.sort((a, b) => b.due - a.due);
+    const sortBy = this._sortBy || this.config.sort_by || 'due_desc';
+    ranking.sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'due_asc':
+          return a.due - b.due;
+        case 'due_desc':
+        default:
+          return b.due - a.due;
+      }
+    });
     const rows = ranking.map((r, i) => html`<tr><td>${i + 1}</td><td>${r.name}</td><td>${r.due.toFixed(2)} €</td></tr>`);
     const width = this._normalizeWidth(this.config.max_width);
     const cardStyle = width ? `max-width:${width};margin:0 auto;` : '';
+    const sortMenu = this.config.sort_menu
+      ? html`<div class="controls">
+          <label>Sortierung:</label>
+          <select @change=${this._sortMenuChanged}>
+            <option value="due_desc" ?selected=${sortBy === 'due_desc'}>Nach offenem Betrag</option>
+            <option value="due_asc" ?selected=${sortBy === 'due_asc'}>Nach offenem Betrag (aufsteigend)</option>
+            <option value="name" ?selected=${sortBy === 'name'}>Alphabetisch</option>
+          </select>
+        </div>`
+      : '';
     return html`
       <ha-card style="${cardStyle}">
+        ${sortMenu}
         <table>
           <thead><tr><th>#</th><th>Name</th><th>Zu zahlen</th></tr></thead>
           <tbody>${rows}</tbody>
@@ -557,7 +581,7 @@ class TallyDueRankingCard extends LitElement {
   }
 
   static getStubConfig() {
-    return { max_width: '' };
+    return { max_width: '', sort_by: 'due_desc', sort_menu: false };
   }
   _gatherUsers() {
     const users = [];
@@ -648,6 +672,10 @@ class TallyDueRankingCard extends LitElement {
     if (str === '') return '';
     return /^\d+$/.test(str) ? `${str}px` : str;
   }
+
+  _sortMenuChanged(ev) {
+    this._sortBy = ev.target.value;
+  }
 }
 
 customElements.define('tally-due-ranking-card', TallyDueRankingCard);
@@ -658,7 +686,7 @@ class TallyDueRankingCardEditor extends LitElement {
   };
 
   setConfig(config) {
-    this._config = { max_width: '', ...config };
+    this._config = { max_width: '', sort_by: 'due_desc', sort_menu: false, ...config };
   }
 
   render() {
@@ -672,6 +700,26 @@ class TallyDueRankingCardEditor extends LitElement {
           @input=${this._widthChanged}
         />
       </div>
+      <div class="form">
+        <label>Sortierung</label>
+        <select @change=${this._sortChanged}>
+          <option value="due_desc" ?selected=${this._config.sort_by === 'due_desc'}>
+            Nach offenem Betrag
+          </option>
+          <option value="due_asc" ?selected=${this._config.sort_by === 'due_asc'}>
+            Nach offenem Betrag (aufsteigend)
+          </option>
+          <option value="name" ?selected=${this._config.sort_by === 'name'}>
+            Alphabetisch
+          </option>
+        </select>
+      </div>
+      <div class="form">
+        <label>
+          <input type="checkbox" .checked=${this._config.sort_menu} @change=${this._menuChanged} />
+          Sortiermenü anzeigen
+        </label>
+      </div>
       <div class="version">Version: ${CARD_VERSION}</div>
     `;
   }
@@ -680,6 +728,29 @@ class TallyDueRankingCardEditor extends LitElement {
     const raw = ev.target.value.trim();
     const width = raw ? `${raw}px` : '';
     this._config = { ...this._config, max_width: width };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  _sortChanged(ev) {
+    const val = ev.target.value;
+    this._config = { ...this._config, sort_by: val };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  _menuChanged(ev) {
+    this._config = { ...this._config, sort_menu: ev.target.checked };
     this.dispatchEvent(
       new CustomEvent('config-changed', {
         detail: { config: this._config },
