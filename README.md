@@ -6,8 +6,7 @@ A simple Lovelace card for showing and updating tally counts per user. Select a 
 
 ### Via HACS
 
-1. Add this repository as a **Custom Repository** in HACS using the
-   **Lovelace** category.
+1. Add this repository as a **Custom Repository** in HACS using the **Lovelace** category.
 2. Install the **Tally List Card** from the HACS store.
 3. HACS will keep the card up to date.
 
@@ -18,12 +17,11 @@ A simple Lovelace card for showing and updating tally counts per user. Select a 
    ```yaml
   - url: /local/tally-list-card.js
     type: module
+   ```
 
 ### Add to Lovelace
 
-After the resource is available, open the Lovelace dashboard, click **Add Card**
-and select **Tally List Card** from the list. The built-in editor lets you
-adjust the lock time without writing YAML.
+After the resource is available, open the Lovelace dashboard, click **Add Card** and select **Tally List Card** from the list. The built-in editor lets you adjust the lock time without writing YAML.
 
 ## Example
 
@@ -35,8 +33,7 @@ type: custom:tally-list-card
 
 The dropdown lists all users detected from the integration and calculates totals using the stored price list. No manual configuration is required. Normal users can only select themselves, while admins may choose any person.
 
-When a `person.<slug>` entity exists, its friendly name is used in the dropdown; otherwise the name comes from the tally sensors. Users are sorted alphabetically and the currently logged in user always appears first. The selected user's **display name** is sent to the `tally_list.add_drink` service, so capitalization is preserved.
-The card also matches the sensor slug against the person's friendly name, so mismatched slugs still detect the current user.
+When a `person.<slug>` entity exists, its friendly name is used in the dropdown; otherwise the name comes from the tally sensors. Users are sorted alphabetically and the currently logged in user always appears first. The selected user's **display name** is sent to the `tally_list.add_drink` service, so capitalization is preserved. The card also matches the sensor slug against the person's friendly name, so mismatched slugs still detect the current user.
 
 Pressing **+1** on the Water row triggers a service call like:
 
@@ -47,8 +44,7 @@ data:
   drink: Wasser
 ```
 
-The top-right **Getränk entfernen** button opens a menu to subtract a drink. Selecting
-**Wasser** sends:
+The top-right **Remove drink** button opens a menu to subtract a drink. Selecting **Wasser** sends:
 
 ```yaml
 action: tally_list.remove_drink
@@ -57,32 +53,35 @@ data:
   drink: Wasser
 ```
 
-If `sensor.preisliste_free_amount` exists, its value is deducted from every user's total. The table displays this free amount and shows the final **Zu zahlen** sum.
-When sensors named `sensor.<name>_amount_due` are present, their values are used directly for the **Zu zahlen** row instead of calculating it from the drink counts.
+If `sensor.preisliste_free_amount` exists, its value is deducted from every user's total. The table displays this free amount and shows the final **Amount due** sum. When sensors named `sensor.<name>_amount_due` are present, their values are used directly for the **Amount due** row instead of calculating it from the drink counts.
 
-If the free amount equals **0 €**, the card hides the **Freibetrag** and **Zu zahlen** rows and only shows the **Gesamt** line.
+If the free amount equals **0 €**, the card hides the **Allowance** and **Amount due** rows and only shows the **Total** line.
 
 ## UI configuration
 
 The card can now be configured directly in the Lovelace UI. It offers the following options:
 
-* **Sperrzeit (ms)** – How long the buttons stay disabled after pressing **+1** or **-1**. The default is `1000` milliseconds.
-* **Maximale Breite (px)** – Optional width limit for the card in pixels. Enter a number and the `px` unit is added automatically. Useful when using panel views to prevent the layout from stretching too wide.
+* **Lock time (ms)** – How long the buttons stay disabled after pressing **+1** or **-1**. The default is `1000` milliseconds.
+* **Maximum width (px)** – Optional width limit for the card in pixels. Enter a number and the `px` unit is added automatically. Useful when using panel views to prevent the layout from stretching too wide.
 * **Version** – Displays the installed card version.
 
-## Zu zahlen Rangliste
+## Amount Due Ranking
 
-Zusätzlich zur eigentlichen Karte steht eine zweite Lovelace-Karte zur Verfügung, die alle Nutzer nach dem offenen Betrag sortiert anzeigt.
+In addition to the main card there is a second Lovelace card that displays all users sorted by the outstanding amount.
 
 ```yaml
 type: custom:tally-due-ranking-card
 ```
 
-Im Editor lässt sich ebenfalls eine maximale Breite in Pixel festlegen. Über die Option `sort_by` kann die Reihenfolge wahlweise alphabetisch oder aufsteigend nach dem offenen Betrag erfolgen. Mit `sort_menu: true` erscheint ein Dropdown, über das die Sortierung direkt gewechselt werden kann.
+The editor also allows defining a maximum width in pixels. The `sort_by` option lets you sort either alphabetically or by outstanding amount. With `sort_menu: true` a dropdown appears that allows changing the sort order directly.
 
 ```yaml
 type: custom:tally-due-ranking-card
-sort_by: name  # oder due_desc (Standard) oder due_asc
+sort_by: name  # or due_desc (default) or due_asc
 sort_menu: true
 ```
+
+## Acknowledgements
+
+This entire script was generated with the help of ChatGPT / Codex.
 
