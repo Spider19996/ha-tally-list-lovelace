@@ -498,6 +498,13 @@ class TallyDueRankingCard extends LitElement {
         height: 32px;
         box-sizing: border-box;
       }
+      .reset-container {
+        text-align: right;
+        margin-bottom: 8px;
+      }
+      .reset-container button {
+        padding: 4px 8px;
+      }
     `,
   ];
 
@@ -573,9 +580,15 @@ class TallyDueRankingCard extends LitElement {
           </select>
         </div>`
       : '';
+    const resetButton = isAdmin
+      ? html`<div class="reset-container">
+          <button @click=${this._resetAllTallies}>Alle Striche zurücksetzen</button>
+        </div>`
+      : '';
     return html`
       <ha-card style="${cardStyle}">
         ${sortMenu}
+        ${resetButton}
         <table>
           <thead><tr><th>#</th><th>Name</th><th>Zu zahlen</th></tr></thead>
           <tbody>${rows}</tbody>
@@ -697,6 +710,24 @@ class TallyDueRankingCard extends LitElement {
 
   _sortMenuChanged(ev) {
     this._sortBy = ev.target.value;
+  }
+
+  _resetAllTallies() {
+    const input = prompt('Zum Zurücksetzen aller Striche "JA RESET" eingeben:');
+    if (input !== 'JA RESET') {
+      return;
+    }
+    const users = this.config.users || this._autoUsers || [];
+    for (const u of users) {
+      const buttonId = `button.${u.slug}_reset_tally`;
+      this.hass.callService('button', 'press', { entity_id: buttonId });
+      for (const entity of Object.values(u.drinks || {})) {
+        this.hass.callService('homeassistant', 'update_entity', { entity_id: entity });
+      }
+      if (u.amount_due_entity) {
+        this.hass.callService('homeassistant', 'update_entity', { entity_id: u.amount_due_entity });
+      }
+    }
   }
 }
 
