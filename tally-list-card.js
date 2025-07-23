@@ -588,11 +588,14 @@ class TallyDueRankingCard extends LitElement {
           </select>
         </div>`
       : '';
-    const resetButton = isAdmin && this.config.show_reset !== false
-      ? html`<div class="reset-container">
-          <button @click=${this._resetAllTallies}>Alle Striche zurücksetzen</button>
-        </div>`
-      : '';
+    const resetButton =
+      isAdmin && this.config.show_reset !== false
+        ? html`<div class="reset-container">
+            <button @click=${this._resetAllTallies}>
+              Alle Striche zurücksetzen
+            </button>
+          </div>`
+        : '';
     return html`
       <ha-card style="${cardStyle}">
         ${sortMenu}
@@ -625,7 +628,7 @@ class TallyDueRankingCard extends LitElement {
   }
 
   static getStubConfig() {
-    return { max_width: '', sort_by: 'due_desc', sort_menu: false };
+    return { max_width: '', sort_by: 'due_desc', sort_menu: false, show_reset: true };
   }
   _gatherUsers() {
     const users = [];
