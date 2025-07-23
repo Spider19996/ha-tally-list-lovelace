@@ -588,11 +588,12 @@ class TallyDueRankingCard extends LitElement {
           </select>
         </div>`
       : '';
-    const resetButton = isAdmin && this.config.show_reset !== false
-      ? html`<div class="reset-container">
-          <button @click=${this._resetAllTallies}>Alle Striche zurücksetzen</button>
-        </div>`
-      : '';
+    let resetButton = '';
+    if (isAdmin && this.config.show_reset !== false) {
+      resetButton = html`<div class="reset-container">
+        <button @click=${this._resetAllTallies}>Alle Striche zurücksetzen</button>
+      </div>`;
+    }
     return html`
       <ha-card style="${cardStyle}">
         ${sortMenu}
