@@ -455,7 +455,8 @@ class TallyListCardEditor extends LitElement {
     .form {
       padding: 16px;
     }
-    input {
+    input[type='number'],
+    input[type='text'] {
       width: 100%;
       box-sizing: border-box;
     }
