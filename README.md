@@ -75,10 +75,13 @@ type: custom:tally-due-ranking-card
 
 The editor also allows defining a maximum width in pixels. The `sort_by` option lets you sort either alphabetically or by outstanding amount. With `sort_menu: true` a dropdown appears that allows changing the sort order directly.
 
+Administrators see a reset button that clears every user's tally. Set `show_reset: false` to hide this button even for admins.
+
 ```yaml
 type: custom:tally-due-ranking-card
 sort_by: name  # or due_desc (default) or due_asc
 sort_menu: true
+show_reset: false  # hide the admin reset button
 ```
 
 ## Acknowledgements

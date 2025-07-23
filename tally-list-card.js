@@ -1,6 +1,6 @@
 // Tally List Card
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
-const CARD_VERSION = '1.6.0';
+const CARD_VERSION = '1.7.0';
 
 window.customCards = window.customCards || [];
 window.customCards.push({
@@ -509,7 +509,13 @@ class TallyDueRankingCard extends LitElement {
   ];
 
   setConfig(config) {
-    this.config = { max_width: '', sort_by: 'due_desc', sort_menu: false, ...config };
+    this.config = {
+      max_width: '',
+      sort_by: 'due_desc',
+      sort_menu: false,
+      show_reset: true,
+      ...config,
+    };
     this._sortBy = this.config.sort_by;
     const width = this._normalizeWidth(this.config.max_width);
     if (width) {
@@ -580,7 +586,7 @@ class TallyDueRankingCard extends LitElement {
           </select>
         </div>`
       : '';
-    const resetButton = isAdmin
+    const resetButton = isAdmin && this.config.show_reset !== false
       ? html`<div class="reset-container">
           <button @click=${this._resetAllTallies}>Alle Striche zurücksetzen</button>
         </div>`
@@ -739,7 +745,13 @@ class TallyDueRankingCardEditor extends LitElement {
   };
 
   setConfig(config) {
-    this._config = { max_width: '', sort_by: 'due_desc', sort_menu: false, ...config };
+    this._config = {
+      max_width: '',
+      sort_by: 'due_desc',
+      sort_menu: false,
+      show_reset: true,
+      ...config,
+    };
   }
 
   render() {
@@ -773,6 +785,12 @@ class TallyDueRankingCardEditor extends LitElement {
           Sortiermenü anzeigen
         </label>
       </div>
+      <div class="form">
+        <label>
+          <input type="checkbox" .checked=${this._config.show_reset} @change=${this._resetChanged} />
+          Reset-Button anzeigen (nur Admins)
+        </label>
+      </div>
       <div class="version">Version: ${CARD_VERSION}</div>
     `;
   }
@@ -804,6 +822,17 @@ class TallyDueRankingCardEditor extends LitElement {
 
   _menuChanged(ev) {
     this._config = { ...this._config, sort_menu: ev.target.checked };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  _resetChanged(ev) {
+    this._config = { ...this._config, show_reset: ev.target.checked };
     this.dispatchEvent(
       new CustomEvent('config-changed', {
         detail: { config: this._config },
