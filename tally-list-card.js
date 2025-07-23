@@ -495,7 +495,7 @@ class TallyDueRankingCard extends LitElement {
         padding: 4px 8px;
         min-width: 160px;
         font-size: 1rem;
-        height: 40px;
+        height: 32px;
         box-sizing: border-box;
       }
     `,
