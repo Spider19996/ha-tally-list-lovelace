@@ -500,7 +500,7 @@ class TallyDueRankingCard extends LitElement {
       }
       .reset-container {
         text-align: right;
-        margin-bottom: 8px;
+        margin-top: 8px;
       }
       .reset-container button {
         padding: 4px 8px;
@@ -599,6 +599,7 @@ class TallyDueRankingCard extends LitElement {
           <thead><tr><th>#</th><th>Name</th><th>Zu zahlen</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
+        ${resetButton}
       </ha-card>
     `;
   }
