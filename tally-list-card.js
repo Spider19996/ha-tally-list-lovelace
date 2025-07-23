@@ -596,6 +596,7 @@ class TallyDueRankingCard extends LitElement {
     return html`
       <ha-card style="${cardStyle}">
         ${sortMenu}
+        ${resetButton}
         <table>
           <thead><tr><th>#</th><th>Name</th><th>Zu zahlen</th></tr></thead>
           <tbody>${rows}</tbody>
