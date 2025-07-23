@@ -70,3 +70,13 @@ The card can now be configured directly in the Lovelace UI. It offers the follow
 * **Maximale Breite (px)** – Optional width limit for the card in pixels. Enter a number and the `px` unit is added automatically. Useful when using panel views to prevent the layout from stretching too wide.
 * **Version** – Displays the installed card version.
 
+## Zu zahlen Rangliste
+
+Zusätzlich zur eigentlichen Karte steht eine zweite Lovelace-Karte zur Verfügung, die alle Nutzer nach dem offenen Betrag sortiert anzeigt.
+
+```yaml
+type: custom:tally-due-ranking-card
+```
+
+Im Editor lässt sich ebenfalls eine maximale Breite in Pixel festlegen.
+

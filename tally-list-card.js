@@ -9,6 +9,12 @@ window.customCards.push({
   preview: true,
   description: 'Displays drink counts per user with quick add/remove buttons.',
 });
+window.customCards.push({
+  type: 'tally-due-ranking-card',
+  name: 'Tally Due Ranking Card',
+  preview: true,
+  description: 'Shows a ranking based on the due amount per user.',
+});
 
 class TallyListCard extends LitElement {
   static properties = {
@@ -462,4 +468,140 @@ class TallyListCardEditor extends LitElement {
 }
 
 customElements.define('tally-list-card-editor', TallyListCardEditor);
+
+class TallyDueRankingCard extends LitElement {
+  static properties = {
+    hass: {},
+    config: {},
+    _autoUsers: { state: true },
+    _autoPrices: { state: true },
+    _freeAmount: { state: true },
+  };
+
+  setConfig(config) {
+    this.config = { max_width: '', ...config };
+    const width = this._normalizeWidth(this.config.max_width);
+    if (width) {
+      this.style.setProperty('--dcc-max-width', width);
+      this.config.max_width = width;
+    } else {
+      this.style.removeProperty('--dcc-max-width');
+      this.config.max_width = '';
+    }
+  }
+
+  render() {
+    if (!this.hass || !this.config) return html``;
+    let users = this.config.users || this._autoUsers || [];
+    if (users.length === 0) {
+      return html`<ha-card>Strichliste-Integration nicht gefunden. Bitte richte die Integration ein.</ha-card>`;
+    }
+    const isAdmin = this.hass.user?.is_admin;
+    if (!isAdmin) {
+      const allowed = this._currentPersonSlugs();
+      const uid = this.hass.user?.id;
+      users = users.filter(u => u.user_id === uid || allowed.includes(u.slug));
+    }
+    if (users.length === 0) {
+      return html`<ha-card>Kein Zugriff auf Nutzer</ha-card>`;
+    }
+    const prices = this.config.prices || this._autoPrices || {};
+    const freeAmount = Number(this.config.free_amount ?? this._freeAmount ?? 0);
+    const ranking = users.map(u => {
+      let total = 0;
+      for (const [drink, entity] of Object.entries(u.drinks)) {
+        const count = Number(this.hass.states[entity]?.state || 0);
+        const price = Number(prices[drink] || 0);
+        total += count * price;
+      }
+      let due;
+      if (u.amount_due_entity) {
+        const s = this.hass.states[u.amount_due_entity];
+        const val = parseFloat(s?.state);
+        due = isNaN(val) ? Math.max(total - freeAmount, 0) : val;
+      } else {
+        due = Math.max(total - freeAmount, 0);
+      }
+      return { name: u.name || u.slug, due };
+    });
+    ranking.sort((a, b) => b.due - a.due);
+    const rows = ranking.map((r, i) => html`<tr><td>${i + 1}</td><td>${r.name}</td><td>${r.due.toFixed(2)} €</td></tr>`);
+    const width = this._normalizeWidth(this.config.max_width);
+    const cardStyle = width ? `max-width:${width};margin:0 auto;` : '';
+    return html`
+      <ha-card style="${cardStyle}">
+        <table>
+          <thead><tr><th>#</th><th>Name</th><th>Zu zahlen</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </ha-card>
+    `;
+  }
+
+  updated(changedProps) {
+    if (changedProps.has('hass')) {
+      if (!this.config.users) {
+        this._autoUsers = this._gatherUsers();
+      }
+      if (!this.config.prices) {
+        this._autoPrices = this._gatherPrices();
+      }
+      if (!this.config.free_amount) {
+        this._freeAmount = this._gatherFreeAmount();
+      }
+    }
+  }
+
+  static async getConfigElement() {
+    return document.createElement('tally-due-ranking-card-editor');
+  }
+
+  static getStubConfig() {
+    return { max_width: '' };
+  }
+}
+
+customElements.define('tally-due-ranking-card', TallyDueRankingCard);
+
+class TallyDueRankingCardEditor extends LitElement {
+  static properties = {
+    _config: {},
+  };
+
+  setConfig(config) {
+    this._config = { max_width: '', ...config };
+  }
+
+  render() {
+    if (!this._config) return html``;
+    return html`
+      <div class="form">
+        <label>Maximale Breite (px)</label>
+        <input
+          type="number"
+          .value=${(this._config.max_width ?? '').replace(/px$/, '')}
+          @input=${this._widthChanged}
+        />
+      </div>
+      <div class="version">Version: ${CARD_VERSION}</div>
+    `;
+  }
+
+  _widthChanged(ev) {
+    const raw = ev.target.value.trim();
+    const width = raw ? `${raw}px` : '';
+    this._config = { ...this._config, max_width: width };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  static styles = TallyListCardEditor.styles;
+}
+
+customElements.define('tally-due-ranking-card-editor', TallyDueRankingCardEditor);
 
