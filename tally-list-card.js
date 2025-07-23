@@ -504,6 +504,8 @@ class TallyDueRankingCard extends LitElement {
       }
       .reset-container button {
         padding: 4px 8px;
+        background-color: red;
+        color: #fff;
       }
     `,
   ];
