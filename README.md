@@ -78,10 +78,11 @@ Zusätzlich zur eigentlichen Karte steht eine zweite Lovelace-Karte zur Verfügu
 type: custom:tally-due-ranking-card
 ```
 
-Im Editor lässt sich ebenfalls eine maximale Breite in Pixel festlegen. Über die Option `sort_by` kann die Reihenfolge wahlweise alphabetisch oder aufsteigend nach dem offenen Betrag erfolgen.
+Im Editor lässt sich ebenfalls eine maximale Breite in Pixel festlegen. Über die Option `sort_by` kann die Reihenfolge wahlweise alphabetisch oder aufsteigend nach dem offenen Betrag erfolgen. Mit `sort_menu: true` erscheint ein Dropdown, über das die Sortierung direkt gewechselt werden kann.
 
 ```yaml
 type: custom:tally-due-ranking-card
 sort_by: name  # oder due_desc (Standard) oder due_asc
+sort_menu: true
 ```
 
