@@ -559,6 +559,95 @@ class TallyDueRankingCard extends LitElement {
   static getStubConfig() {
     return { max_width: '' };
   }
+  _gatherUsers() {
+    const users = [];
+    const states = this.hass.states;
+    for (const [entity, state] of Object.entries(states)) {
+      const match = entity.match(/^sensor\.([a-z0-9_]+)_amount_due$/);
+      if (match) {
+        const slug = match[1];
+        const sensorName = (state.attributes.friendly_name || '').replace(' Amount Due', '');
+        const drinks = {};
+        const prefix = `sensor.${slug}_`;
+        for (const [e2] of Object.entries(states)) {
+          const m2 = e2.startsWith(prefix) && e2.endsWith('_count') && e2.match(/^sensor\.[a-z0-9_]+_([^_]+)_count$/);
+          if (m2) {
+            const drink = m2[1];
+            drinks[drink] = e2;
+          }
+        }
+        let person = states[`person.${slug}`];
+        if (!person) {
+          for (const [pEntity, pState] of Object.entries(states)) {
+            if (pEntity.startsWith('person.') && this._slugify(pState.attributes?.friendly_name || '') === slug) {
+              person = pState;
+              break;
+            }
+          }
+        }
+        const user_id = person?.attributes?.user_id || null;
+        const personName = person?.attributes?.friendly_name;
+        const name = personName || sensorName || slug;
+        users.push({ name, slug, drinks, amount_due_entity: entity, user_id });
+      }
+    }
+    return users;
+  }
+
+  _gatherPrices() {
+    const prices = {};
+    const states = this.hass.states;
+    for (const [entity, state] of Object.entries(states)) {
+      const match = entity.match(/^sensor\.preisliste_([^_]+)_price$/);
+      if (match) {
+        const drink = match[1];
+        const price = parseFloat(state.state);
+        prices[drink] = isNaN(price) ? 0 : price;
+      }
+    }
+    return prices;
+  }
+
+  _gatherFreeAmount() {
+    const state = this.hass.states['sensor.preisliste_free_amount'];
+    if (!state) return 0;
+    const val = parseFloat(state.state);
+    return isNaN(val) ? 0 : val;
+  }
+
+  _slugify(str) {
+    if (!str) return '';
+    return str
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+  }
+
+  _currentPersonSlugs() {
+    const userId = this.hass.user?.id;
+    if (!userId) return [];
+    const slugs = [];
+    for (const [entity, state] of Object.entries(this.hass.states)) {
+      if (entity.startsWith('person.') && state.attributes.user_id === userId) {
+        const slug = entity.substring('person.'.length);
+        slugs.push(slug);
+        const alt = this._slugify(state.attributes.friendly_name || '');
+        if (alt && alt !== slug) {
+          slugs.push(alt);
+        }
+      }
+    }
+    return slugs;
+  }
+
+  _normalizeWidth(value) {
+    if (!value && value !== 0) return '';
+    const str = String(value).trim();
+    if (str === '') return '';
+    return /^\d+$/.test(str) ? `${str}px` : str;
+  }
 }
 
 customElements.define('tally-due-ranking-card', TallyDueRankingCard);
