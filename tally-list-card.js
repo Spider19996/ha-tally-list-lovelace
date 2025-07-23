@@ -1,4 +1,4 @@
-// Tally List Card v1.6.0
+// Tally List Card
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
 const CARD_VERSION = '1.6.0';
 
