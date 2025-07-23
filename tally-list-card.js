@@ -559,7 +559,6 @@ class TallyDueRankingCard extends LitElement {
   static getStubConfig() {
     return { max_width: '' };
   }
-
   _gatherUsers() {
     const users = [];
     const states = this.hass.states;
