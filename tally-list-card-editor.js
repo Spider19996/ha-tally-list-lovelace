@@ -1,5 +1,5 @@
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
-const CARD_VERSION = '1.7.0';
+const CARD_VERSION = '1.8.0';
 
 function fireEvent(node, type, detail = {}, options = {}) {
   node.dispatchEvent(
