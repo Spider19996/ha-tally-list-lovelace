@@ -1,6 +1,6 @@
 // Tally List Card
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
-const CARD_VERSION = '1.8.0';
+const CARD_VERSION = '1.9.0';
 
 window.customCards = window.customCards || [];
 window.customCards.push({
@@ -515,6 +515,8 @@ class TallyDueRankingCard extends LitElement {
       sort_menu: false,
       show_reset: true,
       show_total: true,
+      max_entries: 0,
+      hide_free: false,
       ...config,
     };
     this._sortBy = this.config.sort_by;
@@ -545,7 +547,7 @@ class TallyDueRankingCard extends LitElement {
     }
     const prices = this.config.prices || this._autoPrices || {};
     const freeAmount = Number(this.config.free_amount ?? this._freeAmount ?? 0);
-    const ranking = users.map(u => {
+    let ranking = users.map(u => {
       let total = 0;
       for (const [drink, entity] of Object.entries(u.drinks)) {
         const count = Number(this.hass.states[entity]?.state || 0);
@@ -562,6 +564,9 @@ class TallyDueRankingCard extends LitElement {
       }
       return { name: u.name || u.slug, due };
     });
+    if (this.config.hide_free) {
+      ranking = ranking.filter(r => r.due > 0);
+    }
     const sortBy = this._sortBy || this.config.sort_by || 'due_desc';
     ranking.sort((a, b) => {
       switch (sortBy) {
@@ -574,6 +579,9 @@ class TallyDueRankingCard extends LitElement {
           return b.due - a.due;
       }
     });
+    if (this.config.max_entries > 0) {
+      ranking = ranking.slice(0, this.config.max_entries);
+    }
     const rows = ranking.map((r, i) => html`<tr><td>${i + 1}</td><td>${r.name}</td><td>${r.due.toFixed(2)} €</td></tr>`);
     const totalDue = ranking.reduce((sum, r) => sum + r.due, 0);
     const totalRow = this.config.show_total !== false
@@ -628,7 +636,7 @@ class TallyDueRankingCard extends LitElement {
   }
 
   static getStubConfig() {
-    return { max_width: '', sort_by: 'due_desc', sort_menu: false, show_total: true };
+    return { max_width: '', sort_by: 'due_desc', sort_menu: false, show_total: true, max_entries: 0, hide_free: false };
   }
   _gatherUsers() {
     const users = [];
@@ -757,6 +765,8 @@ class TallyDueRankingCardEditor extends LitElement {
       sort_menu: false,
       show_reset: true,
       show_total: true,
+      max_entries: 0,
+      hide_free: false,
       ...config,
     };
   }
@@ -770,6 +780,14 @@ class TallyDueRankingCardEditor extends LitElement {
           type="number"
           .value=${(this._config.max_width ?? '').replace(/px$/, '')}
           @input=${this._widthChanged}
+        />
+      </div>
+      <div class="form">
+        <label>Maximale Einträge (0 = alle)</label>
+        <input
+          type="number"
+          .value=${this._config.max_entries ?? 0}
+          @input=${this._maxChanged}
         />
       </div>
       <div class="form">
@@ -802,6 +820,12 @@ class TallyDueRankingCardEditor extends LitElement {
         <label>
           <input type="checkbox" .checked=${this._config.show_total} @change=${this._totalChanged} />
           Gesamtsumme anzeigen
+        </label>
+      </div>
+      <div class="form">
+        <label>
+          <input type="checkbox" .checked=${this._config.hide_free} @change=${this._hideChanged} />
+          Personen ohne Betrag ausblenden
         </label>
       </div>
       <div class="version">Version: ${CARD_VERSION}</div>
@@ -857,6 +881,29 @@ class TallyDueRankingCardEditor extends LitElement {
 
   _totalChanged(ev) {
     this._config = { ...this._config, show_total: ev.target.checked };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  _maxChanged(ev) {
+    const val = parseInt(ev.target.value, 10);
+    this._config = { ...this._config, max_entries: isNaN(val) ? 0 : val };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  _hideChanged(ev) {
+    this._config = { ...this._config, hide_free: ev.target.checked };
     this.dispatchEvent(
       new CustomEvent('config-changed', {
         detail: { config: this._config },

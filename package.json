@@ -1,6 +1,6 @@
 {
   "name": "ha-tally-list-lovelace",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "A simple Lovelace card for showing and updating tally counts per user",
   "main": "tally-list-card.js",
   "type": "module",
