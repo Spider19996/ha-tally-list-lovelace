@@ -1,6 +1,6 @@
 // Tally List Card
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
-const CARD_VERSION = '1.7.0';
+const CARD_VERSION = '1.8.0';
 
 window.customCards = window.customCards || [];
 window.customCards.push({
@@ -514,6 +514,7 @@ class TallyDueRankingCard extends LitElement {
       sort_by: 'due_desc',
       sort_menu: false,
       show_reset: true,
+      show_total: true,
       ...config,
     };
     this._sortBy = this.config.sort_by;
@@ -574,6 +575,10 @@ class TallyDueRankingCard extends LitElement {
       }
     });
     const rows = ranking.map((r, i) => html`<tr><td>${i + 1}</td><td>${r.name}</td><td>${r.due.toFixed(2)} €</td></tr>`);
+    const totalDue = ranking.reduce((sum, r) => sum + r.due, 0);
+    const totalRow = this.config.show_total !== false
+      ? html`<tfoot><tr><td colspan="2"><b>Gesamt</b></td><td>${totalDue.toFixed(2)} €</td></tr></tfoot>`
+      : '';
     const width = this._normalizeWidth(this.config.max_width);
     const cardStyle = width ? `max-width:${width};margin:0 auto;` : '';
     const sortMenu = this.config.sort_menu
@@ -597,6 +602,7 @@ class TallyDueRankingCard extends LitElement {
         <table>
           <thead><tr><th>#</th><th>Name</th><th>Zu zahlen</th></tr></thead>
           <tbody>${rows}</tbody>
+          ${totalRow}
         </table>
         ${resetButton}
       </ha-card>
@@ -622,7 +628,7 @@ class TallyDueRankingCard extends LitElement {
   }
 
   static getStubConfig() {
-    return { max_width: '', sort_by: 'due_desc', sort_menu: false };
+    return { max_width: '', sort_by: 'due_desc', sort_menu: false, show_total: true };
   }
   _gatherUsers() {
     const users = [];
@@ -750,6 +756,7 @@ class TallyDueRankingCardEditor extends LitElement {
       sort_by: 'due_desc',
       sort_menu: false,
       show_reset: true,
+      show_total: true,
       ...config,
     };
   }
@@ -789,6 +796,12 @@ class TallyDueRankingCardEditor extends LitElement {
         <label>
           <input type="checkbox" .checked=${this._config.show_reset} @change=${this._resetChanged} />
           Reset-Button anzeigen (nur Admins)
+        </label>
+      </div>
+      <div class="form">
+        <label>
+          <input type="checkbox" .checked=${this._config.show_total} @change=${this._totalChanged} />
+          Gesamtsumme anzeigen
         </label>
       </div>
       <div class="version">Version: ${CARD_VERSION}</div>
@@ -833,6 +846,17 @@ class TallyDueRankingCardEditor extends LitElement {
 
   _resetChanged(ev) {
     this._config = { ...this._config, show_reset: ev.target.checked };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  _totalChanged(ev) {
+    this._config = { ...this._config, show_total: ev.target.checked };
     this.dispatchEvent(
       new CustomEvent('config-changed', {
         detail: { config: this._config },
