@@ -547,6 +547,13 @@ class TallyDueRankingCard extends LitElement {
       .reset-container button {
         padding: 4px 8px;
       }
+      .copy-container {
+        text-align: right;
+        margin-top: 8px;
+      }
+      .copy-container button {
+        padding: 4px 8px;
+      }
     `,
   ];
 
@@ -641,6 +648,7 @@ class TallyDueRankingCard extends LitElement {
           </select>
         </div>`
       : '';
+    const copyButton = html`<div class="copy-container"><button @click=${this._copyRanking}>Tabelle kopieren</button></div>`;
     const resetButton = isAdmin && this.config.show_reset !== false
       ? html`<div class="reset-container">
           <button @click=${this._resetAllTallies}>Alle Striche zurücksetzen</button>
@@ -654,6 +662,7 @@ class TallyDueRankingCard extends LitElement {
           <tbody>${rows}</tbody>
           ${totalRow}
         </table>
+        ${copyButton}
         ${resetButton}
       </ha-card>
     `;
@@ -777,6 +786,60 @@ class TallyDueRankingCard extends LitElement {
 
   _sortMenuChanged(ev) {
     this._sortBy = ev.target.value;
+  }
+
+  _copyRanking() {
+    let users = this.config.users || this._autoUsers || [];
+    const isAdmin = this.hass.user?.is_admin;
+    if (!isAdmin) {
+      const allowed = this._currentPersonSlugs();
+      const uid = this.hass.user?.id;
+      users = users.filter(u => u.user_id === uid || allowed.includes(u.slug));
+    }
+    if (users.length === 0) return;
+    const prices = this.config.prices || this._autoPrices || {};
+    const freeAmount = Number(this.config.free_amount ?? this._freeAmount ?? 0);
+    let ranking = users.map(u => {
+      let total = 0;
+      for (const [drink, entity] of Object.entries(u.drinks)) {
+        const count = this._toNumber(this.hass.states[entity]?.state);
+        const price = this._toNumber(prices[drink]);
+        total += count * price;
+      }
+      let due;
+      if (u.amount_due_entity) {
+        const s = this.hass.states[u.amount_due_entity];
+        const val = parseFloat(s?.state);
+        due = isNaN(val) ? Math.max(total - freeAmount, 0) : val;
+      } else {
+        due = Math.max(total - freeAmount, 0);
+      }
+      return { name: u.name || u.slug, due };
+    });
+    if (this.config.hide_free) {
+      ranking = ranking.filter(r => r.due > 0);
+    }
+    const sortBy = this._sortBy || this.config.sort_by || 'due_desc';
+    ranking.sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'due_asc':
+          return a.due - b.due;
+        case 'due_desc':
+        default:
+          return b.due - a.due;
+      }
+    });
+    if (this.config.max_entries > 0) {
+      ranking = ranking.slice(0, this.config.max_entries);
+    }
+    const lines = ranking.map((r, i) => `${i + 1}. ${r.name}: ${r.due.toFixed(2)} €`);
+    if (this.config.show_total !== false) {
+      const total = ranking.reduce((sum, r) => sum + r.due, 0);
+      lines.push(`Gesamt: ${total.toFixed(2)} €`);
+    }
+    navigator.clipboard.writeText(lines.join('\n'));
   }
 
   _resetAllTallies() {
