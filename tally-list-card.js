@@ -843,8 +843,8 @@ class TallyDueRankingCard extends LitElement {
   }
 
   _resetAllTallies() {
-    const input = prompt('Zum Zurücksetzen aller Striche "JA RESET" eingeben:');
-    if (input !== 'JA RESET') {
+    const input = prompt('Zum Zurücksetzen aller Striche "JA ICH WILL" eingeben:');
+    if (input !== 'JA ICH WILL') {
       return;
     }
     const users = this.config.users || this._autoUsers || [];
