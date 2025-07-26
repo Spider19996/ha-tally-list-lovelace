@@ -31,7 +31,7 @@ class TallyListCard extends LitElement {
   selectedRemoveDrink = '';
 
   setConfig(config) {
-    this.config = { lock_ms: 1000, max_width: '', ...config };
+    this.config = { lock_ms: 400, max_width: '500px', ...config };
     this._disabled = false;
     const width = this._normalizeWidth(this.config.max_width);
     if (width) {
@@ -168,7 +168,7 @@ class TallyListCard extends LitElement {
     }
     this._disabled = true;
     this.requestUpdate();
-    const delay = Number(this.config.lock_ms ?? 1000);
+    const delay = Number(this.config.lock_ms ?? 400);
     setTimeout(() => {
       this._disabled = false;
       this.requestUpdate();
@@ -195,7 +195,7 @@ class TallyListCard extends LitElement {
     }
     this._disabled = true;
     this.requestUpdate();
-    const delay = Number(this.config.lock_ms ?? 1000);
+    const delay = Number(this.config.lock_ms ?? 400);
     setTimeout(() => {
       this._disabled = false;
       this.requestUpdate();
@@ -326,7 +326,7 @@ class TallyListCard extends LitElement {
   }
 
   static getStubConfig() {
-    return { lock_ms: 1000, max_width: '' };
+    return { lock_ms: 400, max_width: '500px' };
   }
 
   static styles = css`
@@ -406,7 +406,7 @@ class TallyListCardEditor extends LitElement {
   };
 
   setConfig(config) {
-    this._config = { lock_ms: 1000, max_width: '', ...config };
+    this._config = { lock_ms: 400, max_width: '500px', ...config };
   }
 
   render() {
@@ -434,7 +434,7 @@ class TallyListCardEditor extends LitElement {
 
   _lockChanged(ev) {
     const value = Number(ev.target.value);
-    this._config = { ...this._config, lock_ms: isNaN(value) ? 1000 : value };
+    this._config = { ...this._config, lock_ms: isNaN(value) ? 400 : value };
     this.dispatchEvent(
       new CustomEvent('config-changed', {
         detail: { config: this._config },
@@ -516,7 +516,7 @@ class TallyDueRankingCard extends LitElement {
 
   setConfig(config) {
     this.config = {
-      max_width: '',
+      max_width: '500px',
       sort_by: 'due_desc',
       sort_menu: false,
       show_reset: true,
@@ -642,7 +642,7 @@ class TallyDueRankingCard extends LitElement {
   }
 
   static getStubConfig() {
-    return { max_width: '', sort_by: 'due_desc', sort_menu: false, show_total: true, max_entries: 0, hide_free: false };
+    return { max_width: '500px', sort_by: 'due_desc', sort_menu: false, show_total: true, max_entries: 0, hide_free: false };
   }
   _gatherUsers() {
     const users = [];
@@ -766,7 +766,7 @@ class TallyDueRankingCardEditor extends LitElement {
 
   setConfig(config) {
     this._config = {
-      max_width: '',
+      max_width: '500px',
       sort_by: 'due_desc',
       sort_menu: false,
       show_reset: true,
