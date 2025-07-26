@@ -79,6 +79,7 @@ The editor also allows defining a maximum width in pixels. The `sort_by` option 
 Administrators see a reset button in the bottom right that clears every user's tally. Set `show_reset: false` to hide this button even for admins.
 The card also displays the combined outstanding amount for all users at the bottom. Use `show_total: false` to hide this summary.
 With `max_entries` you can limit how many users are shown (0 means no limit). Enable `hide_free` to hide all users who do not owe anything.
+The list can be copied to the clipboard with a **Tabelle kopieren** button. Set `show_copy: false` to hide this button.
 
 ```yaml
 type: custom:tally-due-ranking-card
@@ -88,6 +89,7 @@ show_reset: false  # hide the admin reset button
 show_total: false  # hide the total amount row
 max_entries: 5     # show only the top five users
 hide_free: true    # hide users with no outstanding amount
+show_copy: false   # hide the copy button
 ```
 
 ## Acknowledgements
