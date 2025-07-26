@@ -87,8 +87,8 @@ class TallyListCard extends LitElement {
     const rows = Object.entries(user.drinks)
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([drink, entity]) => {
-        const count = Number(this.hass.states[entity]?.state || 0);
-        const price = Number(prices[drink] || 0);
+        const count = this._toNumber(this.hass.states[entity]?.state);
+        const price = this._toNumber(prices[drink]);
         const priceStr = price.toFixed(2) + ' €';
         const cost = count * price;
         total += cost;
@@ -312,6 +312,11 @@ class TallyListCard extends LitElement {
       }
     }
     return slugs;
+  }
+
+  _toNumber(value) {
+    const num = Number(value);
+    return isNaN(num) ? 0 : num;
   }
 
   _normalizeWidth(value) {
@@ -557,8 +562,8 @@ class TallyDueRankingCard extends LitElement {
     let ranking = users.map(u => {
       let total = 0;
       for (const [drink, entity] of Object.entries(u.drinks)) {
-        const count = Number(this.hass.states[entity]?.state || 0);
-        const price = Number(prices[drink] || 0);
+        const count = this._toNumber(this.hass.states[entity]?.state);
+        const price = this._toNumber(prices[drink]);
         total += count * price;
       }
       let due;
@@ -726,6 +731,11 @@ class TallyDueRankingCard extends LitElement {
       }
     }
     return slugs;
+  }
+
+  _toNumber(value) {
+    const num = Number(value);
+    return isNaN(num) ? 0 : num;
   }
 
   _normalizeWidth(value) {
