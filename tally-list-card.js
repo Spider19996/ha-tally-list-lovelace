@@ -130,12 +130,6 @@ class TallyListCard extends LitElement {
               ${users.map(u => html`<option value="${u.name || u.slug}" ?selected=${(u.name || u.slug)===this.selectedUser}>${u.name}</option>`)}
             </select>
           </div>
-          <div class="remove-container">
-            <select @change=${this._selectRemoveDrink.bind(this)}>
-              ${drinks.map(d => html`<option value="${d}" ?selected=${d===this.selectedRemoveDrink}>${d.charAt(0).toUpperCase() + d.slice(1)}</option>`)}
-            </select>
-            <button @click=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${this._disabled}>-1</button>
-          </div>
         </div>
           <table>
           <thead><tr><th></th><th>Getränk</th><th>Anzahl</th><th>Preis</th><th>Summe</th></tr></thead>
@@ -148,6 +142,14 @@ class TallyListCard extends LitElement {
             ` : ''}
           </tfoot>
         </table>
+        <div class="remove-bottom">
+          <div class="remove-container">
+            <button @click=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${this._disabled}>-1</button>
+            <select @change=${this._selectRemoveDrink.bind(this)}>
+              ${drinks.map(d => html`<option value="${d}" ?selected=${d===this.selectedRemoveDrink}>${d.charAt(0).toUpperCase() + d.slice(1)}</option>`)}
+            </select>
+          </div>
+        </div>
       </ha-card>
     `;
   }
@@ -368,6 +370,10 @@ class TallyListCard extends LitElement {
     .remove-container button {
       height: 32px;
       width: 32px;
+    }
+    .remove-bottom {
+      text-align: left;
+      margin-top: 8px;
     }
     .add-button {
       height: 32px;
