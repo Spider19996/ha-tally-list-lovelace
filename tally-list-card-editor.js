@@ -17,7 +17,7 @@ class TallyListCardEditor extends LitElement {
   };
 
   setConfig(config) {
-    this._config = { lock_ms: 1000, max_width: '', ...config };
+    this._config = { lock_ms: 400, max_width: '500px', ...config };
   }
 
   render() {
@@ -45,7 +45,7 @@ class TallyListCardEditor extends LitElement {
 
   _lockChanged(ev) {
     const value = Number(ev.target.value);
-    this._config = { ...this._config, lock_ms: isNaN(value) ? 1000 : value };
+    this._config = { ...this._config, lock_ms: isNaN(value) ? 400 : value };
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
