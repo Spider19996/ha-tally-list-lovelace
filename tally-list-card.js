@@ -374,7 +374,7 @@ class TallyListCard extends LitElement {
     .remove-bottom {
       text-align: left;
       margin-top: 8px;
-      padding-left: 20px;
+      padding-left: 24px;
     }
     .add-button {
       height: 32px;
