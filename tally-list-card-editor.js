@@ -17,7 +17,7 @@ class TallyListCardEditor extends LitElement {
   };
 
   setConfig(config) {
-    this._config = { lock_ms: 400, max_width: '500px', ...config };
+    this._config = { lock_ms: 400, max_width: '500px', show_remove: true, ...config };
   }
 
   render() {
@@ -39,6 +39,12 @@ class TallyListCardEditor extends LitElement {
           @input=${this._widthChanged}
         />
       </div>
+      <div class="form">
+        <label>
+          <input type="checkbox" .checked=${this._config.show_remove} @change=${this._removeChanged} />
+          Entfernen-Menü anzeigen
+        </label>
+      </div>
       <div class="version">Version: ${CARD_VERSION}</div>
     `;
   }
@@ -53,6 +59,11 @@ class TallyListCardEditor extends LitElement {
     const raw = ev.target.value.trim();
     const width = raw ? `${raw}px` : '';
     this._config = { ...this._config, max_width: width };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _removeChanged(ev) {
+    this._config = { ...this._config, show_remove: ev.target.checked };
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
