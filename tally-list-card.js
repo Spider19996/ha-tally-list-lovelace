@@ -87,7 +87,9 @@ class TallyListCard extends LitElement {
     const rows = Object.entries(user.drinks)
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([drink, entity]) => {
-        const count = this._toNumber(this.hass.states[entity]?.state);
+        const stateObj = this.hass.states[entity];
+        const isAvailable = stateObj && stateObj.state !== 'unavailable' && stateObj.state !== 'unknown';
+        const count = this._toNumber(stateObj?.state);
         const price = this._toNumber(prices[drink]);
         const priceStr = price.toFixed(2) + ' €';
         const cost = count * price;
@@ -95,7 +97,7 @@ class TallyListCard extends LitElement {
         const costStr = cost.toFixed(2) + ' €';
         const displayDrink = drink.charAt(0).toUpperCase() + drink.slice(1);
         return html`<tr>
-          <td><button class="add-button" @click=${() => this._addDrink(drink)} ?disabled=${this._disabled}>+1</button></td>
+          <td><button class="add-button" @click=${() => this._addDrink(drink)} ?disabled=${this._disabled || !isAvailable}>+1</button></td>
           <td>${displayDrink}</td>
           <td>${count}</td>
           <td>${priceStr}</td>
@@ -103,9 +105,14 @@ class TallyListCard extends LitElement {
         </tr>`;
       });
 
-    const drinks = Object.keys(user.drinks).sort((a,b) => a.localeCompare(b));
-    if (!this.selectedRemoveDrink && drinks.length > 0) {
-      this.selectedRemoveDrink = drinks[0];
+    const drinks = Object.keys(user.drinks)
+      .filter(d => {
+        const st = this.hass.states[user.drinks[d]]?.state;
+        return st !== 'unavailable' && st !== 'unknown';
+      })
+      .sort((a, b) => a.localeCompare(b));
+    if (!this.selectedRemoveDrink || !drinks.includes(this.selectedRemoveDrink)) {
+      this.selectedRemoveDrink = drinks[0] || '';
     }
 
     const totalStr = total.toFixed(2) + ' €';
@@ -397,6 +404,10 @@ class TallyListCard extends LitElement {
     }
     button {
       padding: 4px;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
     tfoot td {
       font-weight: bold;
