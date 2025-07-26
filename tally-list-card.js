@@ -16,6 +16,15 @@ window.customCards.push({
   description: 'Shows a ranking based on the due amount per user.',
 });
 
+function numericState(hass, id, cache) {
+  const val = parseFloat(hass.states[id]?.state);
+  if (!isNaN(val)) {
+    cache[id] = val;
+    return val;
+  }
+  return cache[id] ?? 0;
+}
+
 class TallyListCard extends LitElement {
   static properties = {
     hass: {},
@@ -29,6 +38,7 @@ class TallyListCard extends LitElement {
   };
 
   selectedRemoveDrink = '';
+  _lastCounts = {};
 
   setConfig(config) {
     this.config = { lock_ms: 400, max_width: '500px', ...config };
@@ -87,7 +97,7 @@ class TallyListCard extends LitElement {
     const rows = Object.entries(user.drinks)
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([drink, entity]) => {
-        const count = Number(this.hass.states[entity]?.state || 0);
+        const count = numericState(this.hass, entity, this._lastCounts);
         const price = Number(prices[drink] || 0);
         const priceStr = price.toFixed(2) + ' €';
         const cost = count * price;
@@ -486,6 +496,7 @@ class TallyDueRankingCard extends LitElement {
     _freeAmount: { state: true },
     _sortBy: { state: true },
   };
+  _lastCounts = {};
 
   static styles = [
     TallyListCard.styles,
@@ -557,7 +568,7 @@ class TallyDueRankingCard extends LitElement {
     let ranking = users.map(u => {
       let total = 0;
       for (const [drink, entity] of Object.entries(u.drinks)) {
-        const count = Number(this.hass.states[entity]?.state || 0);
+        const count = numericState(this.hass, entity, this._lastCounts);
         const price = Number(prices[drink] || 0);
         total += count * price;
       }
