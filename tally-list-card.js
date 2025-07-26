@@ -566,6 +566,7 @@ class TallyDueRankingCard extends LitElement {
       show_total: true,
       max_entries: 0,
       hide_free: false,
+      show_copy: true,
       ...config,
     };
     this._sortBy = this.config.sort_by;
@@ -648,7 +649,9 @@ class TallyDueRankingCard extends LitElement {
           </select>
         </div>`
       : '';
-    const copyButton = html`<div class="copy-container"><button @click=${this._copyRanking}>Tabelle kopieren</button></div>`;
+    const copyButton = this.config.show_copy !== false
+      ? html`<div class="copy-container"><button @click=${this._copyRanking}>Tabelle kopieren</button></div>`
+      : '';
     const resetButton = isAdmin && this.config.show_reset !== false
       ? html`<div class="reset-container">
           <button @click=${this._resetAllTallies}>Alle Striche zurücksetzen</button>
@@ -687,7 +690,15 @@ class TallyDueRankingCard extends LitElement {
   }
 
   static getStubConfig() {
-    return { max_width: '500px', sort_by: 'due_desc', sort_menu: false, show_total: true, max_entries: 0, hide_free: false };
+    return {
+      max_width: '500px',
+      sort_by: 'due_desc',
+      sort_menu: false,
+      show_total: true,
+      max_entries: 0,
+      hide_free: false,
+      show_copy: true,
+    };
   }
   _gatherUsers() {
     const users = [];
@@ -839,7 +850,15 @@ class TallyDueRankingCard extends LitElement {
       const total = ranking.reduce((sum, r) => sum + r.due, 0);
       lines.push(`Gesamt: ${total.toFixed(2)} €`);
     }
-    navigator.clipboard.writeText(lines.join('\n'));
+    navigator.clipboard.writeText(lines.join('\n')).then(() => {
+      this.dispatchEvent(
+        new CustomEvent('hass-notification', {
+          detail: { message: 'Text in die Zwischenablage kopiert!' },
+          bubbles: true,
+          composed: true,
+        })
+      );
+    });
   }
 
   _resetAllTallies() {
@@ -877,6 +896,7 @@ class TallyDueRankingCardEditor extends LitElement {
       show_total: true,
       max_entries: 0,
       hide_free: false,
+      show_copy: true,
       ...config,
     };
   }
@@ -924,6 +944,12 @@ class TallyDueRankingCardEditor extends LitElement {
         <label>
           <input type="checkbox" .checked=${this._config.show_reset} @change=${this._resetChanged} />
           Reset-Button anzeigen (nur Admins)
+        </label>
+      </div>
+      <div class="form">
+        <label>
+          <input type="checkbox" .checked=${this._config.show_copy} @change=${this._copyChanged} />
+          Kopier-Button anzeigen
         </label>
       </div>
       <div class="form">
@@ -980,6 +1006,17 @@ class TallyDueRankingCardEditor extends LitElement {
 
   _resetChanged(ev) {
     this._config = { ...this._config, show_reset: ev.target.checked };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  _copyChanged(ev) {
+    this._config = { ...this._config, show_copy: ev.target.checked };
     this.dispatchEvent(
       new CustomEvent('config-changed', {
         detail: { config: this._config },
