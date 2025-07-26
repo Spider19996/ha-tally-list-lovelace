@@ -862,9 +862,9 @@ class TallyDueRankingCard extends LitElement {
   }
 
   _resetAllTallies() {
-    const input = prompt('Zum Zurücksetzen aller Striche "JA ICH WILL" bzw. "YES I WILL" eingeben:');
+    const input = prompt('Zum Zurücksetzen aller Striche "JA ICH WILL" bzw. "YES I WANT TO" eingeben:');
     const normalized = (input || '').trim().toUpperCase();
-    if (normalized !== 'JA ICH WILL' && normalized !== 'YES I WILL') {
+    if (normalized !== 'JA ICH WILL' && normalized !== 'YES I WANT TO') {
       return;
     }
     const users = this.config.users || this._autoUsers || [];
