@@ -31,7 +31,7 @@ class TallyListCard extends LitElement {
   selectedRemoveDrink = '';
 
   setConfig(config) {
-    this.config = { lock_ms: 400, max_width: '500px', ...config };
+    this.config = { lock_ms: 400, max_width: '500px', show_remove: true, ...config };
     this._disabled = false;
     const width = this._normalizeWidth(this.config.max_width);
     if (width) {
@@ -149,14 +149,16 @@ class TallyListCard extends LitElement {
             ` : ''}
           </tfoot>
         </table>
-        <div class="remove-bottom">
-          <div class="remove-container">
-            <button @click=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${this._disabled}>-1</button>
-            <select @change=${this._selectRemoveDrink.bind(this)}>
-              ${drinks.map(d => html`<option value="${d}" ?selected=${d===this.selectedRemoveDrink}>${d.charAt(0).toUpperCase() + d.slice(1)}</option>`)}
-            </select>
+        ${this.config.show_remove !== false ? html`
+          <div class="remove-bottom">
+            <div class="remove-container">
+              <button @click=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${this._disabled}>-1</button>
+              <select @change=${this._selectRemoveDrink.bind(this)}>
+                ${drinks.map(d => html`<option value="${d}" ?selected=${d===this.selectedRemoveDrink}>${d.charAt(0).toUpperCase() + d.slice(1)}</option>`)}
+              </select>
+            </div>
           </div>
-        </div>
+        ` : ''}
       </ha-card>
     `;
   }
@@ -338,7 +340,7 @@ class TallyListCard extends LitElement {
   }
 
   static getStubConfig() {
-    return { lock_ms: 400, max_width: '500px' };
+    return { lock_ms: 400, max_width: '500px', show_remove: true };
   }
 
   static styles = css`
@@ -423,7 +425,7 @@ class TallyListCardEditor extends LitElement {
   };
 
   setConfig(config) {
-    this._config = { lock_ms: 400, max_width: '500px', ...config };
+    this._config = { lock_ms: 400, max_width: '500px', show_remove: true, ...config };
   }
 
   render() {
@@ -445,6 +447,12 @@ class TallyListCardEditor extends LitElement {
           @input=${this._widthChanged}
         />
       </div>
+      <div class="form">
+        <label>
+          <input type="checkbox" .checked=${this._config.show_remove} @change=${this._removeChanged} />
+          Entfernen-Menü anzeigen
+        </label>
+      </div>
       <div class="version">Version: ${CARD_VERSION}</div>
     `;
   }
@@ -465,6 +473,17 @@ class TallyListCardEditor extends LitElement {
     const raw = ev.target.value.trim();
     const width = raw ? `${raw}px` : '';
     this._config = { ...this._config, max_width: width };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  _removeChanged(ev) {
+    this._config = { ...this._config, show_remove: ev.target.checked };
     this.dispatchEvent(
       new CustomEvent('config-changed', {
         detail: { config: this._config },
