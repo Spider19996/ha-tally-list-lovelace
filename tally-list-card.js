@@ -311,8 +311,9 @@ class TallyListCard extends LitElement {
   }
 
   _currentPersonSlugs() {
-    const userId = this.hass.user?.id;
-    if (!userId) return [];
+    const user = this.hass.user;
+    if (!user) return [];
+    const userId = user.id;
     const slugs = [];
     for (const [entity, state] of Object.entries(this.hass.states)) {
       if (entity.startsWith('person.') && state.attributes.user_id === userId) {
@@ -322,6 +323,12 @@ class TallyListCard extends LitElement {
         if (alt && alt !== slug) {
           slugs.push(alt);
         }
+      }
+    }
+    if (user.name) {
+      const nameSlug = this._slugify(user.name);
+      if (nameSlug && !slugs.includes(nameSlug)) {
+        slugs.push(nameSlug);
       }
     }
     return slugs;
@@ -338,9 +345,20 @@ class TallyListCard extends LitElement {
   }
 
   _isTallyAdmin() {
-    const uid = this.hass.user?.id;
+    const user = this.hass.user;
+    if (!user) return false;
+    const uid = user.id;
     const slugs = this._currentPersonSlugs();
-    return (this._admins || []).some(a => a === uid || slugs.includes(a));
+    const name = user.name || '';
+    const nameSlug = this._slugify(name);
+    const admins = this._admins || [];
+    return admins.some(
+      a =>
+        a === uid ||
+        a === name ||
+        a === nameSlug ||
+        slugs.includes(a)
+    );
   }
 
 
@@ -794,8 +812,9 @@ class TallyDueRankingCard extends LitElement {
   }
 
   _currentPersonSlugs() {
-    const userId = this.hass.user?.id;
-    if (!userId) return [];
+    const user = this.hass.user;
+    if (!user) return [];
+    const userId = user.id;
     const slugs = [];
     for (const [entity, state] of Object.entries(this.hass.states)) {
       if (entity.startsWith('person.') && state.attributes.user_id === userId) {
@@ -805,6 +824,12 @@ class TallyDueRankingCard extends LitElement {
         if (alt && alt !== slug) {
           slugs.push(alt);
         }
+      }
+    }
+    if (user.name) {
+      const nameSlug = this._slugify(user.name);
+      if (nameSlug && !slugs.includes(nameSlug)) {
+        slugs.push(nameSlug);
       }
     }
     return slugs;
@@ -821,9 +846,20 @@ class TallyDueRankingCard extends LitElement {
   }
 
   _isTallyAdmin() {
-    const uid = this.hass.user?.id;
+    const user = this.hass.user;
+    if (!user) return false;
+    const uid = user.id;
     const slugs = this._currentPersonSlugs();
-    return (this._admins || []).some(a => a === uid || slugs.includes(a));
+    const name = user.name || '';
+    const nameSlug = this._slugify(name);
+    const admins = this._admins || [];
+    return admins.some(
+      a =>
+        a === uid ||
+        a === name ||
+        a === nameSlug ||
+        slugs.includes(a)
+    );
   }
 
   _toNumber(value) {
