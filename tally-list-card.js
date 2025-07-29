@@ -25,6 +25,7 @@ class TallyListCard extends LitElement {
     _autoPrices: { state: true },
     _freeAmount: { state: true },
     selectedRemoveDrink: { state: true },
+    _admins: { state: true },
     _disabled: { state: true },
   };
 
@@ -55,7 +56,7 @@ class TallyListCard extends LitElement {
     if (users.length === 0) {
       return html`<ha-card>Strichliste-Integration nicht gefunden. Bitte richte die Integration ein.</ha-card>`;
     }
-    const isAdmin = this.hass.user?.is_admin;
+    const isAdmin = this._isTallyAdmin();
     if (!isAdmin) {
       const allowedSlugs = this._currentPersonSlugs();
       const uid = this.hass.user?.id;
@@ -228,6 +229,9 @@ class TallyListCard extends LitElement {
 
   updated(changedProps) {
     if (changedProps.has('hass')) {
+      if (this._admins === undefined) {
+        this._fetchAdmins();
+      }
       if (!this.config.users) {
         this._autoUsers = this._gatherUsers();
       }
@@ -322,6 +326,25 @@ class TallyListCard extends LitElement {
     }
     return slugs;
   }
+
+  async _fetchAdmins() {
+    try {
+      const result = await this.hass.callWS({ type: 'ha_tally_list/get_admins' });
+      const admins = Array.isArray(result) ? result : result?.admins;
+      this._admins = Array.isArray(admins) ? admins : [];
+    } catch (e) {
+      this._admins = [];
+    }
+  }
+
+  _isTallyAdmin() {
+    const uid = this.hass.user?.id;
+    const slugs = this._currentPersonSlugs();
+    return (this._admins || []).some(a => a === uid || slugs.includes(a));
+  }
+
+
+
 
   _toNumber(value) {
     const num = Number(value);
@@ -520,6 +543,7 @@ class TallyDueRankingCard extends LitElement {
     _autoPrices: { state: true },
     _freeAmount: { state: true },
     _sortBy: { state: true },
+    _admins: { state: true },
   };
 
   static styles = [
@@ -586,7 +610,7 @@ class TallyDueRankingCard extends LitElement {
     if (users.length === 0) {
       return html`<ha-card>Strichliste-Integration nicht gefunden. Bitte richte die Integration ein.</ha-card>`;
     }
-    const isAdmin = this.hass.user?.is_admin;
+    const isAdmin = this._isTallyAdmin();
     if (!isAdmin) {
       const allowed = this._currentPersonSlugs();
       const uid = this.hass.user?.id;
@@ -673,6 +697,9 @@ class TallyDueRankingCard extends LitElement {
 
   updated(changedProps) {
     if (changedProps.has('hass')) {
+      if (this._admins === undefined) {
+        this._fetchAdmins();
+      }
       if (!this.config.users) {
         this._autoUsers = this._gatherUsers();
       }
@@ -783,6 +810,22 @@ class TallyDueRankingCard extends LitElement {
     return slugs;
   }
 
+  async _fetchAdmins() {
+    try {
+      const result = await this.hass.callWS({ type: 'ha_tally_list/get_admins' });
+      const admins = Array.isArray(result) ? result : result?.admins;
+      this._admins = Array.isArray(admins) ? admins : [];
+    } catch (e) {
+      this._admins = [];
+    }
+  }
+
+  _isTallyAdmin() {
+    const uid = this.hass.user?.id;
+    const slugs = this._currentPersonSlugs();
+    return (this._admins || []).some(a => a === uid || slugs.includes(a));
+  }
+
   _toNumber(value) {
     const num = Number(value);
     return isNaN(num) ? 0 : num;
@@ -801,7 +844,7 @@ class TallyDueRankingCard extends LitElement {
 
   _copyRanking() {
     let users = this.config.users || this._autoUsers || [];
-    const isAdmin = this.hass.user?.is_admin;
+    const isAdmin = this._isTallyAdmin();
     if (!isAdmin) {
       const allowed = this._currentPersonSlugs();
       const uid = this.hass.user?.id;
