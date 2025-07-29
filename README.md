@@ -31,7 +31,7 @@ After the resource is available, open the Lovelace dashboard, click **Add Card**
 type: custom:tally-list-card
 ```
 
-The dropdown lists all users detected from the integration and calculates totals using the stored price list. No manual configuration is required. Normal users can only select themselves, while admins registered via `ha_tally_list.get_admins` may choose any person.
+The dropdown lists all users detected from the integration and calculates totals using the stored price list. No manual configuration is required. Normal users can only select themselves, while admins may choose any person.
 
 When a `person.<slug>` entity exists, its friendly name is used in the dropdown; otherwise the name comes from the tally sensors. Users are sorted alphabetically and the currently logged in user always appears first. The selected user's **display name** is sent to the `tally_list.add_drink` service, so capitalization is preserved. The card also matches the sensor slug against the person's friendly name, so mismatched slugs still detect the current user.
 
@@ -76,7 +76,7 @@ type: custom:tally-due-ranking-card
 
 The editor also allows defining a maximum width in pixels. The `sort_by` option lets you sort either alphabetically or by outstanding amount. With `sort_menu: true` a dropdown appears that allows changing the sort order directly.
 
-Administrators from the `ha_tally_list.get_admins` list see a reset button in the bottom right that clears every user's tally. Set `show_reset: false` to hide this button even for these admins.
+Administrators see a reset button in the bottom right that clears every user's tally. Set `show_reset: false` to hide this button even for admins.
 The card also displays the combined outstanding amount for all users at the bottom. Use `show_total: false` to hide this summary.
 With `max_entries` you can limit how many users are shown (0 means no limit). Enable `hide_free` to hide all users who do not owe anything.
 The list can be copied to the clipboard with a **Tabelle kopieren** button. Set `show_copy: false` to hide this button.
@@ -85,7 +85,7 @@ The list can be copied to the clipboard with a **Tabelle kopieren** button. Set 
 type: custom:tally-due-ranking-card
 sort_by: name  # or due_desc (default) or due_asc
 sort_menu: true
-show_reset: false  # hide the reset button even for Tally List admins
+show_reset: false  # hide the admin reset button
 show_total: false  # hide the total amount row
 max_entries: 5     # show only the top five users
 hide_free: true    # hide users with no outstanding amount
