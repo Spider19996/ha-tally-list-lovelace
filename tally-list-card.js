@@ -329,7 +329,7 @@ class TallyListCard extends LitElement {
 
   async _fetchAdmins() {
     try {
-      const result = await this.hass.callWS({ type: 'ha_tally_list/get_admins' });
+      const result = await this.hass.callWS({ type: 'ha_tally_list.get_admins' });
       const admins = Array.isArray(result) ? result : result?.admins;
       this._admins = Array.isArray(admins) ? admins : [];
     } catch (e) {
@@ -812,7 +812,7 @@ class TallyDueRankingCard extends LitElement {
 
   async _fetchAdmins() {
     try {
-      const result = await this.hass.callWS({ type: 'ha_tally_list/get_admins' });
+      const result = await this.hass.callWS({ type: 'ha_tally_list.get_admins' });
       const admins = Array.isArray(result) ? result : result?.admins;
       this._admins = Array.isArray(admins) ? admins : [];
     } catch (e) {
