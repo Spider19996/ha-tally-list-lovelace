@@ -330,9 +330,12 @@ class TallyListCard extends LitElement {
   async _fetchAdmins() {
     try {
       const result = await this.hass.callWS({ type: 'ha_tally_list.get_admins' });
+      console.log('Tally List admins raw result:', result);
       const admins = Array.isArray(result) ? result : result?.admins;
       this._admins = Array.isArray(admins) ? admins : [];
+      console.log('Parsed admin list:', this._admins);
     } catch (e) {
+      console.error('Fetching Tally admins failed:', e);
       this._admins = [];
     }
   }
@@ -356,6 +359,17 @@ class TallyListCard extends LitElement {
     const str = String(value).trim();
     if (str === '') return '';
     return /^\d+$/.test(str) ? `${str}px` : str;
+  }
+
+  debugAdmins() {
+    console.log('Current admin list:', this._admins);
+    return this._admins;
+  }
+
+  async debugFetchAdmins() {
+    await this._fetchAdmins();
+    console.log('Admins after manual fetch:', this._admins);
+    return this._admins;
   }
 
   static async getConfigElement() {
@@ -813,9 +827,12 @@ class TallyDueRankingCard extends LitElement {
   async _fetchAdmins() {
     try {
       const result = await this.hass.callWS({ type: 'ha_tally_list.get_admins' });
+      console.log('Tally List admins raw result:', result);
       const admins = Array.isArray(result) ? result : result?.admins;
       this._admins = Array.isArray(admins) ? admins : [];
+      console.log('Parsed admin list:', this._admins);
     } catch (e) {
+      console.error('Fetching Tally admins failed:', e);
       this._admins = [];
     }
   }
@@ -836,6 +853,17 @@ class TallyDueRankingCard extends LitElement {
     const str = String(value).trim();
     if (str === '') return '';
     return /^\d+$/.test(str) ? `${str}px` : str;
+  }
+
+  debugAdmins() {
+    console.log('Current admin list:', this._admins);
+    return this._admins;
+  }
+
+  async debugFetchAdmins() {
+    await this._fetchAdmins();
+    console.log('Admins after manual fetch:', this._admins);
+    return this._admins;
   }
 
   _sortMenuChanged(ev) {
