@@ -55,7 +55,15 @@ class TallyListCard extends LitElement {
     if (users.length === 0) {
       return html`<ha-card>Strichliste-Integration nicht gefunden. Bitte richte die Integration ein.</ha-card>`;
     }
-    // Allow all users to select any person
+    const isAdmin = this.hass.user?.is_admin;
+    if (!isAdmin) {
+      const allowedSlugs = this._currentPersonSlugs();
+      const uid = this.hass.user?.id;
+      users = users.filter(u => u.user_id === uid || allowedSlugs.includes(u.slug));
+    }
+    if (users.length === 0) {
+      return html`<ha-card>Kein Zugriff auf Nutzer</ha-card>`;
+    }
     const uid = this.hass.user?.id;
     const slugsOfUser = this._currentPersonSlugs();
     const own = users.find(u => u.user_id === uid || slugsOfUser.includes(u.slug));
@@ -579,7 +587,14 @@ class TallyDueRankingCard extends LitElement {
       return html`<ha-card>Strichliste-Integration nicht gefunden. Bitte richte die Integration ein.</ha-card>`;
     }
     const isAdmin = this.hass.user?.is_admin;
-    // All users may see every person
+    if (!isAdmin) {
+      const allowed = this._currentPersonSlugs();
+      const uid = this.hass.user?.id;
+      users = users.filter(u => u.user_id === uid || allowed.includes(u.slug));
+    }
+    if (users.length === 0) {
+      return html`<ha-card>Kein Zugriff auf Nutzer</ha-card>`;
+    }
     const prices = this.config.prices || this._autoPrices || {};
     const freeAmount = Number(this.config.free_amount ?? this._freeAmount ?? 0);
     let ranking = users.map(u => {
@@ -787,7 +802,11 @@ class TallyDueRankingCard extends LitElement {
   _copyRanking() {
     let users = this.config.users || this._autoUsers || [];
     const isAdmin = this.hass.user?.is_admin;
-    // All users may copy the full ranking
+    if (!isAdmin) {
+      const allowed = this._currentPersonSlugs();
+      const uid = this.hass.user?.id;
+      users = users.filter(u => u.user_id === uid || allowed.includes(u.slug));
+    }
     if (users.length === 0) return;
     const prices = this.config.prices || this._autoPrices || {};
     const freeAmount = Number(this.config.free_amount ?? this._freeAmount ?? 0);
