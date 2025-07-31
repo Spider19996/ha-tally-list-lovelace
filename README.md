@@ -64,7 +64,6 @@ The card can now be configured directly in the Lovelace UI. It offers the follow
 * **Lock time (ms)** – How long the buttons stay disabled after pressing **+1** or **-1**. The default is `400` milliseconds.
 * **Maximum width (px)** – Optional width limit for the card in pixels. Enter a number and the `px` unit is added automatically. The default is `500` pixels. Useful when using panel views to prevent the layout from stretching too wide.
 * **Show remove menu** – Toggle the dropdown for subtracting drinks. Enabled by default.
-* **Only show self** – Restrict the dropdown to the logged-in user even for admins.
 * **Version** – Displays the installed card version.
 
 ## Amount Due Ranking
