@@ -490,7 +490,7 @@ class TallyListCardEditor extends LitElement {
       <div class="form">
         <label>
           <input type="checkbox" .checked=${this._config.only_self} @change=${this._selfChanged} />
-          Nur eigenen Nutzer anzeigen (auch für Admins)
+          Für Admins auch nur eigenen Nutzer anzeigen
         </label>
       </div>
       <details class="debug">
