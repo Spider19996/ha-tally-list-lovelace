@@ -24,11 +24,13 @@ class TallyListCard extends LitElement {
     _autoUsers: { state: true },
     _autoPrices: { state: true },
     _freeAmount: { state: true },
+    _tallyAdmins: { state: true },
     selectedRemoveDrink: { state: true },
     _disabled: { state: true },
   };
 
   selectedRemoveDrink = '';
+  _tallyAdmins = [];
 
   setConfig(config) {
     this.config = { lock_ms: 400, max_width: '500px', show_remove: true, ...config };
@@ -55,7 +57,7 @@ class TallyListCard extends LitElement {
     if (users.length === 0) {
       return html`<ha-card>Strichliste-Integration nicht gefunden. Bitte richte die Integration ein.</ha-card>`;
     }
-    const isAdmin = this.hass.user?.is_admin;
+    const isAdmin = (this._tallyAdmins || []).includes(this.hass.user?.name);
     if (!isAdmin) {
       const allowedSlugs = this._currentPersonSlugs();
       const uid = this.hass.user?.id;
@@ -237,6 +239,7 @@ class TallyListCard extends LitElement {
       if (!this.config.free_amount) {
         this._freeAmount = this._gatherFreeAmount();
       }
+      this._fetchTallyAdmins();
     }
   }
 
@@ -294,6 +297,16 @@ class TallyListCard extends LitElement {
     if (!state) return 0;
     const val = parseFloat(state.state);
     return isNaN(val) ? 0 : val;
+  }
+
+  async _fetchTallyAdmins() {
+    if (!this.hass?.connection) return;
+    try {
+      const resp = await this.hass.connection.sendMessagePromise({ type: 'tally_list/get_admins' });
+      this._tallyAdmins = Array.isArray(resp?.admins) ? resp.admins : [];
+    } catch (err) {
+      this._tallyAdmins = [];
+    }
   }
 
   _slugify(str) {
@@ -520,7 +533,10 @@ class TallyDueRankingCard extends LitElement {
     _autoPrices: { state: true },
     _freeAmount: { state: true },
     _sortBy: { state: true },
+    _tallyAdmins: { state: true },
   };
+
+  _tallyAdmins = [];
 
   static styles = [
     TallyListCard.styles,
@@ -586,7 +602,7 @@ class TallyDueRankingCard extends LitElement {
     if (users.length === 0) {
       return html`<ha-card>Strichliste-Integration nicht gefunden. Bitte richte die Integration ein.</ha-card>`;
     }
-    const isAdmin = this.hass.user?.is_admin;
+    const isAdmin = (this._tallyAdmins || []).includes(this.hass.user?.name);
     if (!isAdmin) {
       const allowed = this._currentPersonSlugs();
       const uid = this.hass.user?.id;
@@ -682,6 +698,7 @@ class TallyDueRankingCard extends LitElement {
       if (!this.config.free_amount) {
         this._freeAmount = this._gatherFreeAmount();
       }
+      this._fetchTallyAdmins();
     }
   }
 
@@ -756,6 +773,16 @@ class TallyDueRankingCard extends LitElement {
     return isNaN(val) ? 0 : val;
   }
 
+  async _fetchTallyAdmins() {
+    if (!this.hass?.connection) return;
+    try {
+      const resp = await this.hass.connection.sendMessagePromise({ type: 'tally_list/get_admins' });
+      this._tallyAdmins = Array.isArray(resp?.admins) ? resp.admins : [];
+    } catch (err) {
+      this._tallyAdmins = [];
+    }
+  }
+
   _slugify(str) {
     if (!str) return '';
     return str
@@ -801,7 +828,7 @@ class TallyDueRankingCard extends LitElement {
 
   _copyRanking() {
     let users = this.config.users || this._autoUsers || [];
-    const isAdmin = this.hass.user?.is_admin;
+    const isAdmin = (this._tallyAdmins || []).includes(this.hass.user?.name);
     if (!isAdmin) {
       const allowed = this._currentPersonSlugs();
       const uid = this.hass.user?.id;
