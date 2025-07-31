@@ -1,5 +1,5 @@
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
-const CARD_VERSION = '1.10.0';
+const CARD_VERSION = '1.11.0';
 
 function fireEvent(node, type, detail = {}, options = {}) {
   node.dispatchEvent(
@@ -22,6 +22,7 @@ class TallyListCardEditor extends LitElement {
       max_width: '500px',
       show_remove: true,
       only_self: false,
+      show_all_users: false,
       ...config,
     };
   }
@@ -57,7 +58,16 @@ class TallyListCardEditor extends LitElement {
           Trotz Admin nur eigenen Nutzer anzeigen
         </label>
       </div>
-      <div class="version">Version: ${CARD_VERSION}</div>
+      <details class="debug">
+        <summary>Debug</summary>
+        <div class="form">
+          <label>
+            <input type="checkbox" .checked=${this._config.show_all_users} @change=${this._debugAllChanged} />
+            Alle Nutzer anzeigen
+          </label>
+        </div>
+        <div class="version">Version: ${CARD_VERSION}</div>
+      </details>
     `;
   }
 
@@ -84,6 +94,11 @@ class TallyListCardEditor extends LitElement {
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
+  _debugAllChanged(ev) {
+    this._config = { ...this._config, show_all_users: ev.target.checked };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
   static styles = css`
     .form {
       padding: 16px;
@@ -91,6 +106,14 @@ class TallyListCardEditor extends LitElement {
     input {
       width: 100%;
       box-sizing: border-box;
+    }
+    details.debug {
+      padding: 0 16px 16px;
+    }
+    details.debug summary {
+      cursor: pointer;
+      font-weight: bold;
+      outline: none;
     }
     .version {
       padding: 0 16px 16px;
