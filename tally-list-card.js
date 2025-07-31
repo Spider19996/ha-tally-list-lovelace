@@ -445,7 +445,13 @@ class TallyListCardEditor extends LitElement {
   };
 
   setConfig(config) {
-    this._config = { lock_ms: 400, max_width: '500px', show_remove: true, ...config };
+    this._config = {
+      lock_ms: 400,
+      max_width: '500px',
+      show_remove: true,
+      only_self: false,
+      ...config,
+    };
   }
 
   render() {
@@ -471,6 +477,12 @@ class TallyListCardEditor extends LitElement {
         <label>
           <input type="checkbox" .checked=${this._config.show_remove} @change=${this._removeChanged} />
           Entfernen-Menü anzeigen
+        </label>
+      </div>
+      <div class="form">
+        <label>
+          <input type="checkbox" .checked=${this._config.only_self} @change=${this._selfChanged} />
+          Nur eigenen Nutzer anzeigen (auch für Admins)
         </label>
       </div>
       <div class="version">Version: ${CARD_VERSION}</div>
@@ -504,6 +516,17 @@ class TallyListCardEditor extends LitElement {
 
   _removeChanged(ev) {
     this._config = { ...this._config, show_remove: ev.target.checked };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  _selfChanged(ev) {
+    this._config = { ...this._config, only_self: ev.target.checked };
     this.dispatchEvent(
       new CustomEvent('config-changed', {
         detail: { config: this._config },
