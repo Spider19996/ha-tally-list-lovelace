@@ -1,6 +1,6 @@
 // Tally List Card
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
-const CARD_VERSION = '1.9.0';
+const CARD_VERSION = '1.10.0';
 
 window.customCards = window.customCards || [];
 window.customCards.push({
@@ -33,7 +33,13 @@ class TallyListCard extends LitElement {
   _tallyAdmins = [];
 
   setConfig(config) {
-    this.config = { lock_ms: 400, max_width: '500px', show_remove: true, ...config };
+    this.config = {
+      lock_ms: 400,
+      max_width: '500px',
+      show_remove: true,
+      only_self: false,
+      ...config,
+    };
     this._disabled = false;
     const width = this._normalizeWidth(this.config.max_width);
     if (width) {
@@ -58,7 +64,8 @@ class TallyListCard extends LitElement {
       return html`<ha-card>Strichliste-Integration nicht gefunden. Bitte richte die Integration ein.</ha-card>`;
     }
     const isAdmin = (this._tallyAdmins || []).includes(this.hass.user?.name);
-    if (!isAdmin) {
+    const limitSelf = (!isAdmin) || this.config.only_self;
+    if (limitSelf) {
       const allowedSlugs = this._currentPersonSlugs();
       const uid = this.hass.user?.id;
       users = users.filter(u => u.user_id === uid || allowedSlugs.includes(u.slug));
@@ -353,7 +360,7 @@ class TallyListCard extends LitElement {
   }
 
   static getStubConfig() {
-    return { lock_ms: 400, max_width: '500px', show_remove: true };
+    return { lock_ms: 400, max_width: '500px', show_remove: true, only_self: false };
   }
 
   static styles = css`
