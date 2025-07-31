@@ -64,7 +64,6 @@ The card can now be configured directly in the Lovelace UI. It offers the follow
 * **Lock time (ms)** – How long the buttons stay disabled after pressing **+1** or **-1**. The default is `400` milliseconds.
 * **Maximum width (px)** – Optional width limit for the card in pixels. Enter a number and the `px` unit is added automatically. The default is `500` pixels. Useful when using panel views to prevent the layout from stretching too wide.
 * **Show remove menu** – Toggle the dropdown for subtracting drinks. Enabled by default.
-* **Only show self** – Restrict the dropdown to the logged-in user even for admins.
 * **Version** – Displays the installed card version.
 
 ## Amount Due Ranking
@@ -81,7 +80,6 @@ Administrators from the Tally List integration see a reset button in the bottom 
 The card also displays the combined outstanding amount for all users at the bottom. Use `show_total: false` to hide this summary.
 With `max_entries` you can limit how many users are shown (0 means no limit). Enable `hide_free` to hide all users who do not owe anything.
 The list can be copied to the clipboard with a **Tabelle kopieren** button. Set `show_copy: false` to hide this button.
-Enable `only_self: true` if even admins should only see their own entry.
 
 ```yaml
 type: custom:tally-due-ranking-card
@@ -92,7 +90,6 @@ show_total: false  # hide the total amount row
 max_entries: 5     # show only the top five users
 hide_free: true    # hide users with no outstanding amount
 show_copy: false   # hide the copy button
-only_self: true    # limit admins to their own user
 ```
 
 ## Acknowledgements
