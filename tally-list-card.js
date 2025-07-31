@@ -1,6 +1,6 @@
 // Tally List Card
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
-const CARD_VERSION = '1.11.0';
+const CARD_VERSION = '1.10.0';
 
 window.customCards = window.customCards || [];
 window.customCards.push({
@@ -38,7 +38,6 @@ class TallyListCard extends LitElement {
       max_width: '500px',
       show_remove: true,
       only_self: false,
-      show_all_users: false,
       ...config,
     };
     this._disabled = false;
@@ -65,7 +64,7 @@ class TallyListCard extends LitElement {
       return html`<ha-card>Strichliste-Integration nicht gefunden. Bitte richte die Integration ein.</ha-card>`;
     }
     const isAdmin = (this._tallyAdmins || []).includes(this.hass.user?.name);
-    const limitSelf = (!isAdmin && !this.config.show_all_users) || this.config.only_self;
+    const limitSelf = (!isAdmin) || this.config.only_self;
     if (limitSelf) {
       const allowedSlugs = this._currentPersonSlugs();
       const uid = this.hass.user?.id;
@@ -361,13 +360,7 @@ class TallyListCard extends LitElement {
   }
 
   static getStubConfig() {
-    return {
-      lock_ms: 400,
-      max_width: '500px',
-      show_remove: true,
-      only_self: false,
-      show_all_users: false,
-    };
+    return { lock_ms: 400, max_width: '500px', show_remove: true, only_self: false };
   }
 
   static styles = css`
@@ -492,10 +485,7 @@ class TallyListCardEditor extends LitElement {
           Nur eigenen Nutzer anzeigen (auch für Admins)
         </label>
       </div>
-      <details class="debug">
-        <summary>Debug</summary>
-        <div class="version">Version: ${CARD_VERSION}</div>
-      </details>
+      <div class="version">Version: ${CARD_VERSION}</div>
     `;
   }
 
@@ -1032,10 +1022,7 @@ class TallyDueRankingCardEditor extends LitElement {
           Personen ohne Betrag ausblenden
         </label>
       </div>
-      <details class="debug">
-        <summary>Debug</summary>
-        <div class="version">Version: ${CARD_VERSION}</div>
-      </details>
+      <div class="version">Version: ${CARD_VERSION}</div>
     `;
   }
 
