@@ -645,6 +645,7 @@ class TallyDueRankingCard extends LitElement {
       sort_by: 'due_desc',
       sort_menu: false,
       show_reset: true,
+      show_reset_everyone: false,
       show_total: true,
       max_entries: 0,
       hide_free: false,
@@ -734,7 +735,8 @@ class TallyDueRankingCard extends LitElement {
     const copyButton = this.config.show_copy !== false
       ? html`<div class="copy-container"><button @click=${this._copyRanking}>Tabelle kopieren</button></div>`
       : '';
-    const resetButton = isAdmin && this.config.show_reset !== false
+    const resetButton = (isAdmin || this.config.show_reset_everyone) &&
+      this.config.show_reset !== false
       ? html`<div class="reset-container">
           <button @click=${this._resetAllTallies}>Alle Striche zurücksetzen</button>
         </div>`
@@ -987,6 +989,7 @@ class TallyDueRankingCardEditor extends LitElement {
       sort_by: 'due_desc',
       sort_menu: false,
       show_reset: true,
+      show_reset_everyone: false,
       show_total: true,
       max_entries: 0,
       hide_free: false,
@@ -1060,6 +1063,12 @@ class TallyDueRankingCardEditor extends LitElement {
       </div>
       <details class="debug">
         <summary>Debug</summary>
+        <div class="form">
+          <label>
+            <input type="checkbox" .checked=${this._config.show_reset_everyone} @change=${this._debugResetChanged} />
+            Für jeden Reset-Button anzeigen
+          </label>
+        </div>
         <div class="version">Version: ${CARD_VERSION}</div>
       </details>
     `;
@@ -1148,6 +1157,17 @@ class TallyDueRankingCardEditor extends LitElement {
 
   _hideChanged(ev) {
     this._config = { ...this._config, hide_free: ev.target.checked };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  _debugResetChanged(ev) {
+    this._config = { ...this._config, show_reset_everyone: ev.target.checked };
     this.dispatchEvent(
       new CustomEvent('config-changed', {
         detail: { config: this._config },
