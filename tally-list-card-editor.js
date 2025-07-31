@@ -1,5 +1,5 @@
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
-const CARD_VERSION = '1.9.0';
+const CARD_VERSION = '1.10.0';
 
 function fireEvent(node, type, detail = {}, options = {}) {
   node.dispatchEvent(
@@ -17,7 +17,13 @@ class TallyListCardEditor extends LitElement {
   };
 
   setConfig(config) {
-    this._config = { lock_ms: 400, max_width: '500px', show_remove: true, ...config };
+    this._config = {
+      lock_ms: 400,
+      max_width: '500px',
+      show_remove: true,
+      only_self: false,
+      ...config,
+    };
   }
 
   render() {
@@ -45,6 +51,12 @@ class TallyListCardEditor extends LitElement {
           Entfernen-Menü anzeigen
         </label>
       </div>
+      <div class="form">
+        <label>
+          <input type="checkbox" .checked=${this._config.only_self} @change=${this._selfChanged} />
+          Nur eigenen Nutzer anzeigen (auch für Admins)
+        </label>
+      </div>
       <div class="version">Version: ${CARD_VERSION}</div>
     `;
   }
@@ -64,6 +76,11 @@ class TallyListCardEditor extends LitElement {
 
   _removeChanged(ev) {
     this._config = { ...this._config, show_remove: ev.target.checked };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _selfChanged(ev) {
+    this._config = { ...this._config, only_self: ev.target.checked };
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
