@@ -1,6 +1,6 @@
 // Tally List Card
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
-const CARD_VERSION = '1.10.0';
+const CARD_VERSION = '1.11.0';
 
 window.customCards = window.customCards || [];
 window.customCards.push({
@@ -38,6 +38,7 @@ class TallyListCard extends LitElement {
       max_width: '500px',
       show_remove: true,
       only_self: false,
+      show_all_users: false,
       ...config,
     };
     this._disabled = false;
@@ -64,7 +65,7 @@ class TallyListCard extends LitElement {
       return html`<ha-card>Strichliste-Integration nicht gefunden. Bitte richte die Integration ein.</ha-card>`;
     }
     const isAdmin = (this._tallyAdmins || []).includes(this.hass.user?.name);
-    const limitSelf = (!isAdmin) || this.config.only_self;
+    const limitSelf = (!isAdmin && !this.config.show_all_users) || this.config.only_self;
     if (limitSelf) {
       const allowedSlugs = this._currentPersonSlugs();
       const uid = this.hass.user?.id;
@@ -360,7 +361,13 @@ class TallyListCard extends LitElement {
   }
 
   static getStubConfig() {
-    return { lock_ms: 400, max_width: '500px', show_remove: true, only_self: false };
+    return {
+      lock_ms: 400,
+      max_width: '500px',
+      show_remove: true,
+      only_self: false,
+      show_all_users: false,
+    };
   }
 
   static styles = css`
@@ -450,6 +457,7 @@ class TallyListCardEditor extends LitElement {
       max_width: '500px',
       show_remove: true,
       only_self: false,
+      show_all_users: false,
       ...config,
     };
   }
@@ -485,7 +493,16 @@ class TallyListCardEditor extends LitElement {
           Nur eigenen Nutzer anzeigen (auch für Admins)
         </label>
       </div>
-      <div class="version">Version: ${CARD_VERSION}</div>
+      <details class="debug">
+        <summary>Debug</summary>
+        <div class="form">
+          <label>
+            <input type="checkbox" .checked=${this._config.show_all_users} @change=${this._debugAllChanged} />
+            Alle Nutzer anzeigen
+          </label>
+        </div>
+        <div class="version">Version: ${CARD_VERSION}</div>
+      </details>
     `;
   }
 
@@ -536,6 +553,17 @@ class TallyListCardEditor extends LitElement {
     );
   }
 
+  _debugAllChanged(ev) {
+    this._config = { ...this._config, show_all_users: ev.target.checked };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
   static styles = css`
     .form {
       padding: 16px;
@@ -544,6 +572,14 @@ class TallyListCardEditor extends LitElement {
     input[type='text'] {
       width: 100%;
       box-sizing: border-box;
+    }
+    details.debug {
+      padding: 0 16px 16px;
+    }
+    details.debug summary {
+      cursor: pointer;
+      font-weight: bold;
+      outline: none;
     }
     .version {
       padding: 0 16px 16px;
@@ -1022,7 +1058,10 @@ class TallyDueRankingCardEditor extends LitElement {
           Personen ohne Betrag ausblenden
         </label>
       </div>
-      <div class="version">Version: ${CARD_VERSION}</div>
+      <details class="debug">
+        <summary>Debug</summary>
+        <div class="version">Version: ${CARD_VERSION}</div>
+      </details>
     `;
   }
 
