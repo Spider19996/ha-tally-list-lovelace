@@ -498,7 +498,7 @@ class TallyListCardEditor extends LitElement {
         <div class="form">
           <label>
             <input type="checkbox" .checked=${this._config.show_all_users} @change=${this._debugAllChanged} />
-            Alle Nutzer anzeigen
+            Für jeden alle Nutzer anzeigen
           </label>
         </div>
         <div class="version">Version: ${CARD_VERSION}</div>
