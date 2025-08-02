@@ -411,6 +411,8 @@ class TallyListCard extends LitElement {
     .remove-container button {
       height: 32px;
       width: 32px;
+      border: none;
+      border-radius: 4px;
     }
     .remove-button {
       background-color: var(--error-color, #c62828);
@@ -426,6 +428,8 @@ class TallyListCard extends LitElement {
       width: 32px;
       background-color: var(--success-color, #2e7d32);
       color: white;
+      border: none;
+      border-radius: 4px;
     }
     table {
       width: 100%;
@@ -636,6 +640,8 @@ class TallyDueRankingCard extends LitElement {
         padding: 4px 8px;
         background-color: var(--error-color, #c62828);
         color: white;
+        border: none;
+        border-radius: 4px;
       }
       .copy-container {
         text-align: right;
