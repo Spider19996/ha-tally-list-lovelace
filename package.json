@@ -10,5 +10,8 @@
     "tally list",
     "custom card"
   ],
-  "private": true
+  "private": true,
+  "scripts": {
+    "test": "echo \"No tests required\""
+  }
 }
