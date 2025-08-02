@@ -32,6 +32,16 @@ class TallyListCard extends LitElement {
   selectedRemoveDrink = '';
   _tallyAdmins = [];
 
+  constructor() {
+    super();
+    try {
+      const stored = window.localStorage.getItem('tally-list-admins');
+      this._tallyAdmins = stored ? JSON.parse(stored) : [];
+    } catch (err) {
+      this._tallyAdmins = [];
+    }
+  }
+
   setConfig(config) {
     this.config = {
       lock_ms: 400,
@@ -313,6 +323,7 @@ class TallyListCard extends LitElement {
     try {
       const resp = await this.hass.connection.sendMessagePromise({ type: 'tally_list/get_admins' });
       this._tallyAdmins = Array.isArray(resp?.admins) ? resp.admins : [];
+      window.localStorage.setItem('tally-list-admins', JSON.stringify(this._tallyAdmins));
     } catch (err) {
       this._tallyAdmins = [];
     }
@@ -628,6 +639,16 @@ class TallyDueRankingCard extends LitElement {
 
   _tallyAdmins = [];
 
+  constructor() {
+    super();
+    try {
+      const stored = window.localStorage.getItem('tally-list-admins');
+      this._tallyAdmins = stored ? JSON.parse(stored) : [];
+    } catch (err) {
+      this._tallyAdmins = [];
+    }
+  }
+
   static styles = [
     TallyListCard.styles,
     css`
@@ -879,6 +900,7 @@ class TallyDueRankingCard extends LitElement {
     try {
       const resp = await this.hass.connection.sendMessagePromise({ type: 'tally_list/get_admins' });
       this._tallyAdmins = Array.isArray(resp?.admins) ? resp.admins : [];
+      window.localStorage.setItem('tally-list-admins', JSON.stringify(this._tallyAdmins));
     } catch (err) {
       this._tallyAdmins = [];
     }
