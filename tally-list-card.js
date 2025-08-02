@@ -162,7 +162,7 @@ class TallyListCard extends LitElement {
         ${this.config.show_remove !== false ? html`
           <div class="remove-bottom">
             <div class="remove-container">
-              <button @click=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${this._disabled}>-1</button>
+              <button class="remove-button" @click=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${this._disabled}>-1</button>
               <select @change=${this._selectRemoveDrink.bind(this)}>
                 ${drinks.map(d => html`<option value="${d}" ?selected=${d===this.selectedRemoveDrink}>${d.charAt(0).toUpperCase() + d.slice(1)}</option>`)}
               </select>
@@ -412,6 +412,10 @@ class TallyListCard extends LitElement {
       height: 32px;
       width: 32px;
     }
+    .remove-button {
+      background-color: var(--error-color, #c62828);
+      color: white;
+    }
     .remove-bottom {
       text-align: left;
       margin-top: 8px;
@@ -420,6 +424,8 @@ class TallyListCard extends LitElement {
     .add-button {
       height: 32px;
       width: 32px;
+      background-color: var(--success-color, #2e7d32);
+      color: white;
     }
     table {
       width: 100%;
@@ -628,6 +634,8 @@ class TallyDueRankingCard extends LitElement {
       }
       .reset-container button {
         padding: 4px 8px;
+        background-color: var(--error-color, #c62828);
+        color: white;
       }
       .copy-container {
         text-align: right;
