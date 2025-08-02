@@ -2,6 +2,8 @@
 
 A simple Lovelace card for showing and updating tally counts per user. Select a name and the card displays how many drinks of each type that user has consumed and the amount owed. Prices are shown with the **€** symbol. Each drink row provides an **+1** button on the left to increment the counter. The table refreshes automatically after adding a drink. The card can automatically read all users and drink prices from the **Tally List** integration.
 
+The card supports English and German and automatically follows the Home Assistant language. A debug setting allows forcing the language to **Auto**, **Deutsch** or **English**.
+
 ## Installation
 
 ### Via HACS
@@ -65,6 +67,7 @@ The card can now be configured directly in the Lovelace UI. It offers the follow
 * **Maximum width (px)** – Optional width limit for the card in pixels. Enter a number and the `px` unit is added automatically. The default is `500` pixels. Useful when using panel views to prevent the layout from stretching too wide.
 * **Show remove menu** – Toggle the dropdown for subtracting drinks. Enabled by default.
 * **Only show self** – Restrict the dropdown to the logged-in user even for admins.
+* **Language** – Override the detected language with **Auto**, **Deutsch** or **English**.
 * **Version** – Displays the installed card version.
 
 ## Amount Due Ranking

@@ -2,18 +2,127 @@
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
 const CARD_VERSION = '1.11.0';
 
+const TL_STRINGS = {
+  en: {
+    card_name: 'Tally List Card',
+    card_desc: 'Displays drink counts per user with quick add/remove buttons.',
+    ranking_name: 'Tally Due Ranking Card',
+    ranking_desc: 'Shows a ranking based on the due amount per user.',
+    integration_missing:
+      'Tally List integration not found. Please set up the integration.',
+    no_user_access: 'No access to users',
+    unknown_user: 'Unknown user',
+    name: 'Name',
+    drink: 'Drink',
+    count: 'Count',
+    price: 'Price',
+    sum: 'Sum',
+    total: 'Total',
+    free_amount: 'Free amount',
+    amount_due: 'Amount due',
+    lock_ms: 'Lock duration (ms)',
+    max_width: 'Maximum width (px)',
+    show_remove_menu: 'Show remove menu',
+    only_self: 'Only show own user even for admins',
+    show_all_users: 'Show all users',
+    debug: 'Debug',
+    language: 'Language',
+    auto: 'Auto',
+    german: 'German',
+    english: 'English',
+    sort: 'Sort by',
+    sort_due_desc: 'By amount due',
+    sort_due_asc: 'By amount due (ascending)',
+    sort_name: 'Alphabetically',
+    sort_menu_show: 'Show sort menu',
+    show_reset: 'Show reset button (admins only)',
+    show_copy: 'Show copy button',
+    show_total: 'Show total amount',
+    hide_free: 'Hide people without amount',
+    copy_table: 'Copy table',
+    reset_all: 'Reset all tallies',
+    show_reset_everyone: 'Show reset button for everyone',
+    max_entries: 'Maximum entries (0 = all)',
+    sort_label: 'Sort:',
+    version: 'Version',
+    copy_success: 'Text copied to clipboard!',
+    reset_confirm_prompt: 'Type "YES I WANT TO" to reset all tallies:',
+  },
+  de: {
+    card_name: 'Strichliste Karte',
+    card_desc:
+      'Zeigt Getränkezähler pro Benutzer mit schnellen Hinzufügen/Entfernen-Tasten.',
+    ranking_name: 'Strichliste Ranglistenkarte',
+    ranking_desc: 'Zeigt eine Rangliste nach offenem Betrag pro Benutzer.',
+    integration_missing:
+      'Strichliste-Integration nicht gefunden. Bitte richte die Integration ein.',
+    no_user_access: 'Kein Zugriff auf Nutzer',
+    unknown_user: 'Unbekannter Benutzer',
+    name: 'Name',
+    drink: 'Getränk',
+    count: 'Anzahl',
+    price: 'Preis',
+    sum: 'Summe',
+    total: 'Gesamt',
+    free_amount: 'Freibetrag',
+    amount_due: 'Zu zahlen',
+    lock_ms: 'Sperrzeit (ms)',
+    max_width: 'Maximale Breite (px)',
+    show_remove_menu: 'Entfernen-Menü anzeigen',
+    only_self: 'Trotz Admin nur eigenen Nutzer anzeigen',
+    show_all_users: 'Alle Nutzer anzeigen',
+    debug: 'Debug',
+    language: 'Sprache',
+    auto: 'Auto',
+    german: 'Deutsch',
+    english: 'Englisch',
+    sort: 'Sortierung',
+    sort_due_desc: 'Nach offenem Betrag',
+    sort_due_asc: 'Nach offenem Betrag (aufsteigend)',
+    sort_name: 'Alphabetisch',
+    sort_menu_show: 'Sortiermenü anzeigen',
+    show_reset: 'Reset-Button anzeigen (nur Admins)',
+    show_copy: 'Kopier-Button anzeigen',
+    show_total: 'Gesamtsumme anzeigen',
+    hide_free: 'Personen ohne Betrag ausblenden',
+    copy_table: 'Tabelle kopieren',
+    reset_all: 'Alle Striche zurücksetzen',
+    show_reset_everyone: 'Für jeden Reset-Button anzeigen',
+    max_entries: 'Maximale Einträge (0 = alle)',
+    sort_label: 'Sortierung:',
+    version: 'Version',
+    copy_success: 'Text in die Zwischenablage kopiert!',
+    reset_confirm_prompt: 'Zum Zurücksetzen aller Striche "JA ICH WILL" eingeben:',
+  },
+};
+
+function detectLang(hass, override = 'auto') {
+  if (override && override !== 'auto') return override;
+  const lang =
+    hass?.language || hass?.locale?.language || navigator.language || 'en';
+  return lang.toLowerCase().startsWith('de') ? 'de' : 'en';
+}
+
+function t(hass, override, key) {
+  const lang = detectLang(hass, override);
+  return TL_STRINGS[lang][key] || TL_STRINGS.en[key] || key;
+}
+
+const navLang = (navigator.language || '').toLowerCase().startsWith('de')
+  ? 'de'
+  : 'en';
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: 'tally-list-card',
-  name: 'Tally List Card',
+  name: TL_STRINGS[navLang].card_name,
   preview: true,
-  description: 'Displays drink counts per user with quick add/remove buttons.',
+  description: TL_STRINGS[navLang].card_desc,
 });
 window.customCards.push({
   type: 'tally-due-ranking-card',
-  name: 'Tally Due Ranking Card',
+  name: TL_STRINGS[navLang].ranking_name,
   preview: true,
-  description: 'Shows a ranking based on the due amount per user.',
+  description: TL_STRINGS[navLang].ranking_desc,
 });
 
 class TallyListCard extends LitElement {
@@ -49,6 +158,7 @@ class TallyListCard extends LitElement {
       show_remove: true,
       only_self: false,
       show_all_users: false,
+      language: 'auto',
       ...config,
     };
     this._disabled = false;
@@ -66,13 +176,15 @@ class TallyListCard extends LitElement {
     }
   }
 
-
+  _t(key) {
+    return t(this.hass, this.config?.language, key);
+  }
 
   render() {
     if (!this.hass || !this.config) return html``;
     let users = this.config.users || this._autoUsers || [];
     if (users.length === 0) {
-      return html`<ha-card>Strichliste-Integration nicht gefunden. Bitte richte die Integration ein.</ha-card>`;
+      return html`<ha-card>${this._t('integration_missing')}</ha-card>`;
     }
     const userNames = [this.hass.user?.name, ...this._currentPersonNames()];
     const isAdmin = userNames.some(n => (this._tallyAdmins || []).includes(n));
@@ -83,7 +195,7 @@ class TallyListCard extends LitElement {
       users = users.filter(u => u.user_id === uid || allowedSlugs.includes(u.slug));
     }
     if (users.length === 0) {
-      return html`<ha-card>Kein Zugriff auf Nutzer</ha-card>`;
+      return html`<ha-card>${this._t('no_user_access')}</ha-card>`;
     }
     const uid = this.hass.user?.id;
     const slugsOfUser = this._currentPersonSlugs();
@@ -101,7 +213,7 @@ class TallyListCard extends LitElement {
       this.selectedUser = own ? (own.name || own.slug) : (users[0].name || users[0].slug);
     }
     const user = users.find(u => (u.name || u.slug) === this.selectedUser);
-    if (!user) return html`<ha-card>Unbekannter Benutzer</ha-card>`;
+    if (!user) return html`<ha-card>${this._t('unknown_user')}</ha-card>`;
     const prices = this.config.prices || this._autoPrices || {};
     const freeAmount = Number(this.config.free_amount ?? this._freeAmount ?? 0);
     let total = 0;
@@ -153,20 +265,20 @@ class TallyListCard extends LitElement {
       <ha-card style="${cardStyle}">
         <div class="controls">
           <div class="user-select">
-            <label for="user">Name:</label>
+            <label for="user">${this._t('name')}:</label>
             <select id="user" @change=${this._selectUser.bind(this)}>
               ${users.map(u => html`<option value="${u.name || u.slug}" ?selected=${(u.name || u.slug)===this.selectedUser}>${u.name}</option>`)}
             </select>
           </div>
         </div>
           <table>
-          <thead><tr><th></th><th>Getränk</th><th>Anzahl</th><th>Preis</th><th>Summe</th></tr></thead>
+          <thead><tr><th></th><th>${this._t('drink')}</th><th>${this._t('count')}</th><th>${this._t('price')}</th><th>${this._t('sum')}</th></tr></thead>
           <tbody>${rows}</tbody>
           <tfoot>
-            <tr><td colspan="4"><b>Gesamt</b></td><td>${totalStr}</td></tr>
+            <tr><td colspan="4"><b>${this._t('total')}</b></td><td>${totalStr}</td></tr>
             ${freeAmount > 0 ? html`
-              <tr><td colspan="4"><b>Freibetrag</b></td><td>- ${freeAmountStr}</td></tr>
-              <tr><td colspan="4"><b>Zu zahlen</b></td><td>${dueStr}</td></tr>
+              <tr><td colspan="4"><b>${this._t('free_amount')}</b></td><td>- ${freeAmountStr}</td></tr>
+              <tr><td colspan="4"><b>${this._t('amount_due')}</b></td><td>${dueStr}</td></tr>
             ` : ''}
           </tfoot>
         </table>
@@ -493,15 +605,20 @@ class TallyListCardEditor extends LitElement {
       show_remove: true,
       only_self: false,
       show_all_users: false,
+      language: 'auto',
       ...config,
     };
+  }
+
+  _t(key) {
+    return t(this.hass, this._config?.language, key);
   }
 
   render() {
     if (!this._config) return html``;
     return html`
       <div class="form">
-        <label>Sperrzeit (ms)</label>
+        <label>${this._t('lock_ms')}</label>
         <input
           type="number"
           .value=${this._config.lock_ms}
@@ -509,7 +626,7 @@ class TallyListCardEditor extends LitElement {
         />
       </div>
       <div class="form">
-        <label>Maximale Breite (px)</label>
+        <label>${this._t('max_width')}</label>
         <input
           type="number"
           .value=${(this._config.max_width ?? '').replace(/px$/, '')}
@@ -519,24 +636,32 @@ class TallyListCardEditor extends LitElement {
       <div class="form">
         <label>
           <input type="checkbox" .checked=${this._config.show_remove} @change=${this._removeChanged} />
-          Entfernen-Menü anzeigen
+          ${this._t('show_remove_menu')}
         </label>
       </div>
       <div class="form">
         <label>
           <input type="checkbox" .checked=${this._config.only_self} @change=${this._selfChanged} />
-          Für Admins auch nur eigenen Nutzer anzeigen
+          ${this._t('only_self')}
         </label>
       </div>
       <details class="debug">
-        <summary>Debug</summary>
+        <summary>${this._t('debug')}</summary>
         <div class="form">
           <label>
             <input type="checkbox" .checked=${this._config.show_all_users} @change=${this._debugAllChanged} />
-            Für jeden alle Nutzer anzeigen
+            ${this._t('show_all_users')}
           </label>
         </div>
-        <div class="version">Version: ${CARD_VERSION}</div>
+        <div class="form">
+          <label>${this._t('language')}</label>
+          <select @change=${this._languageChanged}>
+            <option value="auto" ?selected=${this._config.language === 'auto'}>${this._t('auto')}</option>
+            <option value="de" ?selected=${this._config.language === 'de'}>${this._t('german')}</option>
+            <option value="en" ?selected=${this._config.language === 'en'}>${this._t('english')}</option>
+          </select>
+        </div>
+        <div class="version">${this._t('version')}: ${CARD_VERSION}</div>
       </details>
     `;
   }
@@ -590,6 +715,17 @@ class TallyListCardEditor extends LitElement {
 
   _debugAllChanged(ev) {
     this._config = { ...this._config, show_all_users: ev.target.checked };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  _languageChanged(ev) {
+    this._config = { ...this._config, language: ev.target.value };
     this.dispatchEvent(
       new CustomEvent('config-changed', {
         detail: { config: this._config },
@@ -703,6 +839,7 @@ class TallyDueRankingCard extends LitElement {
       max_entries: 0,
       hide_free: false,
       show_copy: true,
+      language: 'auto',
       ...config,
     };
     this._sortBy = this.config.sort_by;
@@ -716,11 +853,15 @@ class TallyDueRankingCard extends LitElement {
     }
   }
 
+  _t(key) {
+    return t(this.hass, this.config?.language, key);
+  }
+
   render() {
     if (!this.hass || !this.config) return html``;
     let users = this.config.users || this._autoUsers || [];
     if (users.length === 0) {
-      return html`<ha-card>Strichliste-Integration nicht gefunden. Bitte richte die Integration ein.</ha-card>`;
+      return html`<ha-card>${this._t('integration_missing')}</ha-card>`;
     }
     const userNames = [this.hass.user?.name, ...this._currentPersonNames()];
     const isAdmin = userNames.some(n => (this._tallyAdmins || []).includes(n));
@@ -730,7 +871,7 @@ class TallyDueRankingCard extends LitElement {
       users = users.filter(u => u.user_id === uid || allowed.includes(u.slug));
     }
     if (users.length === 0) {
-      return html`<ha-card>Kein Zugriff auf Nutzer</ha-card>`;
+      return html`<ha-card>${this._t('no_user_access')}</ha-card>`;
     }
     const prices = this.config.prices || this._autoPrices || {};
     const freeAmount = Number(this.config.free_amount ?? this._freeAmount ?? 0);
@@ -772,34 +913,34 @@ class TallyDueRankingCard extends LitElement {
     const rows = ranking.map((r, i) => html`<tr><td>${i + 1}</td><td>${r.name}</td><td>${r.due.toFixed(2)} €</td></tr>`);
     const totalDue = ranking.reduce((sum, r) => sum + r.due, 0);
     const totalRow = this.config.show_total !== false
-      ? html`<tfoot><tr><td colspan="2"><b>Gesamt</b></td><td>${totalDue.toFixed(2)} €</td></tr></tfoot>`
+      ? html`<tfoot><tr><td colspan="2"><b>${this._t('total')}</b></td><td>${totalDue.toFixed(2)} €</td></tr></tfoot>`
       : '';
     const width = this._normalizeWidth(this.config.max_width);
     const cardStyle = width ? `max-width:${width};margin:0 auto;` : '';
     const sortMenu = this.config.sort_menu
       ? html`<div class="controls">
-          <label>Sortierung:</label>
+          <label>${this._t('sort_label')}</label>
           <select @change=${this._sortMenuChanged}>
-            <option value="due_desc" ?selected=${sortBy === 'due_desc'}>Nach offenem Betrag</option>
-            <option value="due_asc" ?selected=${sortBy === 'due_asc'}>Nach offenem Betrag (aufsteigend)</option>
-            <option value="name" ?selected=${sortBy === 'name'}>Alphabetisch</option>
+            <option value="due_desc" ?selected=${sortBy === 'due_desc'}>${this._t('sort_due_desc')}</option>
+            <option value="due_asc" ?selected=${sortBy === 'due_asc'}>${this._t('sort_due_asc')}</option>
+            <option value="name" ?selected=${sortBy === 'name'}>${this._t('sort_name')}</option>
           </select>
         </div>`
       : '';
     const copyButton = this.config.show_copy !== false
-      ? html`<div class="copy-container"><button @click=${this._copyRanking}>Tabelle kopieren</button></div>`
+      ? html`<div class="copy-container"><button @click=${this._copyRanking}>${this._t('copy_table')}</button></div>`
       : '';
     const resetButton = (isAdmin || this.config.show_reset_everyone) &&
       this.config.show_reset !== false
       ? html`<div class="reset-container">
-          <button @click=${this._resetAllTallies}>Alle Striche zurücksetzen</button>
+          <button @click=${this._resetAllTallies}>${this._t('reset_all')}</button>
         </div>`
       : '';
     return html`
       <ha-card style="${cardStyle}">
         ${sortMenu}
         <table>
-          <thead><tr><th>#</th><th>Name</th><th>Zu zahlen</th></tr></thead>
+          <thead><tr><th>#</th><th>${this._t('name')}</th><th>${this._t('amount_due')}</th></tr></thead>
           <tbody>${rows}</tbody>
           ${totalRow}
         </table>
@@ -1012,12 +1153,12 @@ class TallyDueRankingCard extends LitElement {
     const lines = ranking.map((r, i) => `${i + 1}. ${r.name}: ${r.due.toFixed(2)} €`);
     if (this.config.show_total !== false) {
       const total = ranking.reduce((sum, r) => sum + r.due, 0);
-      lines.push(`Gesamt: ${total.toFixed(2)} €`);
+      lines.push(`${this._t('total')}: ${total.toFixed(2)} €`);
     }
     navigator.clipboard.writeText(lines.join('\n')).then(() => {
       this.dispatchEvent(
         new CustomEvent('hass-notification', {
-          detail: { message: 'Text in die Zwischenablage kopiert!' },
+          detail: { message: this._t('copy_success') },
           bubbles: true,
           composed: true,
         })
@@ -1026,7 +1167,7 @@ class TallyDueRankingCard extends LitElement {
   }
 
   _resetAllTallies() {
-    const input = prompt('Zum Zurücksetzen aller Striche "JA ICH WILL" bzw. "YES I WANT TO" eingeben:');
+    const input = prompt(this._t('reset_confirm_prompt'));
     const normalized = (input || '').trim().toUpperCase();
     if (normalized !== 'JA ICH WILL' && normalized !== 'YES I WANT TO') {
       return;
@@ -1063,15 +1204,20 @@ class TallyDueRankingCardEditor extends LitElement {
       max_entries: 0,
       hide_free: false,
       show_copy: true,
+      language: 'auto',
       ...config,
     };
+  }
+
+  _t(key) {
+    return t(this.hass, this._config?.language, key);
   }
 
   render() {
     if (!this._config) return html``;
     return html`
       <div class="form">
-        <label>Maximale Breite (px)</label>
+        <label>${this._t('max_width')}</label>
         <input
           type="number"
           .value=${(this._config.max_width ?? '').replace(/px$/, '')}
@@ -1079,7 +1225,7 @@ class TallyDueRankingCardEditor extends LitElement {
         />
       </div>
       <div class="form">
-        <label>Maximale Einträge (0 = alle)</label>
+        <label>${this._t('max_entries')}</label>
         <input
           type="number"
           .value=${this._config.max_entries ?? 0}
@@ -1087,58 +1233,66 @@ class TallyDueRankingCardEditor extends LitElement {
         />
       </div>
       <div class="form">
-        <label>Sortierung</label>
+        <label>${this._t('sort')}</label>
         <select @change=${this._sortChanged}>
           <option value="due_desc" ?selected=${this._config.sort_by === 'due_desc'}>
-            Nach offenem Betrag
+            ${this._t('sort_due_desc')}
           </option>
           <option value="due_asc" ?selected=${this._config.sort_by === 'due_asc'}>
-            Nach offenem Betrag (aufsteigend)
+            ${this._t('sort_due_asc')}
           </option>
           <option value="name" ?selected=${this._config.sort_by === 'name'}>
-            Alphabetisch
+            ${this._t('sort_name')}
           </option>
         </select>
       </div>
       <div class="form">
         <label>
           <input type="checkbox" .checked=${this._config.sort_menu} @change=${this._menuChanged} />
-          Sortiermenü anzeigen
+          ${this._t('sort_menu_show')}
         </label>
       </div>
       <div class="form">
         <label>
           <input type="checkbox" .checked=${this._config.show_reset} @change=${this._resetChanged} />
-          Reset-Button anzeigen (nur Admins)
+          ${this._t('show_reset')}
         </label>
       </div>
       <div class="form">
         <label>
           <input type="checkbox" .checked=${this._config.show_copy} @change=${this._copyChanged} />
-          Kopier-Button anzeigen
+          ${this._t('show_copy')}
         </label>
       </div>
       <div class="form">
         <label>
           <input type="checkbox" .checked=${this._config.show_total} @change=${this._totalChanged} />
-          Gesamtsumme anzeigen
+          ${this._t('show_total')}
         </label>
       </div>
       <div class="form">
         <label>
           <input type="checkbox" .checked=${this._config.hide_free} @change=${this._hideChanged} />
-          Personen ohne Betrag ausblenden
+          ${this._t('hide_free')}
         </label>
       </div>
       <details class="debug">
-        <summary>Debug</summary>
+        <summary>${this._t('debug')}</summary>
         <div class="form">
           <label>
             <input type="checkbox" .checked=${this._config.show_reset_everyone} @change=${this._debugResetChanged} />
-            Für jeden Reset-Button anzeigen
+            ${this._t('show_reset_everyone')}
           </label>
         </div>
-        <div class="version">Version: ${CARD_VERSION}</div>
+        <div class="form">
+          <label>${this._t('language')}</label>
+          <select @change=${this._languageChanged}>
+            <option value="auto" ?selected=${this._config.language === 'auto'}>${this._t('auto')}</option>
+            <option value="de" ?selected=${this._config.language === 'de'}>${this._t('german')}</option>
+            <option value="en" ?selected=${this._config.language === 'en'}>${this._t('english')}</option>
+          </select>
+        </div>
+        <div class="version">${this._t('version')}: ${CARD_VERSION}</div>
       </details>
     `;
   }
@@ -1237,6 +1391,17 @@ class TallyDueRankingCardEditor extends LitElement {
 
   _debugResetChanged(ev) {
     this._config = { ...this._config, show_reset_everyone: ev.target.checked };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  _languageChanged(ev) {
+    this._config = { ...this._config, language: ev.target.value };
     this.dispatchEvent(
       new CustomEvent('config-changed', {
         detail: { config: this._config },
