@@ -652,6 +652,8 @@ class TallyDueRankingCard extends LitElement {
       }
       .reset-container button {
         padding: 4px 8px;
+        height: 32px;
+        box-sizing: border-box;
         background-color: var(--error-color, #c62828);
         color: white;
         border: none;
@@ -663,6 +665,8 @@ class TallyDueRankingCard extends LitElement {
       }
       .copy-container button {
         padding: 4px 8px;
+        height: 32px;
+        box-sizing: border-box;
       }
     `,
   ];
