@@ -64,7 +64,8 @@ class TallyListCard extends LitElement {
     if (users.length === 0) {
       return html`<ha-card>Strichliste-Integration nicht gefunden. Bitte richte die Integration ein.</ha-card>`;
     }
-    const isAdmin = (this._tallyAdmins || []).includes(this.hass.user?.name);
+    const userNames = [this.hass.user?.name, ...this._currentPersonNames()];
+    const isAdmin = userNames.some(n => (this._tallyAdmins || []).includes(n));
     const limitSelf = (!isAdmin && !this.config.show_all_users) || this.config.only_self;
     if (limitSelf) {
       const allowedSlugs = this._currentPersonSlugs();
@@ -325,6 +326,19 @@ class TallyListCard extends LitElement {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '_')
       .replace(/^_+|_+$/g, '');
+  }
+
+  _currentPersonNames() {
+    const userId = this.hass.user?.id;
+    if (!userId) return [];
+    const names = [];
+    for (const [entity, state] of Object.entries(this.hass.states)) {
+      if (entity.startsWith('person.') && state.attributes.user_id === userId) {
+        const friendly = state.attributes.friendly_name;
+        if (friendly) names.push(friendly);
+      }
+    }
+    return names;
   }
 
   _currentPersonSlugs() {
@@ -677,7 +691,8 @@ class TallyDueRankingCard extends LitElement {
     if (users.length === 0) {
       return html`<ha-card>Strichliste-Integration nicht gefunden. Bitte richte die Integration ein.</ha-card>`;
     }
-    const isAdmin = (this._tallyAdmins || []).includes(this.hass.user?.name);
+    const userNames = [this.hass.user?.name, ...this._currentPersonNames()];
+    const isAdmin = userNames.some(n => (this._tallyAdmins || []).includes(n));
     if (!isAdmin) {
       const allowed = this._currentPersonSlugs();
       const uid = this.hass.user?.id;
@@ -869,6 +884,19 @@ class TallyDueRankingCard extends LitElement {
       .replace(/^_+|_+$/g, '');
   }
 
+  _currentPersonNames() {
+    const userId = this.hass.user?.id;
+    if (!userId) return [];
+    const names = [];
+    for (const [entity, state] of Object.entries(this.hass.states)) {
+      if (entity.startsWith('person.') && state.attributes.user_id === userId) {
+        const friendly = state.attributes.friendly_name;
+        if (friendly) names.push(friendly);
+      }
+    }
+    return names;
+  }
+
   _currentPersonSlugs() {
     const userId = this.hass.user?.id;
     if (!userId) return [];
@@ -904,7 +932,8 @@ class TallyDueRankingCard extends LitElement {
 
   _copyRanking() {
     let users = this.config.users || this._autoUsers || [];
-    const isAdmin = (this._tallyAdmins || []).includes(this.hass.user?.name);
+    const userNames = [this.hass.user?.name, ...this._currentPersonNames()];
+    const isAdmin = userNames.some(n => (this._tallyAdmins || []).includes(n));
     if (!isAdmin) {
       const allowed = this._currentPersonSlugs();
       const uid = this.hass.user?.id;
