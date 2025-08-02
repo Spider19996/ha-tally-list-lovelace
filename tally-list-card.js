@@ -143,6 +143,7 @@ class TallyListCard extends LitElement {
     _autoUsers: { state: true },
     _autoPrices: { state: true },
     _freeAmount: { state: true },
+    _currency: { state: true },
     _tallyAdmins: { state: true },
     selectedRemoveDrink: { state: true },
     _disabled: { state: true },
@@ -234,10 +235,10 @@ class TallyListCard extends LitElement {
         const isAvailable = stateObj && stateObj.state !== 'unavailable' && stateObj.state !== 'unknown';
         const count = this._toNumber(stateObj?.state);
         const price = this._toNumber(prices[drink]);
-        const priceStr = price.toFixed(2) + ' €';
+        const priceStr = price.toFixed(2) + ` ${this._currency}`;
         const cost = count * price;
         total += cost;
-        const costStr = cost.toFixed(2) + ' €';
+        const costStr = cost.toFixed(2) + ` ${this._currency}`;
         const displayDrink = drink.charAt(0).toUpperCase() + drink.slice(1);
         return html`<tr>
           <td><button class="add-button" @click=${() => this._addDrink(drink)} ?disabled=${this._disabled || !isAvailable}>+1</button></td>
@@ -258,8 +259,8 @@ class TallyListCard extends LitElement {
       this.selectedRemoveDrink = drinks[0] || '';
     }
 
-    const totalStr = total.toFixed(2) + ' €';
-    const freeAmountStr = freeAmount.toFixed(2) + ' €';
+    const totalStr = total.toFixed(2) + ` ${this._currency}`;
+    const freeAmountStr = freeAmount.toFixed(2) + ` ${this._currency}`;
     let due;
     if (user.amount_due_entity) {
       const dueState = this.hass.states[user.amount_due_entity];
@@ -268,7 +269,7 @@ class TallyListCard extends LitElement {
     } else {
       due = Math.max(total - freeAmount, 0);
     }
-    const dueStr = due.toFixed(2) + ' €';
+    const dueStr = due.toFixed(2) + ` ${this._currency}`;
     const width = this._normalizeWidth(this.config.max_width);
     const cardStyle = width ? `max-width:${width};margin:0 auto;` : '';
     return html`
@@ -428,6 +429,10 @@ class TallyListCard extends LitElement {
         const drink = match[1];
         const price = parseFloat(state.state);
         prices[drink] = isNaN(price) ? 0 : price;
+        if (!this._currency) {
+          const cur = state.attributes?.currency || state.attributes?.unit_of_measurement;
+          if (cur) this._currency = cur;
+        }
       }
     }
     return prices;
@@ -779,6 +784,7 @@ class TallyDueRankingCard extends LitElement {
     _autoUsers: { state: true },
     _autoPrices: { state: true },
     _freeAmount: { state: true },
+    _currency: { state: true },
     _sortBy: { state: true },
     _tallyAdmins: { state: true },
   };
@@ -920,10 +926,10 @@ class TallyDueRankingCard extends LitElement {
     if (this.config.max_entries > 0) {
       ranking = ranking.slice(0, this.config.max_entries);
     }
-    const rows = ranking.map((r, i) => html`<tr><td>${i + 1}</td><td>${r.name}</td><td>${r.due.toFixed(2)} €</td></tr>`);
+    const rows = ranking.map((r, i) => html`<tr><td>${i + 1}</td><td>${r.name}</td><td>${r.due.toFixed(2)} ${this._currency}</td></tr>`);
     const totalDue = ranking.reduce((sum, r) => sum + r.due, 0);
     const totalRow = this.config.show_total !== false
-      ? html`<tfoot><tr><td colspan="2"><b>${this._t('total')}</b></td><td>${totalDue.toFixed(2)} €</td></tr></tfoot>`
+      ? html`<tfoot><tr><td colspan="2"><b>${this._t('total')}</b></td><td>${totalDue.toFixed(2)} ${this._currency}</td></tr></tfoot>`
       : '';
     const width = this._normalizeWidth(this.config.max_width);
     const cardStyle = width ? `max-width:${width};margin:0 auto;` : '';
@@ -1034,6 +1040,10 @@ class TallyDueRankingCard extends LitElement {
         const drink = match[1];
         const price = parseFloat(state.state);
         prices[drink] = isNaN(price) ? 0 : price;
+        if (!this._currency) {
+          const cur = state.attributes?.currency || state.attributes?.unit_of_measurement;
+          if (cur) this._currency = cur;
+        }
       }
     }
     return prices;
@@ -1160,10 +1170,10 @@ class TallyDueRankingCard extends LitElement {
     if (this.config.max_entries > 0) {
       ranking = ranking.slice(0, this.config.max_entries);
     }
-    const lines = ranking.map((r, i) => `${i + 1}. ${r.name}: ${r.due.toFixed(2)} €`);
+    const lines = ranking.map((r, i) => `${i + 1}. ${r.name}: ${r.due.toFixed(2)} ${this._currency}`);
     if (this.config.show_total !== false) {
       const total = ranking.reduce((sum, r) => sum + r.due, 0);
-      lines.push(`${this._t('total')}: ${total.toFixed(2)} €`);
+      lines.push(`${this._t('total')}: ${total.toFixed(2)} ${this._currency}`);
     }
     navigator.clipboard.writeText(lines.join('\n')).then(() => {
       this.dispatchEvent(
