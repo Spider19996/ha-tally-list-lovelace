@@ -108,6 +108,16 @@ function t(hass, override, key) {
   return TL_STRINGS[lang][key] || TL_STRINGS.en[key] || key;
 }
 
+function fireEvent(node, type, detail = {}, options = {}) {
+  node.dispatchEvent(
+    new CustomEvent(type, {
+      detail,
+      bubbles: options.bubbles ?? true,
+      composed: options.composed ?? true,
+    })
+  );
+}
+
 const navLang = (navigator.language || '').toLowerCase().startsWith('de')
   ? 'de'
   : 'en';
@@ -1301,114 +1311,54 @@ class TallyDueRankingCardEditor extends LitElement {
     const raw = ev.target.value.trim();
     const width = raw ? `${raw}px` : '';
     this._config = { ...this._config, max_width: width };
-    this.dispatchEvent(
-      new CustomEvent('config-changed', {
-        detail: { config: this._config },
-        bubbles: true,
-        composed: true,
-      })
-    );
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 
   _sortChanged(ev) {
     const val = ev.target.value;
     this._config = { ...this._config, sort_by: val };
-    this.dispatchEvent(
-      new CustomEvent('config-changed', {
-        detail: { config: this._config },
-        bubbles: true,
-        composed: true,
-      })
-    );
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 
   _menuChanged(ev) {
     this._config = { ...this._config, sort_menu: ev.target.checked };
-    this.dispatchEvent(
-      new CustomEvent('config-changed', {
-        detail: { config: this._config },
-        bubbles: true,
-        composed: true,
-      })
-    );
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 
   _resetChanged(ev) {
     this._config = { ...this._config, show_reset: ev.target.checked };
-    this.dispatchEvent(
-      new CustomEvent('config-changed', {
-        detail: { config: this._config },
-        bubbles: true,
-        composed: true,
-      })
-    );
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 
   _copyChanged(ev) {
     this._config = { ...this._config, show_copy: ev.target.checked };
-    this.dispatchEvent(
-      new CustomEvent('config-changed', {
-        detail: { config: this._config },
-        bubbles: true,
-        composed: true,
-      })
-    );
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 
   _totalChanged(ev) {
     this._config = { ...this._config, show_total: ev.target.checked };
-    this.dispatchEvent(
-      new CustomEvent('config-changed', {
-        detail: { config: this._config },
-        bubbles: true,
-        composed: true,
-      })
-    );
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 
   _maxChanged(ev) {
     const val = parseInt(ev.target.value, 10);
     this._config = { ...this._config, max_entries: isNaN(val) ? 0 : val };
-    this.dispatchEvent(
-      new CustomEvent('config-changed', {
-        detail: { config: this._config },
-        bubbles: true,
-        composed: true,
-      })
-    );
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 
   _hideChanged(ev) {
     this._config = { ...this._config, hide_free: ev.target.checked };
-    this.dispatchEvent(
-      new CustomEvent('config-changed', {
-        detail: { config: this._config },
-        bubbles: true,
-        composed: true,
-      })
-    );
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 
   _debugResetChanged(ev) {
     this._config = { ...this._config, show_reset_everyone: ev.target.checked };
-    this.dispatchEvent(
-      new CustomEvent('config-changed', {
-        detail: { config: this._config },
-        bubbles: true,
-        composed: true,
-      })
-    );
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 
   _languageChanged(ev) {
     this._config = { ...this._config, language: ev.target.value };
-    this.dispatchEvent(
-      new CustomEvent('config-changed', {
-        detail: { config: this._config },
-        bubbles: true,
-        composed: true,
-      })
-    );
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 
   static styles = TallyListCardEditor.styles;
