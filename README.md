@@ -57,7 +57,7 @@ data:
 
 If `sensor.preisliste_free_amount` exists, its value is deducted from every user's total. The table displays this free amount and shows the final **Amount due** sum. When sensors named `sensor.<name>_amount_due` are present, their values are used directly for the **Amount due** row instead of calculating it from the drink counts.
 
-If the free amount equals **0 €**, the card hides the **Allowance** and **Amount due** rows and only shows the **Total** line. You can also hide these rows explicitly with `show_free_amount: false` or `show_amount_due: false`.
+If the free amount equals **0 €**, the card hides the **Allowance** and **Amount due** rows and only shows the **Total** line.
 
 ## UI configuration
 
@@ -66,8 +66,6 @@ The card can now be configured directly in the Lovelace UI. It offers the follow
 * **Lock time (ms)** – How long the buttons stay disabled after pressing **+1** or **-1**. The default is `400` milliseconds.
 * **Maximum width (px)** – Optional width limit for the card in pixels. Enter a number and the `px` unit is added automatically. The default is `500` pixels. Useful when using panel views to prevent the layout from stretching too wide.
 * **Show remove menu** – Toggle the dropdown for subtracting drinks. Enabled by default.
-* **Show free amount** – Toggle the deduction row for the free amount. Enabled by default.
-* **Show amount due** – Toggle the final amount due row. Enabled by default.
 * **Only show self** – Restrict the dropdown to the logged-in user even for admins.
 * **Language** – Override the detected language with **Auto**, **Deutsch** or **English**.
 * **Version** – Displays the installed card version.
