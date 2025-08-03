@@ -1,11 +1,13 @@
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
-const CARD_VERSION = '1.11.0';
+const CARD_VERSION = '1.12.0';
 
 const TL_STRINGS = {
   en: {
     lock_ms: 'Lock duration (ms)',
     max_width: 'Maximum width (px)',
     show_remove_menu: 'Show remove menu',
+    show_free_amount: 'Show free amount',
+    show_amount_due: 'Show amount due',
     only_self: 'Only show own user even for admins',
     show_all_users: 'Show all users',
     debug: 'Debug',
@@ -19,6 +21,8 @@ const TL_STRINGS = {
     lock_ms: 'Sperrzeit (ms)',
     max_width: 'Maximale Breite (px)',
     show_remove_menu: 'Entfernen-Menü anzeigen',
+    show_free_amount: 'Freibetrag anzeigen',
+    show_amount_due: 'Zu zahlenden Betrag anzeigen',
     only_self: 'Trotz Admin nur eigenen Nutzer anzeigen',
     show_all_users: 'Alle Nutzer anzeigen',
     debug: 'Debug',
@@ -62,6 +66,8 @@ class TallyListCardEditor extends LitElement {
       lock_ms: 400,
       max_width: '500px',
       show_remove: true,
+      show_free_amount: true,
+      show_amount_due: true,
       only_self: false,
       show_all_users: false,
       language: 'auto',
@@ -96,6 +102,18 @@ class TallyListCardEditor extends LitElement {
         <label>
           <input type="checkbox" .checked=${this._config.show_remove} @change=${this._removeChanged} />
           ${this._t('show_remove_menu')}
+        </label>
+      </div>
+      <div class="form">
+        <label>
+          <input type="checkbox" .checked=${this._config.show_free_amount} @change=${this._freeChanged} />
+          ${this._t('show_free_amount')}
+        </label>
+      </div>
+      <div class="form">
+        <label>
+          <input type="checkbox" .checked=${this._config.show_amount_due} @change=${this._dueChanged} />
+          ${this._t('show_amount_due')}
         </label>
       </div>
       <div class="form">
@@ -140,6 +158,16 @@ class TallyListCardEditor extends LitElement {
 
   _removeChanged(ev) {
     this._config = { ...this._config, show_remove: ev.target.checked };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _freeChanged(ev) {
+    this._config = { ...this._config, show_free_amount: ev.target.checked };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _dueChanged(ev) {
+    this._config = { ...this._config, show_amount_due: ev.target.checked };
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
