@@ -1,6 +1,6 @@
 // Tally List Card
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
-const CARD_VERSION = '1.11.0';
+const CARD_VERSION = '1.12.0';
 
 const TL_STRINGS = {
   en: {
@@ -23,6 +23,8 @@ const TL_STRINGS = {
     lock_ms: 'Lock duration (ms)',
     max_width: 'Maximum width (px)',
     show_remove_menu: 'Show remove menu',
+    show_free_amount: 'Show free amount',
+    show_amount_due: 'Show amount due',
     only_self: 'Only show own user even for admins',
     show_all_users: 'Show all users',
     debug: 'Debug',
@@ -69,6 +71,8 @@ const TL_STRINGS = {
     lock_ms: 'Sperrzeit (ms)',
     max_width: 'Maximale Breite (px)',
     show_remove_menu: 'Entfernen-Menü anzeigen',
+    show_free_amount: 'Freibetrag anzeigen',
+    show_amount_due: 'Zu zahlenden Betrag anzeigen',
     only_self: 'Trotz Admin nur eigenen Nutzer anzeigen',
     show_all_users: 'Alle Nutzer anzeigen',
     debug: 'Debug',
@@ -169,6 +173,8 @@ class TallyListCard extends LitElement {
       show_remove: true,
       only_self: false,
       show_all_users: false,
+      show_free_amount: true,
+      show_amount_due: true,
       language: 'auto',
       ...config,
     };
@@ -270,6 +276,8 @@ class TallyListCard extends LitElement {
       due = Math.max(total - freeAmount, 0);
     }
     const dueStr = this._formatPrice(due) + ` ${this._currency}`;
+    const showFree = freeAmount > 0 && this.config.show_free_amount !== false;
+    const showDue = freeAmount > 0 && this.config.show_amount_due !== false;
     const width = this._normalizeWidth(this.config.max_width);
     const cardStyle = width ? `max-width:${width};margin:0 auto;` : '';
     return html`
@@ -287,10 +295,12 @@ class TallyListCard extends LitElement {
           <tbody>${rows}</tbody>
           <tfoot>
             <tr><td colspan="4"><b>${this._t('total')}</b></td><td>${totalStr}</td></tr>
-            ${freeAmount > 0 ? html`
-              <tr><td colspan="4"><b>${this._t('free_amount')}</b></td><td>- ${freeAmountStr}</td></tr>
-              <tr><td colspan="4"><b>${this._t('amount_due')}</b></td><td>${dueStr}</td></tr>
-            ` : ''}
+            ${showFree
+              ? html`<tr><td colspan="4"><b>${this._t('free_amount')}</b></td><td>- ${freeAmountStr}</td></tr>`
+              : ''}
+            ${showDue
+              ? html`<tr><td colspan="4"><b>${this._t('amount_due')}</b></td><td>${dueStr}</td></tr>`
+              : ''}
           </tfoot>
         </table>
         ${this.config.show_remove !== false ? html`
@@ -542,6 +552,8 @@ class TallyListCard extends LitElement {
       show_remove: true,
       only_self: false,
       show_all_users: false,
+      show_free_amount: true,
+      show_amount_due: true,
     };
   }
 
@@ -643,6 +655,8 @@ class TallyListCardEditor extends LitElement {
       show_remove: true,
       only_self: false,
       show_all_users: false,
+      show_free_amount: true,
+      show_amount_due: true,
       language: 'auto',
       ...config,
     };
@@ -675,6 +689,18 @@ class TallyListCardEditor extends LitElement {
         <label>
           <input type="checkbox" .checked=${this._config.show_remove} @change=${this._removeChanged} />
           ${this._t('show_remove_menu')}
+        </label>
+      </div>
+      <div class="form">
+        <label>
+          <input type="checkbox" .checked=${this._config.show_free_amount} @change=${this._freeChanged} />
+          ${this._t('show_free_amount')}
+        </label>
+      </div>
+      <div class="form">
+        <label>
+          <input type="checkbox" .checked=${this._config.show_amount_due} @change=${this._dueChanged} />
+          ${this._t('show_amount_due')}
         </label>
       </div>
       <div class="form">
@@ -731,6 +757,28 @@ class TallyListCardEditor extends LitElement {
 
   _removeChanged(ev) {
     this._config = { ...this._config, show_remove: ev.target.checked };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  _freeChanged(ev) {
+    this._config = { ...this._config, show_free_amount: ev.target.checked };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  _dueChanged(ev) {
+    this._config = { ...this._config, show_amount_due: ev.target.checked };
     this.dispatchEvent(
       new CustomEvent('config-changed', {
         detail: { config: this._config },
