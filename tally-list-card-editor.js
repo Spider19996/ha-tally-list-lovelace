@@ -1,5 +1,5 @@
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
-const CARD_VERSION = '1.11.0';
+const CARD_VERSION = '1.11.1';
 
 const TL_STRINGS = {
   en: {
