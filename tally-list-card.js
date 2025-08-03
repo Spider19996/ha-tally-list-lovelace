@@ -291,18 +291,18 @@ class TallyListCard extends LitElement {
               <tr><td colspan="4"><b>${this._t('free_amount')}</b></td><td>- ${freeAmountStr}</td></tr>
               <tr><td colspan="4"><b>${this._t('amount_due')}</b></td><td>${dueStr}</td></tr>
             ` : ''}
+            ${this.config.show_remove !== false ? html`
+              <tr class="remove-row">
+                <td><button class="remove-button" @click=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${this._disabled}>-1</button></td>
+                <td colspan="4" class="remove-select-cell">
+                  <select class="remove-select" @change=${this._selectRemoveDrink.bind(this)}>
+                    ${drinks.map(d => html`<option value="${d}" ?selected=${d===this.selectedRemoveDrink}>${d.charAt(0).toUpperCase() + d.slice(1)}</option>`)}
+                  </select>
+                </td>
+              </tr>
+            ` : ''}
           </tfoot>
         </table>
-        ${this.config.show_remove !== false ? html`
-          <div class="remove-bottom">
-            <div class="remove-container">
-              <button class="remove-button" @click=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${this._disabled}>-1</button>
-              <select @change=${this._selectRemoveDrink.bind(this)}>
-                ${drinks.map(d => html`<option value="${d}" ?selected=${d===this.selectedRemoveDrink}>${d.charAt(0).toUpperCase() + d.slice(1)}</option>`)}
-              </select>
-            </div>
-          </div>
-        ` : ''}
       </ha-card>
     `;
   }
@@ -571,19 +571,19 @@ class TallyListCard extends LitElement {
       gap: 8px;
     }
     .user-select select,
-    .remove-container select {
+    .remove-select {
       padding: 4px 8px;
       min-width: 120px;
       font-size: 1rem;
       height: 32px;
       box-sizing: border-box;
     }
-    .remove-container {
-      display: flex;
-      align-items: center;
-      gap: 8px;
+    .remove-row td {
+      border-bottom: none;
+      padding-top: 8px;
+      font-weight: normal;
     }
-    .remove-container button {
+    .remove-row .remove-button {
       height: 32px;
       width: 32px;
       border: none;
@@ -593,10 +593,8 @@ class TallyListCard extends LitElement {
       background-color: var(--error-color, #c62828);
       color: white;
     }
-    .remove-bottom {
+    .remove-select-cell {
       text-align: left;
-      margin-top: 8px;
-      padding-left: 21px;
     }
     .add-button {
       height: 32px;
