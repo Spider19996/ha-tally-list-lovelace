@@ -1,6 +1,6 @@
 // Tally List Card
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
-const CARD_VERSION = '1.11.1';
+const CARD_VERSION = '1.11.0';
 
 const TL_STRINGS = {
   en: {
@@ -259,10 +259,6 @@ class TallyListCard extends LitElement {
       this.selectedRemoveDrink = drinks[0] || '';
     }
 
-    const removeCount = this.selectedRemoveDrink
-      ? this._toNumber(this.hass.states[user.drinks[this.selectedRemoveDrink]]?.state)
-      : 0;
-
     const totalStr = this._formatPrice(total) + ` ${this._currency}`;
     const freeAmountStr = this._formatPrice(freeAmount) + ` ${this._currency}`;
     let due;
@@ -297,7 +293,7 @@ class TallyListCard extends LitElement {
             ` : ''}
             ${this.config.show_remove !== false ? html`
               <tr class="remove-row">
-                <td><button class="remove-button" @click=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${this._disabled || removeCount <= 0}>-1</button></td>
+                <td><button class="remove-button" @click=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${this._disabled}>-1</button></td>
                 <td colspan="4" class="remove-select-cell">
                   <select class="remove-select" @change=${this._selectRemoveDrink.bind(this)}>
                     ${drinks.map(d => html`<option value="${d}" ?selected=${d===this.selectedRemoveDrink}>${d.charAt(0).toUpperCase() + d.slice(1)}</option>`)}
