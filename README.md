@@ -1,43 +1,34 @@
 # Tally List Lovelace
 
-A simple Lovelace card for showing and updating tally counts per user. Select a name and the card displays how many drinks of each type that user has consumed and the amount owed. Prices are shown with the **€** symbol. Each drink row provides an **+1** button on the left to increment the counter. The table refreshes automatically after adding a drink. The card can automatically read all users and drink prices from the **Tally List** integration.
-
-The card supports English and German and automatically follows the Home Assistant language. A debug setting allows forcing the language to **Auto**, **Deutsch** or **English**.
+A Lovelace card for Home Assistant that displays drink tallies per user and allows updating them. Selecting a name shows drink counts and the amount owed. Prices and users are read automatically from the Tally List integration. Currency and language follow Home Assistant settings (English and German supported, with optional override).
 
 ## Installation
 
 ### Via HACS
-
-1. Add this repository as a **Custom Repository** in HACS using the **Lovelace** category.
-2. Install the **Tally List Card** from the HACS store.
-3. HACS will keep the card up to date.
+1. Add this repository as a **Custom Repository** in HACS (category **Lovelace**).
+2. Install **Tally List Card** from the HACS store.
+3. HACS keeps the card up to date.
 
 ### Manual
-
 1. Copy `tally-list-card.js` to your Home Assistant `www` directory.
-2. Add the following to your Lovelace resources:
-   ```yaml
-  - url: /local/tally-list-card.js
-    type: module
-   ```
+2. Add to your Lovelace resources:
+```yaml
+- url: /local/tally-list-card.js
+  type: module
+```
 
 ### Add to Lovelace
+After the resource is available, open the dashboard, choose **Add Card**, and select **Tally List Card**. The editor lets you configure options without YAML.
 
-After the resource is available, open the Lovelace dashboard, click **Add Card** and select **Tally List Card** from the list. The built-in editor lets you adjust the lock time without writing YAML.
-
-## Example
+## Usage
 
 ### Automatic configuration
-
 ```yaml
 type: custom:tally-list-card
 ```
+All users detected by the integration appear in the dropdown. Admins (as defined in the Tally List integration) may choose any user; regular users can only select themselves. Drink prices are taken from sensors named `sensor.preisliste_<drink>_price`. If `sensor.preisliste_free_amount` exists, its value is deducted from each user's total. Sensors named `sensor.<name>_amount_due` override the calculated amount due.
 
-The dropdown lists all users detected from the integration and calculates totals using the stored price list. No manual configuration is required. Normal users can only select themselves, while admins (defined in the Tally List integration) may choose any person.
-
-When a `person.<slug>` entity exists, its friendly name is used in the dropdown; otherwise the name comes from the tally sensors. Users are sorted alphabetically and the currently logged in user always appears first. The selected user's **display name** is sent to the `tally_list.add_drink` service, so capitalization is preserved. The card also matches the sensor slug against the person's friendly name, so mismatched slugs still detect the current user.
-
-Pressing **+1** on the Water row triggers a service call like:
+Pressing **+1** adds a drink:
 
 ```yaml
 action: tally_list.add_drink
@@ -46,57 +37,35 @@ data:
   drink: Wasser
 ```
 
-The top-right **Remove drink** button opens a menu to subtract a drink. Selecting **Wasser** sends:
+The **Remove drink** button subtracts a drink with a `tally_list.remove_drink` call.
 
-```yaml
-action: tally_list.remove_drink
-data:
-  user: Robin
-  drink: Wasser
-```
+## Configuration options
 
-If `sensor.preisliste_free_amount` exists, its value is deducted from every user's total. The table displays this free amount and shows the final **Amount due** sum. When sensors named `sensor.<name>_amount_due` are present, their values are used directly for the **Amount due** row instead of calculating it from the drink counts.
+The card offers the following options in the UI:
 
-If the free amount equals **0 €**, the card hides the **Allowance** and **Amount due** rows and only shows the **Total** line.
-
-## UI configuration
-
-The card can now be configured directly in the Lovelace UI. It offers the following options:
-
-* **Lock time (ms)** – How long the buttons stay disabled after pressing **+1** or **-1**. The default is `400` milliseconds.
-* **Maximum width (px)** – Optional width limit for the card in pixels. Enter a number and the `px` unit is added automatically. The default is `500` pixels. Useful when using panel views to prevent the layout from stretching too wide.
-* **Show remove menu** – Toggle the dropdown for subtracting drinks. Enabled by default.
-* **Only show self** – Restrict the dropdown to the logged-in user even for admins.
-* **Language** – Override the detected language with **Auto**, **Deutsch** or **English**.
-* **Version** – Displays the installed card version.
+* **Lock time (ms)** – Duration the buttons stay disabled after pressing them. Default `400`.
+* **Maximum width (px)** – Limit card width. Default `500`.
+* **Show remove menu** – Enable/disable the remove-drink dropdown.
+* **Only show self** – Limit selection to the logged‑in user even for admins.
+* **Language** – Force **Auto**, **Deutsch**, or **English**.
+* **Version** – Display the installed version.
 
 ## Amount Due Ranking
 
-In addition to the main card there is a second Lovelace card that displays all users sorted by the outstanding amount.
+A second card lists all users ordered by outstanding amount.
 
 ```yaml
 type: custom:tally-due-ranking-card
 ```
 
-The editor also allows defining a maximum width in pixels. The `sort_by` option lets you sort either alphabetically or by outstanding amount. With `sort_menu: true` a dropdown appears that allows changing the sort order directly.
+Options:
 
-Administrators from the Tally List integration see a reset button in the bottom right that clears every user's tally. Set `show_reset: false` to hide this button even for admins.
-The card also displays the combined outstanding amount for all users at the bottom. Use `show_total: false` to hide this summary.
-With `max_entries` you can limit how many users are shown (0 means no limit). Enable `hide_free` to hide all users who do not owe anything.
-The list can be copied to the clipboard with a **Tabelle kopieren** button. Set `show_copy: false` to hide this button.
-
-```yaml
-type: custom:tally-due-ranking-card
-sort_by: name  # or due_desc (default) or due_asc
-sort_menu: true
-show_reset: false  # hide the admin reset button
-show_total: false  # hide the total amount row
-max_entries: 5     # show only the top five users
-hide_free: true    # hide users with no outstanding amount
-show_copy: false   # hide the copy button
-```
-
-## Acknowledgements
-
-This entire script was generated with the help of ChatGPT / Codex.
+* **Maximum width (px)** – Limit card width.
+* **sort_by** – `due_desc` (default), `due_asc`, or `name`.
+* **sort_menu** – Show a dropdown to change the sort order.
+* **show_reset** – Show the admin reset button.
+* **show_total** – Display the total outstanding amount.
+* **max_entries** – Limit how many users are shown (`0` = no limit).
+* **hide_free** – Hide users who owe nothing.
+* **show_copy** – Show the "Tabelle kopieren" button.
 
