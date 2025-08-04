@@ -147,10 +147,12 @@ class TallyListCard extends LitElement {
     _tallyAdmins: { state: true },
     selectedRemoveDrink: { state: true },
     _disabled: { state: true },
+    _optimisticCounts: { state: true },
   };
 
   selectedRemoveDrink = '';
   _tallyAdmins = [];
+  _optimisticCounts = {};
 
   constructor() {
     super();
@@ -232,8 +234,9 @@ class TallyListCard extends LitElement {
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([drink, entity]) => {
         const stateObj = this.hass.states[entity];
-        const isAvailable = stateObj && stateObj.state !== 'unavailable' && stateObj.state !== 'unknown';
-        const count = this._toNumber(stateObj?.state);
+        const isAvailable =
+          stateObj && stateObj.state !== 'unavailable' && stateObj.state !== 'unknown';
+        const count = this._optimisticCounts[entity] ?? this._toNumber(stateObj?.state);
         const price = this._toNumber(prices[drink]);
         const priceStr = this._formatPrice(price) + ` ${this._currency}`;
         const cost = count * price;
@@ -241,7 +244,15 @@ class TallyListCard extends LitElement {
         const costStr = this._formatPrice(cost) + ` ${this._currency}`;
         const displayDrink = drink.charAt(0).toUpperCase() + drink.slice(1);
         return html`<tr>
-          <td><button class="add-button" @click=${() => this._addDrink(drink)} ?disabled=${this._disabled || !isAvailable}>+1</button></td>
+          <td>
+            <button
+              class="add-button"
+              @click=${() => this._addDrink(drink)}
+              ?disabled=${this._disabled || !isAvailable}
+            >
+              +1
+            </button>
+          </td>
           <td>${displayDrink}</td>
           <td>${count}</td>
           <td>${priceStr}</td>
@@ -258,6 +269,17 @@ class TallyListCard extends LitElement {
     if (!this.selectedRemoveDrink || !drinks.includes(this.selectedRemoveDrink)) {
       this.selectedRemoveDrink = drinks[0] || '';
     }
+
+    const selectedEntity = user.drinks[this.selectedRemoveDrink];
+    const selectedState = selectedEntity ? this.hass.states[selectedEntity] : null;
+    const selectedAvailable =
+      selectedState &&
+      selectedState.state !== 'unavailable' &&
+      selectedState.state !== 'unknown';
+    const selectedCount =
+      this._optimisticCounts[selectedEntity] ?? this._toNumber(selectedState?.state);
+    const removeDisabled =
+      this._disabled || !selectedAvailable || selectedCount <= 0;
 
     const totalStr = this._formatPrice(total) + ` ${this._currency}`;
     const freeAmountStr = this._formatPrice(freeAmount) + ` ${this._currency}`;
@@ -293,7 +315,7 @@ class TallyListCard extends LitElement {
             ` : ''}
             ${this.config.show_remove !== false ? html`
               <tr class="remove-row">
-                <td><button class="remove-button" @click=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${this._disabled}>-1</button></td>
+                <td><button class="remove-button" @click=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${removeDisabled}>-1</button></td>
                 <td colspan="4" class="remove-select-cell">
                   <select class="remove-select" @change=${this._selectRemoveDrink.bind(this)}>
                     ${drinks.map(d => html`<option value="${d}" ?selected=${d===this.selectedRemoveDrink}>${d.charAt(0).toUpperCase() + d.slice(1)}</option>`)}
@@ -313,6 +335,7 @@ class TallyListCard extends LitElement {
 
   _selectRemoveDrink(ev) {
     this.selectedRemoveDrink = ev.target.value;
+    this.requestUpdate();
   }
 
   _addDrink(drink) {
@@ -336,6 +359,9 @@ class TallyListCard extends LitElement {
     const user = users.find(u => (u.name || u.slug) === this.selectedUser);
     const entity = user?.drinks?.[drink];
     if (entity) {
+      const stateObj = this.hass.states[entity];
+      const base = this._optimisticCounts[entity] ?? this._toNumber(stateObj?.state);
+      this._optimisticCounts = { ...this._optimisticCounts, [entity]: base + 1 };
       this.hass.callService('homeassistant', 'update_entity', {
         entity_id: entity,
       });
@@ -346,6 +372,20 @@ class TallyListCard extends LitElement {
     if (this._disabled || !drink) {
       return;
     }
+
+    const users = this.config.users || this._autoUsers || [];
+    const user = users.find(u => (u.name || u.slug) === this.selectedUser);
+    const entity = user?.drinks?.[drink];
+    const stateObj = entity ? this.hass.states[entity] : null;
+    const isAvailable =
+      stateObj &&
+      stateObj.state !== 'unavailable' &&
+      stateObj.state !== 'unknown';
+    const count = this._optimisticCounts[entity] ?? this._toNumber(stateObj?.state);
+    if (!isAvailable || count <= 0) {
+      return;
+    }
+
     this._disabled = true;
     this.requestUpdate();
     const delay = Number(this.config.lock_ms ?? 400);
@@ -360,10 +400,9 @@ class TallyListCard extends LitElement {
       drink: displayDrink,
     });
 
-    const users = this.config.users || this._autoUsers || [];
-    const user = users.find(u => (u.name || u.slug) === this.selectedUser);
-    const entity = user?.drinks?.[drink];
     if (entity) {
+      const base = this._optimisticCounts[entity] ?? count;
+      this._optimisticCounts = { ...this._optimisticCounts, [entity]: base - 1 };
       this.hass.callService('homeassistant', 'update_entity', {
         entity_id: entity,
       });
@@ -382,6 +421,24 @@ class TallyListCard extends LitElement {
         this._freeAmount = this._gatherFreeAmount();
       }
       this._fetchTallyAdmins();
+
+      // Sync optimistic counts with real states when updates arrive
+      const updated = { ...this._optimisticCounts };
+      let changed = false;
+      for (const [entity, val] of Object.entries(this._optimisticCounts)) {
+        const real = this._toNumber(this.hass.states[entity]?.state);
+        if (!isNaN(real)) {
+          if (real === val) {
+            delete updated[entity];
+          } else {
+            updated[entity] = real;
+          }
+          changed = true;
+        }
+      }
+      if (changed) {
+        this._optimisticCounts = updated;
+      }
     }
   }
 
