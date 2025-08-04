@@ -1,5 +1,7 @@
 # Tally List Lovelace
 
+🇩🇪 [Deutsche Version lesen](README.de.md)
+
 A Lovelace card for Home Assistant that displays drink tallies per user and allows updating them. Selecting a name shows drink counts and the amount owed. Prices and users are read automatically from the Tally List integration. Currency and language follow Home Assistant settings (English and German supported, with optional override).
 
 ## Installation
