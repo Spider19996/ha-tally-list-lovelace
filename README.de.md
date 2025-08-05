@@ -4,7 +4,7 @@
 
 Eine Lovelace-Karte für Home Assistant, die Getränkezähler pro Nutzer anzeigt und aktualisieren lässt. Nach der Auswahl eines Namens erscheinen die Anzahl der Getränke sowie der fällige Betrag. Nutzer und Preise werden automatisch aus der Tally‑List‑Integration gelesen. Währung und Sprache folgen den Home‑Assistant‑Einstellungen (Englisch und Deutsch, manuelle Auswahl möglich).
 
-![Screenshot der Tally List Karte](images/screenshot1.png)
+![Screenshot der Tally List Karte](images/image1.png)
 
 ## Installation
 
