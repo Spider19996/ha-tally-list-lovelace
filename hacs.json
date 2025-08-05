@@ -2,6 +2,5 @@
   "name": "Tally List Card",
   "content_in_root": true,
   "filename": "tally-list-card.js",
-  "render_readme": true,
-  "version": "1.11.0"
+  "render_readme": true
 }
