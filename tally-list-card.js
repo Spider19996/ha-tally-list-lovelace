@@ -492,6 +492,22 @@ class TallyListCard extends LitElement {
         }
       }
     }
+    if (!this._currency) {
+      const state = states['sensor.price_list_free_amount'];
+      const cur = state?.attributes?.currency || state?.attributes?.unit_of_measurement;
+      if (cur) this._currency = cur;
+    }
+    if (!this._currency) {
+      for (const [entity, state] of Object.entries(states)) {
+        if (/^sensor\.[a-z0-9_]+_amount_due$/.test(entity)) {
+          const cur = state.attributes?.currency || state.attributes?.unit_of_measurement;
+          if (cur) {
+            this._currency = cur;
+            break;
+          }
+        }
+      }
+    }
     return prices;
   }
 
@@ -1121,6 +1137,22 @@ class TallyDueRankingCard extends LitElement {
         if (!this._currency) {
           const cur = state.attributes?.currency || state.attributes?.unit_of_measurement;
           if (cur) this._currency = cur;
+        }
+      }
+    }
+    if (!this._currency) {
+      const state = states['sensor.price_list_free_amount'];
+      const cur = state?.attributes?.currency || state?.attributes?.unit_of_measurement;
+      if (cur) this._currency = cur;
+    }
+    if (!this._currency) {
+      for (const [entity, state] of Object.entries(states)) {
+        if (/^sensor\.[a-z0-9_]+_amount_due$/.test(entity)) {
+          const cur = state.attributes?.currency || state.attributes?.unit_of_measurement;
+          if (cur) {
+            this._currency = cur;
+            break;
+          }
         }
       }
     }
