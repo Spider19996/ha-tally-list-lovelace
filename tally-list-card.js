@@ -481,7 +481,7 @@ class TallyListCard extends LitElement {
     const prices = {};
     const states = this.hass.states;
     for (const [entity, state] of Object.entries(states)) {
-      const match = entity.match(/^sensor\.preisliste_([^_]+)_price$/);
+      const match = entity.match(/^sensor\.price_list_([^_]+)_price$/);
       if (match) {
         const drink = match[1];
         const price = parseFloat(state.state);
@@ -496,7 +496,7 @@ class TallyListCard extends LitElement {
   }
 
   _gatherFreeAmount() {
-    const state = this.hass.states['sensor.preisliste_free_amount'];
+    const state = this.hass.states['sensor.price_list_free_amount'];
     if (!state) return 0;
     const val = parseFloat(state.state);
     return isNaN(val) ? 0 : val;
@@ -1113,7 +1113,7 @@ class TallyDueRankingCard extends LitElement {
     const prices = {};
     const states = this.hass.states;
     for (const [entity, state] of Object.entries(states)) {
-      const match = entity.match(/^sensor\.preisliste_([^_]+)_price$/);
+      const match = entity.match(/^sensor\.price_list_([^_]+)_price$/);
       if (match) {
         const drink = match[1];
         const price = parseFloat(state.state);
@@ -1128,7 +1128,7 @@ class TallyDueRankingCard extends LitElement {
   }
 
   _gatherFreeAmount() {
-    const state = this.hass.states['sensor.preisliste_free_amount'];
+    const state = this.hass.states['sensor.price_list_free_amount'];
     if (!state) return 0;
     const val = parseFloat(state.state);
     return isNaN(val) ? 0 : val;
