@@ -12,6 +12,7 @@ const TL_STRINGS = {
       'Tally List integration not found. Please set up the integration.',
     no_user_access: 'No access to users',
     unknown_user: 'Unknown user',
+    no_drinks: 'Please add a drink via the Tally List integration first.',
     name: 'Name',
     drink: 'Drink',
     count: 'Count',
@@ -58,6 +59,7 @@ const TL_STRINGS = {
       'Strichliste-Integration nicht gefunden. Bitte richte die Integration ein.',
     no_user_access: 'Kein Zugriff auf Nutzer',
     unknown_user: 'Unbekannter Benutzer',
+    no_drinks: 'Bitte füge zuerst ein Getränk über die Strichliste-Integration hinzu.',
     name: 'Name',
     drink: 'Getränk',
     count: 'Anzahl',
@@ -227,6 +229,9 @@ class TallyListCard extends LitElement {
     }
     const user = users.find(u => (u.name || u.slug) === this.selectedUser);
     if (!user) return html`<ha-card>${this._t('unknown_user')}</ha-card>`;
+    if (!user.drinks || Object.keys(user.drinks).length === 0) {
+      return html`<ha-card>${this._t('no_drinks')}</ha-card>`;
+    }
     const prices = this.config.prices || this._autoPrices || {};
     const freeAmount = Number(this.config.free_amount ?? this._freeAmount ?? 0);
     let total = 0;
