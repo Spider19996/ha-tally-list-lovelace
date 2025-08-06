@@ -26,6 +26,7 @@ const TL_STRINGS = {
     show_remove_menu: 'Show remove menu',
     only_self: 'Only show own user even for admins',
     show_all_users: 'Show all users',
+    show_inactive_drinks: 'Show inactive drinks',
     debug: 'Debug',
     language: 'Language',
     auto: 'Auto',
@@ -73,6 +74,7 @@ const TL_STRINGS = {
     show_remove_menu: 'Entfernen-Menü anzeigen',
     only_self: 'Trotz Admin nur eigenen Nutzer anzeigen',
     show_all_users: 'Alle Nutzer anzeigen',
+    show_inactive_drinks: 'Inaktive Getränke anzeigen',
     debug: 'Debug',
     language: 'Sprache',
     auto: 'Auto',
@@ -173,6 +175,7 @@ class TallyListCard extends LitElement {
       show_remove: true,
       only_self: false,
       show_all_users: false,
+      show_inactive_drinks: false,
       language: 'auto',
       ...config,
     };
@@ -234,8 +237,16 @@ class TallyListCard extends LitElement {
     }
     const prices = this.config.prices || this._autoPrices || {};
     const freeAmount = Number(this.config.free_amount ?? this._freeAmount ?? 0);
+    const drinkEntries = Object.entries(user.drinks).filter(([d, e]) => {
+      if (this.config.show_inactive_drinks) return true;
+      const st = this.hass.states[e]?.state;
+      return st !== 'unavailable' && st !== 'unknown';
+    });
+    if (drinkEntries.length === 0) {
+      return html`<ha-card>${this._t('no_drinks')}</ha-card>`;
+    }
     let total = 0;
-    const rows = Object.entries(user.drinks)
+    const rows = drinkEntries
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([drink, entity]) => {
         const stateObj = this.hass.states[entity];
@@ -265,12 +276,7 @@ class TallyListCard extends LitElement {
         </tr>`;
       });
 
-    const drinks = Object.keys(user.drinks)
-      .filter(d => {
-        const st = this.hass.states[user.drinks[d]]?.state;
-        return st !== 'unavailable' && st !== 'unknown';
-      })
-      .sort((a, b) => a.localeCompare(b));
+    const drinks = drinkEntries.map(([d]) => d).sort((a, b) => a.localeCompare(b));
     if (!this.selectedRemoveDrink || !drinks.includes(this.selectedRemoveDrink)) {
       this.selectedRemoveDrink = drinks[0] || '';
     }
@@ -620,6 +626,7 @@ class TallyListCard extends LitElement {
       show_remove: true,
       only_self: false,
       show_all_users: false,
+      show_inactive_drinks: false,
     };
   }
 
@@ -719,6 +726,7 @@ class TallyListCardEditor extends LitElement {
       show_remove: true,
       only_self: false,
       show_all_users: false,
+      show_inactive_drinks: false,
       language: 'auto',
       ...config,
     };
@@ -765,6 +773,12 @@ class TallyListCardEditor extends LitElement {
           <label>
             <input type="checkbox" .checked=${this._config.show_all_users} @change=${this._debugAllChanged} />
             ${this._t('show_all_users')}
+          </label>
+        </div>
+        <div class="form">
+          <label>
+            <input type="checkbox" .checked=${this._config.show_inactive_drinks} @change=${this._debugInactiveChanged} />
+            ${this._t('show_inactive_drinks')}
           </label>
         </div>
         <div class="form">
@@ -829,6 +843,17 @@ class TallyListCardEditor extends LitElement {
 
   _debugAllChanged(ev) {
     this._config = { ...this._config, show_all_users: ev.target.checked };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  _debugInactiveChanged(ev) {
+    this._config = { ...this._config, show_inactive_drinks: ev.target.checked };
     this.dispatchEvent(
       new CustomEvent('config-changed', {
         detail: { config: this._config },

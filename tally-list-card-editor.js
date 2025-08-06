@@ -8,6 +8,7 @@ const TL_STRINGS = {
     show_remove_menu: 'Show remove menu',
     only_self: 'Only show own user even for admins',
     show_all_users: 'Show all users',
+    show_inactive_drinks: 'Show inactive drinks',
     debug: 'Debug',
     language: 'Language',
     auto: 'Auto',
@@ -21,6 +22,7 @@ const TL_STRINGS = {
     show_remove_menu: 'Entfernen-Menü anzeigen',
     only_self: 'Trotz Admin nur eigenen Nutzer anzeigen',
     show_all_users: 'Alle Nutzer anzeigen',
+    show_inactive_drinks: 'Inaktive Getränke anzeigen',
     debug: 'Debug',
     language: 'Sprache',
     auto: 'Auto',
@@ -64,6 +66,7 @@ class TallyListCardEditor extends LitElement {
       show_remove: true,
       only_self: false,
       show_all_users: false,
+      show_inactive_drinks: false,
       language: 'auto',
       ...config,
     };
@@ -113,6 +116,12 @@ class TallyListCardEditor extends LitElement {
           </label>
         </div>
         <div class="form">
+          <label>
+            <input type="checkbox" .checked=${this._config.show_inactive_drinks} @change=${this._debugInactiveChanged} />
+            ${this._t('show_inactive_drinks')}
+          </label>
+        </div>
+        <div class="form">
           <label>${this._t('language')}</label>
           <select @change=${this._languageChanged}>
             <option value="auto" ?selected=${this._config.language === 'auto'}>${this._t('auto')}</option>
@@ -150,6 +159,11 @@ class TallyListCardEditor extends LitElement {
 
   _debugAllChanged(ev) {
     this._config = { ...this._config, show_all_users: ev.target.checked };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _debugInactiveChanged(ev) {
+    this._config = { ...this._config, show_inactive_drinks: ev.target.checked };
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
