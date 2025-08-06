@@ -58,7 +58,7 @@ Folgende Optionen stehen im UI zur Verfügung:
 
 ## Betrag-Rangliste
 
-Eine zweite Karte listet alle Nutzer nach offenem Betrag sortiert auf.
+Eine zweite Karte listet alle Nutzer nach offenem Betrag sortiert auf. Die offenen Beträge sind für alle Nutzer sichtbar; Adminrechte werden nur für den Reset-Button benötigt.
 
 ```yaml
 type: custom:tally-due-ranking-card

@@ -552,7 +552,7 @@ class TallyListCard extends LitElement {
     }
     return slugs;
   }
-  
+
   _toNumber(value) {
     const num = Number(value);
     return isNaN(num) ? 0 : num;
@@ -959,14 +959,6 @@ class TallyDueRankingCard extends LitElement {
     }
     const userNames = [this.hass.user?.name, ...this._currentPersonNames()];
     const isAdmin = userNames.some(n => (this._tallyAdmins || []).includes(n));
-    if (!isAdmin) {
-      const allowed = this._currentPersonSlugs();
-      const uid = this.hass.user?.id;
-      users = users.filter(u => u.user_id === uid || allowed.includes(u.slug));
-    }
-    if (users.length === 0) {
-      return html`<ha-card>${this._t('no_user_access')}</ha-card>`;
-    }
     const prices = this.config.prices || this._autoPrices || {};
     const freeAmount = Number(this.config.free_amount ?? this._freeAmount ?? 0);
     let ranking = users.map(u => {
@@ -1168,22 +1160,6 @@ class TallyDueRankingCard extends LitElement {
     return names;
   }
 
-  _currentPersonSlugs() {
-    const userId = this.hass.user?.id;
-    if (!userId) return [];
-    const slugs = [];
-    for (const [entity, state] of Object.entries(this.hass.states)) {
-      if (entity.startsWith('person.') && state.attributes.user_id === userId) {
-        const slug = entity.substring('person.'.length);
-        slugs.push(slug);
-        const alt = this._slugify(state.attributes.friendly_name || '');
-        if (alt && alt !== slug) {
-          slugs.push(alt);
-        }
-      }
-    }
-    return slugs;
-  }
 
   _toNumber(value) {
     const num = Number(value);
@@ -1225,14 +1201,7 @@ class TallyDueRankingCard extends LitElement {
   }
 
   _copyRanking() {
-    let users = this.config.users || this._autoUsers || [];
-    const userNames = [this.hass.user?.name, ...this._currentPersonNames()];
-    const isAdmin = userNames.some(n => (this._tallyAdmins || []).includes(n));
-    if (!isAdmin) {
-      const allowed = this._currentPersonSlugs();
-      const uid = this.hass.user?.id;
-      users = users.filter(u => u.user_id === uid || allowed.includes(u.slug));
-    }
+    const users = this.config.users || this._autoUsers || [];
     if (users.length === 0) return;
     const prices = this.config.prices || this._autoPrices || {};
     const freeAmount = Number(this.config.free_amount ?? this._freeAmount ?? 0);

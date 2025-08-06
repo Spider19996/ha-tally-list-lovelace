@@ -58,7 +58,7 @@ The card offers the following options in the UI:
 
 ## Amount Due Ranking
 
-A second card lists all users ordered by outstanding amount.
+A second card lists all users ordered by outstanding amount. Outstanding balances are visible to all users; admin rights are only required for the reset button.
 
 ```yaml
 type: custom:tally-due-ranking-card
