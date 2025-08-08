@@ -61,7 +61,7 @@ const TL_STRINGS = {
     grouped: 'Grouped',
     grouped_breaks: 'Grouped breaks',
     show_all_tab: 'Show "All" tab',
-    grid_columns: 'Grid columns',
+    grid_columns: 'Grid columns (0 = auto)',
   },
   de: {
     card_name: 'Strichliste Karte',
@@ -121,7 +121,7 @@ const TL_STRINGS = {
     grouped: 'Gruppiert',
     grouped_breaks: 'Gruppierte Bereiche',
     show_all_tab: 'Tab "Alle" anzeigen',
-    grid_columns: 'Spalten',
+    grid_columns: 'Spalten (0 = automatisch)',
   },
 };
 
@@ -222,7 +222,7 @@ class TallyListCard extends LitElement {
       ...(config?.tabs || {}),
     };
     const grid = {
-      columns: 'auto',
+      columns: 0,
       ...(config?.grid || {}),
     };
     this.config = {
@@ -312,9 +312,9 @@ class TallyListCard extends LitElement {
 
   _renderUserButtons(list, source) {
     const cfg = this.config.grid || {};
-    const cols = cfg.columns;
+    const cols = Number(cfg.columns);
     const columnStyle =
-      cols && cols !== 'auto'
+      cols > 0
         ? `grid-template-columns:repeat(${cols},1fr);`
         : `grid-template-columns:repeat(auto-fit,minmax(0,1fr));`;
     const style = `${columnStyle}--tl-btn-h:32px;`;
@@ -1024,7 +1024,7 @@ class TallyListCardEditor extends LitElement {
       ...(config?.tabs || {}),
     };
     const grid = {
-      columns: 'auto',
+      columns: 0,
       ...(config?.grid || {}),
     };
     this._config = {
@@ -1255,7 +1255,8 @@ class TallyListCardEditor extends LitElement {
 
   _gridColumnsChanged(ev) {
     const val = ev.target.value.trim();
-    const columns = val === '' || val === 'auto' ? 'auto' : Math.max(1, Number(val));
+    const num = Number(val);
+    const columns = val === '' || num === 0 ? 0 : Math.max(1, num);
     this._config = {
       ...this._config,
       grid: { ...this._config.grid, columns },
