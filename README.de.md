@@ -34,19 +34,16 @@ type: custom:tally-list-card
 ```
 Alle von der Integration erkannten Nutzer erscheinen in der Auswahlliste. Administratoren (laut Tally‑List‑Integration) können jeden Nutzer wählen, normale Nutzer nur sich selbst. Getränkepreise stammen aus Sensoren `sensor.price_list_<getränk>_price`. Falls `sensor.price_list_free_amount` existiert, wird dieser Betrag jedem Nutzer gutgeschrieben. Sensoren `sensor.<name>_amount_due` überschreiben den berechneten Betrag.
 
-Unter der Nutzerauswahl ermöglicht eine neue Buttonreihe, wie viele Getränke auf einmal hinzugefügt oder entfernt werden (1, 3, 5 oder 10). Die gewählte Anzahl wird hervorgehoben und für alle folgenden Aktionen verwendet.
-
-Ein Klick auf **+X** fügt die ausgewählte Anzahl an Getränken hinzu:
+Ein Klick auf **+1** fügt ein Getränk hinzu:
 
 ```yaml
 action: tally_list.add_drink
 data:
   user: Robin
   drink: Wasser
-  count: 3
 ```
 
-Über den Button **Getränk entfernen** werden Getränke mit `tally_list.remove_drink` abgezogen. Wird `count` weggelassen, beträgt der Standardwert `1`.
+Über den Button **Getränk entfernen** wird ein Getränk mit `tally_list.remove_drink` abgezogen.
 
 ## Konfigurationsoptionen
 
