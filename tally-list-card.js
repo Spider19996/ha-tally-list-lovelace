@@ -62,10 +62,6 @@ const TL_STRINGS = {
     grouped_breaks: 'Grouped breaks',
     show_all_tab: 'Show "All" tab',
     grid_columns: 'Grid columns',
-    grid_min_width: 'Min button width (px)',
-    grid_max_width: 'Max button width (px)',
-    grid_gap: 'Gap (px)',
-    grid_font_size: 'Font size (rem)',
   },
   de: {
     card_name: 'Strichliste Karte',
@@ -126,10 +122,6 @@ const TL_STRINGS = {
     grouped_breaks: 'Gruppierte Bereiche',
     show_all_tab: 'Tab "Alle" anzeigen',
     grid_columns: 'Spalten',
-    grid_min_width: 'Minimale Buttonbreite (px)',
-    grid_max_width: 'Maximale Buttonbreite (px)',
-    grid_gap: 'Abstand (px)',
-    grid_font_size: 'Schriftgröße (rem)',
   },
 };
 
@@ -231,10 +223,6 @@ class TallyListCard extends LitElement {
     };
     const grid = {
       columns: 'auto',
-      min_button_width_px: 88,
-      max_button_width_px: 160,
-      gap_px: 8,
-      font_size_rem: 1.0,
       ...(config?.grid || {}),
     };
     this.config = {
@@ -325,15 +313,11 @@ class TallyListCard extends LitElement {
   _renderUserButtons(list, source) {
     const cfg = this.config.grid || {};
     const cols = cfg.columns;
-    const min = Number(cfg.min_button_width_px || 88);
-    const max = Number(cfg.max_button_width_px || 160);
-    const gap = Number(cfg.gap_px || 8);
-    const font = Number(cfg.font_size_rem || 1);
     const columnStyle =
       cols && cols !== 'auto'
         ? `grid-template-columns:repeat(${cols},1fr);`
-        : `grid-template-columns:repeat(auto-fit,minmax(${min}px,1fr));`;
-    const style = `${columnStyle}gap:${gap}px;--tl-btn-h:32px;--tl-btn-font:${font}rem;--tl-btn-min:${min}px;--tl-btn-max:${max}px;`;
+        : `grid-template-columns:repeat(auto-fit,minmax(0,1fr));`;
+    const style = `${columnStyle}--tl-btn-h:32px;`;
     const pressed = this.selectedUser;
     return html`<div class="user-grid" aria-label="${this._t('name')}" style="${style}">
       ${repeat(list, u => u.user_id || u.slug, u => {
@@ -934,13 +918,13 @@ class TallyListCard extends LitElement {
       transition: none;
       content-visibility: auto;
       contain-intrinsic-size: 500px 300px;
+      gap: 8px;
     }
     .user-grid button {
-      min-width: var(--tl-btn-min, 88px);
-      max-width: var(--tl-btn-max, 160px);
       min-height: var(--tl-btn-h, 32px);
       height: auto;
-      font-size: var(--tl-btn-font, 1rem);
+      font-size: 1rem;
+      width: 100%;
       white-space: normal;
       overflow-wrap: anywhere;
       border: none;
@@ -1041,10 +1025,6 @@ class TallyListCardEditor extends LitElement {
     };
     const grid = {
       columns: 'auto',
-      min_button_width_px: 88,
-      max_button_width_px: 160,
-      gap_px: 8,
-      font_size_rem: 1.0,
       ...(config?.grid || {}),
     };
     this._config = {
@@ -1131,22 +1111,6 @@ class TallyListCardEditor extends LitElement {
               <label>${this._t('grid_columns')}</label>
               <input type="text" .value=${this._config.grid.columns} @input=${this._gridColumnsChanged} />
             </div>
-            <div class="form">
-              <label>${this._t('grid_min_width')}</label>
-              <input type="number" min="1" .value=${this._config.grid.min_button_width_px} @input=${this._gridMinWidthChanged} />
-            </div>
-            <div class="form">
-              <label>${this._t('grid_max_width')}</label>
-              <input type="number" min="1" .value=${this._config.grid.max_button_width_px} @input=${this._gridMaxWidthChanged} />
-            </div>
-            <div class="form">
-              <label>${this._t('grid_gap')}</label>
-              <input type="number" min="0" .value=${this._config.grid.gap_px} @input=${this._gridGapChanged} />
-            </div>
-              <div class="form">
-                <label>${this._t('grid_font_size')}</label>
-                <input type="number" step="0.1" min="0.1" .value=${this._config.grid.font_size_rem} @input=${this._gridFontSizeChanged} />
-              </div>
           `
         : ''}
       <details class="debug">
@@ -1295,42 +1259,6 @@ class TallyListCardEditor extends LitElement {
     this._config = {
       ...this._config,
       grid: { ...this._config.grid, columns },
-    };
-    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
-  }
-
-  _gridMinWidthChanged(ev) {
-    const v = Math.max(1, Number(ev.target.value));
-    this._config = {
-      ...this._config,
-      grid: { ...this._config.grid, min_button_width_px: v },
-    };
-    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
-  }
-
-  _gridMaxWidthChanged(ev) {
-    const v = Math.max(1, Number(ev.target.value));
-    this._config = {
-      ...this._config,
-      grid: { ...this._config.grid, max_button_width_px: v },
-    };
-    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
-  }
-
-  _gridGapChanged(ev) {
-    const v = Math.max(0, Number(ev.target.value));
-    this._config = {
-      ...this._config,
-      grid: { ...this._config.grid, gap_px: v },
-    };
-    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
-  }
-
-  _gridFontSizeChanged(ev) {
-    const v = Math.max(0.1, Number(ev.target.value));
-    this._config = {
-      ...this._config,
-      grid: { ...this._config.grid, font_size_rem: v },
     };
     this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
   }
