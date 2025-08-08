@@ -22,6 +22,7 @@ const TL_STRINGS = {
     total: 'Total',
     free_amount: 'Free amount',
     amount_due: 'Amount due',
+    step_label: 'Step size (affects + and −)',
     lock_ms: 'Lock duration (ms)',
     max_width: 'Maximum width (px)',
     show_remove_menu: 'Show remove menu',
@@ -42,6 +43,7 @@ const TL_STRINGS = {
     show_copy: 'Show copy button',
     show_total: 'Show total amount',
     hide_free: 'Hide people without amount',
+    show_step_select: 'Show step selection',
     copy_table: 'Copy table',
     reset_all: 'Reset all tallies',
     show_reset_everyone: 'Show reset button for everyone',
@@ -82,6 +84,7 @@ const TL_STRINGS = {
     total: 'Gesamt',
     free_amount: 'Freibetrag',
     amount_due: 'Zu zahlen',
+    step_label: 'Schrittweite (wirkt auf + und −)',
     lock_ms: 'Sperrzeit (ms)',
     max_width: 'Maximale Breite (px)',
     show_remove_menu: 'Entfernen-Menü anzeigen',
@@ -102,6 +105,7 @@ const TL_STRINGS = {
     show_copy: 'Kopier-Button anzeigen',
     show_total: 'Gesamtsumme anzeigen',
     hide_free: 'Personen ohne Betrag ausblenden',
+    show_step_select: 'Schrittweiten-Auswahl anzeigen',
     copy_table: 'Tabelle kopieren',
     reset_all: 'Alle Striche zurücksetzen',
     show_reset_everyone: 'Für jeden Reset-Button anzeigen',
@@ -236,6 +240,7 @@ class TallyListCard extends LitElement {
       show_inactive_drinks: false,
       language: 'auto',
       user_selector: 'list',
+      show_step_select: true,
       ...config,
     };
     this.config.tabs = tabs;
@@ -261,6 +266,8 @@ class TallyListCard extends LitElement {
 
   _setSelectedUser(name, source) {
     this.selectedUser = name;
+    this.selectedCount = 1;
+    this.requestUpdate('selectedCount');
     fireEvent(this, 'tally-user-picker-change', { userId: name, source });
   }
 
@@ -556,18 +563,27 @@ class TallyListCard extends LitElement {
     const width = this._normalizeWidth(this.config.max_width);
     const cardStyle = width ? `max-width:${width};margin:0 auto;` : '';
     const selector = this._renderUserSelector(users, isAdmin);
-    const countSelector = html`
-      <div class="count-row">
-        ${[1, 3, 5, 10].map(
-          c => html`<button
-            class=${c === this.selectedCount ? 'selected' : ''}
-            @pointerdown=${(e) => this._onSelectCount(c, e)}
-          >
-            ${c}
-          </button>`
-        )}
-      </div>
-    `;
+    if (this.config.show_step_select === false) {
+      if (this.selectedCount !== 1) {
+        this.selectedCount = 1;
+      }
+    }
+    const countSelector =
+      this.config.show_step_select === false
+        ? null
+        : html`<div class="count-selector">
+            <div class="count-label">${this._t('step_label')}</div>
+            <div class="count-row">
+              ${[1, 3, 5, 10].map(
+                c => html`<button
+                  class=${c === this.selectedCount ? 'selected' : ''}
+                  @pointerdown=${e => this._onSelectCount(c, e)}
+                >
+                  ${c}
+                </button>`
+              )}
+            </div>
+          </div>`;
     return html`
       <ha-card style="${cardStyle}">
         ${selector}
@@ -950,22 +966,33 @@ class TallyListCard extends LitElement {
       font-weight: bold;
       margin-bottom: 8px;
     }
+    .count-selector {
+      margin-bottom: 8px;
+    }
+    .count-label {
+      font-size: 0.8rem;
+      margin-bottom: 4px;
+    }
     .count-row {
       display: flex;
-      gap: 8px;
-      margin-bottom: 8px;
+      flex-wrap: wrap;
     }
     .count-row button {
       flex: 1;
-      height: 32px;
+      height: var(--tl-btn-h, 32px);
       border: 1px solid var(--divider-color);
-      border-radius: 4px;
-      background: var(
-        --card-background-color,
-        var(--ha-card-background, transparent)
-      );
+      border-right: none;
+      border-radius: 0;
+      background: var(--secondary-background-color);
       color: var(--primary-text-color);
       transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+    }
+    .count-row button:first-child {
+      border-radius: 4px 0 0 4px;
+    }
+    .count-row button:last-child {
+      border-right: 1px solid var(--divider-color);
+      border-radius: 0 4px 4px 0;
     }
     .count-row button.selected {
       background-color: var(--success-color, #2e7d32);
@@ -980,11 +1007,12 @@ class TallyListCard extends LitElement {
     }
     .user-tabs button {
       flex: 0 0 auto;
-      padding: 8px 12px;
-      min-height: 44px;
-      height: auto;
+      padding: 0 8px;
+      min-height: var(--tl-btn-h, 32px);
+      height: var(--tl-btn-h, 32px);
       border: none;
-      background: var(--secondary-background-color);
+      background: var(--error-color, #c62828);
+      color: #fff;
       border-radius: 4px;
       transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
       white-space: normal;
@@ -1121,6 +1149,7 @@ class TallyListCardEditor extends LitElement {
       show_inactive_drinks: false,
       language: 'auto',
       user_selector: 'list',
+      show_step_select: true,
       ...config,
       tabs,
       grid,
@@ -1936,6 +1965,12 @@ class TallyDueRankingCardEditor extends LitElement {
           ${this._t('hide_free')}
         </label>
       </div>
+      <div class="form">
+        <label>
+          <input type="checkbox" .checked=${this._config.show_step_select !== false} @change=${this._stepSelectChanged} />
+          ${this._t('show_step_select')}
+        </label>
+      </div>
       <details class="debug">
         <summary>${this._t('debug')}</summary>
         <div class="form">
@@ -1998,6 +2033,11 @@ class TallyDueRankingCardEditor extends LitElement {
 
   _hideChanged(ev) {
     this._config = { ...this._config, hide_free: ev.target.checked };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _stepSelectChanged(ev) {
+    this._config = { ...this._config, show_step_select: ev.target.checked };
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
