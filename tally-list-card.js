@@ -361,7 +361,16 @@ class TallyListCard extends LitElement {
     }
     const active = tabs.find(t => t.key === this._uiState.tab) || tabs[0];
     return html`<div class="user-tabs" role="tablist">
-        ${tabs.map(t => html`<button role="tab" aria-selected="${t.key === active.key}" @click=${() => this._changeTab(t.key)}>${t.label}</button>`) }
+        ${tabs.map(
+          t => html`<button
+            role="tab"
+            aria-selected="${t.key === active.key}"
+            @pointerdown=${() => this._changeTab(t.key)}
+            @click=${e => {
+              if (e.detail === 0) this._changeTab(t.key);
+            }}
+          >${t.label}</button>`
+        ) }
       </div>
       ${this._renderUserButtons(active.key === 'all' ? users : active.users, 'tabs')}`;
   }
@@ -850,6 +859,7 @@ class TallyListCard extends LitElement {
       border: none;
       background: var(--secondary-background-color);
       border-radius: 4px;
+      touch-action: manipulation;
     }
     .user-tabs button[aria-selected='true'],
     .user-grid button[aria-pressed='true'] {
