@@ -866,7 +866,7 @@ class TallyListCard extends LitElement {
     .user-grid button {
       min-width: var(--tl-btn-min, 88px);
       max-width: var(--tl-btn-max, 160px);
-      height: var(--tl-btn-h, 56px);
+      height: var(--tl-btn-h, 32px);
       font-size: var(--tl-btn-font, 1rem);
       overflow: hidden;
       text-overflow: ellipsis;
