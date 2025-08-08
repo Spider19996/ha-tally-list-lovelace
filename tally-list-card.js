@@ -66,9 +66,7 @@ const TL_STRINGS = {
     grid_min_width: 'Min button width (px)',
     grid_max_width: 'Max button width (px)',
     grid_gap: 'Gap (px)',
-    grid_button_height: 'Button height (px)',
     grid_font_size: 'Font size (rem)',
-    grid_wrap_labels: 'Wrap labels',
   },
   de: {
     card_name: 'Strichliste Karte',
@@ -133,9 +131,7 @@ const TL_STRINGS = {
     grid_min_width: 'Minimale Buttonbreite (px)',
     grid_max_width: 'Maximale Buttonbreite (px)',
     grid_gap: 'Abstand (px)',
-    grid_button_height: 'Buttonhöhe (px)',
     grid_font_size: 'Schriftgröße (rem)',
-    grid_wrap_labels: 'Text umbrechen',
   },
 };
 
@@ -217,6 +213,17 @@ class TallyListCard extends LitElement {
     }
   }
 
+  connectedCallback() {
+    super.connectedCallback();
+    this._resizeHandler = () => this._updateButtonHeight();
+    window.addEventListener('resize', this._resizeHandler);
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener('resize', this._resizeHandler);
+    super.disconnectedCallback();
+  }
+
   setConfig(config) {
     const tabs = {
       mode: 'per-letter',
@@ -230,9 +237,7 @@ class TallyListCard extends LitElement {
       min_button_width_px: 88,
       max_button_width_px: 160,
       gap_px: 8,
-      button_height_px: 32,
       font_size_rem: 1.0,
-      wrap_labels: false,
       ...(config?.grid || {}),
     };
     this.config = {
@@ -326,14 +331,12 @@ class TallyListCard extends LitElement {
     const min = Number(cfg.min_button_width_px || 88);
     const max = Number(cfg.max_button_width_px || 160);
     const gap = Number(cfg.gap_px || 8);
-    const height = Number(cfg.button_height_px || 32);
     const font = Number(cfg.font_size_rem || 1);
-    const wrap = cfg.wrap_labels ? 'normal' : 'nowrap';
     const columnStyle =
       cols && cols !== 'auto'
         ? `grid-template-columns:repeat(${cols},1fr);`
         : `grid-template-columns:repeat(auto-fit,minmax(${min}px,1fr));`;
-    const style = `${columnStyle}gap:${gap}px;--tl-btn-h:${height}px;--tl-btn-font:${font}rem;--tl-btn-min:${min}px;--tl-btn-max:${max}px;--tl-btn-wrap:${wrap};`;
+    const style = `${columnStyle}gap:${gap}px;--tl-btn-h:32px;--tl-btn-font:${font}rem;--tl-btn-min:${min}px;--tl-btn-max:${max}px;`;
     const pressed = this.selectedUser;
     return html`<div class="user-grid" aria-label="${this._t('name')}" style="${style}">
       ${repeat(list, u => u.user_id || u.slug, u => {
@@ -341,6 +344,23 @@ class TallyListCard extends LitElement {
         return html`<button class="user-btn" data-id="${name}" data-source="${source}" aria-pressed="${name === pressed}" @pointerdown=${this._onUserPick}>${name}</button>`;
       })}
     </div>`;
+  }
+
+  _updateButtonHeight() {
+    const grid = this.renderRoot?.querySelector('.user-grid');
+    if (!grid) return;
+    const buttons = grid.querySelectorAll('button');
+    if (!buttons.length) return;
+    // Temporarily allow buttons to size to their content
+    buttons.forEach(btn => btn.style.height = 'auto');
+    let max = 32;
+    buttons.forEach(btn => {
+      const h = btn.offsetHeight;
+      if (h > max) max = h;
+    });
+    // Remove inline height so CSS variable can take effect
+    buttons.forEach(btn => btn.style.removeProperty('height'));
+    grid.style.setProperty('--tl-btn-h', `${max}px`);
   }
 
   _onUserPick(e) {
@@ -675,6 +695,9 @@ class TallyListCard extends LitElement {
         this._optimisticCounts = updated;
       }
     }
+    if (changedProps.has('_visibleUsers')) {
+      this._updateButtonHeight();
+    }
   }
 
   _gatherUsers() {
@@ -917,9 +940,8 @@ class TallyListCard extends LitElement {
       max-width: var(--tl-btn-max, 160px);
       height: var(--tl-btn-h, 32px);
       font-size: var(--tl-btn-font, 1rem);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: var(--tl-btn-wrap, nowrap);
+      white-space: normal;
+      overflow-wrap: anywhere;
       border: none;
       border-radius: 4px;
       transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
@@ -1022,9 +1044,7 @@ class TallyListCardEditor extends LitElement {
       min_button_width_px: 88,
       max_button_width_px: 160,
       gap_px: 8,
-      button_height_px: 32,
       font_size_rem: 1.0,
-      wrap_labels: false,
       ...(config?.grid || {}),
     };
     this._config = {
@@ -1126,17 +1146,10 @@ class TallyListCardEditor extends LitElement {
               <label>${this._t('grid_gap')}</label>
               <input type="number" min="0" .value=${this._config.grid.gap_px} @input=${this._gridGapChanged} />
             </div>
-            <div class="form">
-              <label>${this._t('grid_button_height')}</label>
-              <input type="number" min="1" .value=${this._config.grid.button_height_px} @input=${this._gridButtonHeightChanged} />
-            </div>
-            <div class="form">
-              <label>${this._t('grid_font_size')}</label>
-              <input type="number" step="0.1" min="0.1" .value=${this._config.grid.font_size_rem} @input=${this._gridFontSizeChanged} />
-            </div>
-            <div class="form">
-              <label><input type="checkbox" .checked=${this._config.grid.wrap_labels} @change=${this._gridWrapChanged} /> ${this._t('grid_wrap_labels')}</label>
-            </div>
+              <div class="form">
+                <label>${this._t('grid_font_size')}</label>
+                <input type="number" step="0.1" min="0.1" .value=${this._config.grid.font_size_rem} @input=${this._gridFontSizeChanged} />
+              </div>
           `
         : ''}
       <details class="debug">
@@ -1324,28 +1337,11 @@ class TallyListCardEditor extends LitElement {
     this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
   }
 
-  _gridButtonHeightChanged(ev) {
-    const v = Math.max(1, Number(ev.target.value));
-    this._config = {
-      ...this._config,
-      grid: { ...this._config.grid, button_height_px: v },
-    };
-    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
-  }
-
   _gridFontSizeChanged(ev) {
     const v = Math.max(0.1, Number(ev.target.value));
     this._config = {
       ...this._config,
       grid: { ...this._config.grid, font_size_rem: v },
-    };
-    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
-  }
-
-  _gridWrapChanged(ev) {
-    this._config = {
-      ...this._config,
-      grid: { ...this._config.grid, wrap_labels: ev.target.checked },
     };
     this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
   }
