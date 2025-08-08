@@ -1,6 +1,6 @@
 // Tally List Card
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
-const CARD_VERSION = 'v06.08.2025';
+const CARD_VERSION = '08.08.2025';
 
 const TL_STRINGS = {
   en: {
