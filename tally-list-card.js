@@ -526,7 +526,7 @@ class TallyListCard extends LitElement {
         return html`<tr>
           <td>
             <button
-              class="action-btn plus"
+              class="action-btn plus plus-btn"
               @pointerdown=${() => this._addDrink(drink)}
               ?disabled=${this._disabled || !isAvailable}
             >
@@ -606,29 +606,27 @@ class TallyListCard extends LitElement {
         <div class="content">
           ${selector ? html`${selector}` : ''}
           ${countSelector ? html`<div class="spacer"></div>${countSelector}` : ''}
-          <table>
-          <thead><tr><th></th><th>${this._t('drink')}</th><th>${this._t('count')}</th><th>${this._t('price')}</th><th>${this._t('sum')}</th></tr></thead>
-          <tbody>${rows}</tbody>
-          <tfoot>
-            <tr><td colspan="4"><b>${this._t('total')}</b></td><td>${totalStr}</td></tr>
-            ${freeAmount > 0 ? html`
-              <tr><td colspan="4"><b>${this._t('free_amount')}</b></td><td>- ${freeAmountStr}</td></tr>
-              <tr><td colspan="4"><b>${this._t('amount_due')}</b></td><td>${dueStr}</td></tr>
-            ` : ''}
+          <div class="container-grid">
+            <table class="obere-zeile">
+            <thead><tr><th></th><th>${this._t('drink')}</th><th>${this._t('count')}</th><th>${this._t('price')}</th><th>${this._t('sum')}</th></tr></thead>
+            <tbody>${rows}</tbody>
+            <tfoot>
+              <tr><td colspan="4"><b>${this._t('total')}</b></td><td>${totalStr}</td></tr>
+              ${freeAmount > 0 ? html`
+                <tr><td colspan="4"><b>${this._t('free_amount')}</b></td><td>- ${freeAmountStr}</td></tr>
+                <tr><td colspan="4"><b>${this._t('amount_due')}</b></td><td>${dueStr}</td></tr>
+              ` : ''}
+            </tfoot>
+            </table>
             ${this.config.show_remove !== false ? html`
-              <tr class="remove-row">
-                <td colspan="5">
-                  <div class="input-group minus-group">
-                    <button class="action-btn minus" @pointerdown=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${removeDisabled}>&minus;${this.selectedCount}</button>
-                    <ha-select class="drink-select" .value=${this.selectedRemoveDrink} @selected=${this._selectRemoveDrink.bind(this)} @closed=${e => e.stopPropagation()}>
-                      ${drinks.map(d => html`<mwc-list-item value="${d}">${d.charAt(0).toUpperCase() + d.slice(1)}</mwc-list-item>`)}
-                    </ha-select>
-                  </div>
-                </td>
-              </tr>
+              <div class="input-group minus-group">
+                <button class="action-btn minus" @pointerdown=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${removeDisabled}>&minus;${this.selectedCount}</button>
+                <select class="drink-select-native" .value=${this.selectedRemoveDrink} @change=${this._selectRemoveDrink.bind(this)}>
+                  ${drinks.map(d => html`<option value="${d}">${d.charAt(0).toUpperCase() + d.slice(1)}</option>`)}
+                </select>
+              </div>
             ` : ''}
-          </tfoot>
-        </table>
+          </div>
       </div>
       </ha-card>
     `;
@@ -1160,11 +1158,6 @@ class TallyListCard extends LitElement {
       box-sizing: border-box;
       border-radius: 12px;
     }
-    .remove-row td {
-      border-bottom: none;
-      padding-top: 8px;
-      font-weight: normal;
-    }
     .action-btn {
       display: inline-flex;
       align-items: center;
@@ -1187,59 +1180,45 @@ class TallyListCard extends LitElement {
     .action-btn.minus {
       background: var(--error-color, #c62828);
       color: #fff;
+      border-radius: 12px 0 0 12px;
     }
     .input-group {
       display: flex;
       align-items: stretch;
       gap: 0;
     }
-    .input-group .action-btn.minus {
-      border-radius: 12px 0 0 12px;
-      margin: 0;
-    }
-    .input-group .drink-select {
-      flex: 1 1 auto;
+    .drink-select-native {
       height: 44px;
-      min-height: 44px;
-      margin: 0;
+      line-height: 44px;
       border-radius: 0 12px 12px 0;
-      box-sizing: border-box;
-    }
-    .drink-select::part(control) {
-      height: 44px;
-      min-height: 44px;
-      border-radius: 0 12px 12px 0;
+      border: 1px solid var(--ha-card-border-color);
+      background: #2b2b2b;
+      color: #fff;
       padding: 0 12px;
-    }
-    .drink-select .mdc-select,
-    .drink-select .mdc-select__anchor {
-      height: 44px !important;
-      min-height: 44px !important;
-      border-radius: 0 12px 12px 0;
-      padding: 0 12px !important;
-      display: flex;
-      align-items: center;
+      appearance: none;
       box-sizing: border-box;
-    }
-    .drink-select .mdc-select__selected-text {
-      line-height: 44px;
-    }
-    .drink-select .mdc-select__dropdown-icon {
-      height: 44px;
-      line-height: 44px;
-      align-self: stretch;
-      display: flex;
-      align-items: center;
+      flex: 1;
     }
     .input-group * {
       box-sizing: border-box;
     }
     .action-btn.minus,
-    .drink-select {
+    .drink-select-native {
       margin: 0 !important;
     }
+    .container-grid {
+      display: grid;
+      grid-template-columns: 56px 1fr;
+      gap: 0;
+    }
+    .obere-zeile {
+      grid-column: 1 / -1;
+    }
+    .plus-btn {
+      grid-column: 1;
+    }
     .minus-group {
-      margin-left: var(--plus-button-offset, 0px);
+      grid-column: 1 / -1;
     }
     .reset-container,
     .copy-container {
