@@ -1166,15 +1166,19 @@ class TallyListCard extends LitElement {
       font-weight: normal;
     }
     .action-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       height: 44px;
       width: 44px;
       min-width: 44px;
+      padding: 0;
+      font-weight: 700;
       border-radius: 12px;
-      font-weight: 600;
       border: none;
       font-size: 14px;
-      line-height: 44px;
-      text-align: center;
+      line-height: normal;
+      box-sizing: border-box;
     }
     .action-btn.plus {
       background: var(--success-color, #2e7d32);
@@ -1183,31 +1187,52 @@ class TallyListCard extends LitElement {
     .action-btn.minus {
       background: var(--error-color, #c62828);
       color: #fff;
-      border-radius: 12px 0 0 12px;
-      margin: 0;
     }
     .input-group {
       display: flex;
-      align-items: center;
+      align-items: stretch;
       gap: 0;
     }
-    .drink-select {
-      height: 44px;
-      border-radius: 0 12px 12px 0;
+    .input-group .action-btn.minus {
+      border-radius: 12px 0 0 12px;
       margin: 0;
+    }
+    .input-group .drink-select {
       flex: 1 1 auto;
-      min-width: 180px;
+      height: 44px;
+      min-height: 44px;
+      margin: 0;
+      border-radius: 0 12px 12px 0;
+      box-sizing: border-box;
     }
     .drink-select::part(control) {
       height: 44px;
+      min-height: 44px;
+      border-radius: 0 12px 12px 0;
+      padding: 0 12px;
     }
     .drink-select .mdc-select,
     .drink-select .mdc-select__anchor {
-      height: 44px;
-      min-height: 44px;
+      height: 44px !important;
+      min-height: 44px !important;
+      border-radius: 0 12px 12px 0;
+      padding: 0 12px !important;
+      display: flex;
+      align-items: center;
+      box-sizing: border-box;
     }
     .drink-select .mdc-select__selected-text {
       line-height: 44px;
+    }
+    .drink-select .mdc-select__dropdown-icon {
+      height: 44px;
+      line-height: 44px;
+      align-self: stretch;
+      display: flex;
+      align-items: center;
+    }
+    .input-group * {
+      box-sizing: border-box;
     }
     .action-btn.minus,
     .drink-select {
