@@ -49,6 +49,26 @@ const TL_STRINGS = {
     version: 'Version',
     copy_success: 'Text copied to clipboard!',
     reset_confirm_prompt: 'Type "YES I WANT TO" to reset all tallies:',
+    tab_all_label: 'All',
+    tab_misc_label: '#',
+    user_selector: 'User selector',
+    user_selector_list: 'List',
+    user_selector_tabs: 'Tabs',
+    user_selector_grid: 'Grid',
+    tab_mode: 'Tab mode',
+    per_letter: 'Per letter',
+    grouped: 'Grouped',
+    grouped_breaks: 'Grouped breaks',
+    show_all_tab: 'Show "All" tab',
+    show_misc_tab: 'Show "#" tab',
+    grid_columns: 'Grid columns',
+    grid_min_width: 'Min button width (px)',
+    grid_max_width: 'Max button width (px)',
+    grid_gap: 'Gap (px)',
+    grid_button_height: 'Button height (px)',
+    grid_font_size: 'Font size (rem)',
+    grid_wrap_labels: 'Wrap labels',
+    focus_outline: 'Show focus outline',
   },
   de: {
     card_name: 'Strichliste Karte',
@@ -97,6 +117,26 @@ const TL_STRINGS = {
     version: 'Version',
     copy_success: 'Text in die Zwischenablage kopiert!',
     reset_confirm_prompt: 'Zum Zurücksetzen aller Striche "JA ICH WILL" eingeben:',
+    tab_all_label: 'Alle',
+    tab_misc_label: '#',
+    user_selector: 'Nutzerauswahl',
+    user_selector_list: 'Liste',
+    user_selector_tabs: 'Tabs',
+    user_selector_grid: 'Grid',
+    tab_mode: 'Tab-Modus',
+    per_letter: 'Pro Buchstabe',
+    grouped: 'Gruppiert',
+    grouped_breaks: 'Gruppierte Bereiche',
+    show_all_tab: 'Tab "Alle" anzeigen',
+    show_misc_tab: 'Tab "#" anzeigen',
+    grid_columns: 'Spalten',
+    grid_min_width: 'Minimale Buttonbreite (px)',
+    grid_max_width: 'Maximale Buttonbreite (px)',
+    grid_gap: 'Abstand (px)',
+    grid_button_height: 'Buttonhöhe (px)',
+    grid_font_size: 'Schriftgröße (rem)',
+    grid_wrap_labels: 'Text umbrechen',
+    focus_outline: 'Fokusrahmen anzeigen',
   },
 };
 
@@ -152,11 +192,13 @@ class TallyListCard extends LitElement {
     selectedRemoveDrink: { state: true },
     _disabled: { state: true },
     _optimisticCounts: { state: true },
+    _uiState: { state: true },
   };
 
   selectedRemoveDrink = '';
   _tallyAdmins = [];
   _optimisticCounts = {};
+  _uiState = { tab: 'all' };
 
   constructor() {
     super();
@@ -169,6 +211,23 @@ class TallyListCard extends LitElement {
   }
 
   setConfig(config) {
+    const tabs = {
+      mode: 'per-letter',
+      grouped_breaks: ['A–E', 'F–J', 'K–O', 'P–T', 'U–Z'],
+      show_all_tab: true,
+      show_misc_tab: true,
+      ...(config?.tabs || {}),
+    };
+    const grid = {
+      columns: 'auto',
+      min_button_width_px: 88,
+      max_button_width_px: 160,
+      gap_px: 8,
+      button_height_px: 56,
+      font_size_rem: 1.0,
+      wrap_labels: false,
+      ...(config?.grid || {}),
+    };
     this.config = {
       lock_ms: 400,
       max_width: '500px',
@@ -177,8 +236,12 @@ class TallyListCard extends LitElement {
       show_all_users: false,
       show_inactive_drinks: false,
       language: 'auto',
+      user_selector: 'list',
+      focus_outline: true,
       ...config,
     };
+    this.config.tabs = tabs;
+    this.config.grid = grid;
     this._disabled = false;
     const width = this._normalizeWidth(this.config.max_width);
     if (width) {
@@ -198,6 +261,130 @@ class TallyListCard extends LitElement {
     return t(this.hass, this.config?.language, key);
   }
 
+  _setSelectedUser(name, source) {
+    this.selectedUser = name;
+    fireEvent(this, 'tally-user-picker-change', { userId: name, source });
+  }
+
+  _firstLetter(name) {
+    return name
+      .trim()
+      .charAt(0)
+      .toUpperCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
+
+  _bucketizeUsers(users, cfg) {
+    const misc = [];
+    if ((cfg.mode || 'per-letter') === 'grouped') {
+      const ranges = (cfg.grouped_breaks || []).map(b => {
+        const [s, e] = b.split('–');
+        return {
+          key: b,
+          start: this._firstLetter(s || ''),
+          end: this._firstLetter(e || ''),
+          users: [],
+        };
+      });
+      users.forEach(u => {
+        const ch = this._firstLetter(u.name || u.slug);
+        let placed = false;
+        for (const r of ranges) {
+          if (ch >= r.start && ch <= r.end) {
+            r.users.push(u);
+            placed = true;
+            break;
+          }
+        }
+        if (!placed) misc.push(u);
+      });
+      return { ranges, misc };
+    }
+    const letters = new Map();
+    users.forEach(u => {
+      const ch = this._firstLetter(u.name || u.slug);
+      if (ch >= 'A' && ch <= 'Z') {
+        if (!letters.has(ch)) letters.set(ch, []);
+        letters.get(ch).push(u);
+      } else {
+        misc.push(u);
+      }
+    });
+    return { letters, misc };
+  }
+
+  _renderUserButtons(list, source) {
+    const cfg = this.config.grid || {};
+    const cols = cfg.columns;
+    const min = Number(cfg.min_button_width_px || 88);
+    const max = Number(cfg.max_button_width_px || 160);
+    const gap = Number(cfg.gap_px || 8);
+    const height = Number(cfg.button_height_px || 56);
+    const font = Number(cfg.font_size_rem || 1);
+    const wrap = cfg.wrap_labels ? 'normal' : 'nowrap';
+    const columnStyle =
+      cols && cols !== 'auto'
+        ? `grid-template-columns:repeat(${cols},1fr);`
+        : `grid-template-columns:repeat(auto-fit,minmax(${min}px,1fr));`;
+    const style = `${columnStyle}gap:${gap}px;--tl-btn-h:${height}px;--tl-btn-font:${font}rem;--tl-btn-min:${min}px;--tl-btn-max:${max}px;--tl-btn-wrap:${wrap};`;
+    const pressed = this.selectedUser;
+    return html`<div class="user-grid" aria-label="${this._t('name')}" style="${style}">
+      ${list.map(u => {
+        const name = u.name || u.slug;
+        return html`<button class="user-btn" aria-pressed="${name === pressed}" @click=${() => this._setSelectedUser(name, source)}>${name}</button>`;
+      })}
+    </div>`;
+  }
+
+  _changeTab(key) {
+    this._uiState = { ...this._uiState, tab: key };
+  }
+
+  _renderTabs(users) {
+    const cfg = this.config.tabs || {};
+    const data = this._bucketizeUsers(users, cfg);
+    let tabs = [];
+    if (cfg.mode === 'grouped') {
+      tabs = data.ranges
+        .filter(r => r.users.length > 0)
+        .map(r => ({ key: r.key, label: r.key, users: r.users }));
+    } else {
+      const letters = Array.from(data.letters.keys()).sort((a, b) => a.localeCompare(b));
+      tabs = letters.map(l => ({ key: l, label: l, users: data.letters.get(l) }));
+    }
+    if (cfg.show_misc_tab !== false && data.misc.length > 0) {
+      tabs.push({ key: '#', label: this._t('tab_misc_label'), users: data.misc });
+    }
+    if (cfg.show_all_tab !== false) {
+      tabs.unshift({ key: 'all', label: this._t('tab_all_label'), users });
+    }
+    if (!tabs.some(t => t.key === this._uiState.tab)) {
+      this._uiState = { ...this._uiState, tab: tabs[0]?.key || 'all' };
+    }
+    const active = tabs.find(t => t.key === this._uiState.tab) || tabs[0];
+    return html`<div class="user-tabs" role="tablist">
+        ${tabs.map(t => html`<button role="tab" aria-selected="${t.key === active.key}" @click=${() => this._changeTab(t.key)}>${t.label}</button>`) }
+      </div>
+      ${this._renderUserButtons(active.key === 'all' ? users : active.users, 'tabs')}`;
+  }
+
+  _renderGrid(users) {
+    return this._renderUserButtons(users, 'grid');
+  }
+
+  _renderUserSelector(users, isAdmin) {
+    if (!isAdmin) {
+      const own = users.find(u => (u.name || u.slug) === this.selectedUser) || users[0];
+      const name = own?.name || own?.slug || '';
+      return html`<div class="controls"><div class="user-label">${name}</div></div>`;
+    }
+    const mode = this.config.user_selector || 'list';
+    if (mode === 'tabs') return this._renderTabs(users);
+    if (mode === 'grid') return this._renderGrid(users);
+    return html`<div class="controls"><div class="user-select"><label for="user">${this._t('name')}:</label><select id="user" @change=${this._selectUser.bind(this)}>${users.map(u => html`<option value="${u.name || u.slug}" ?selected=${(u.name || u.slug)===this.selectedUser}>${u.name}</option>`)}</select></div></div>`;
+  }
+
   render() {
     if (!this.hass || !this.config) return html``;
     let users = this.config.users || this._autoUsers || [];
@@ -206,7 +393,7 @@ class TallyListCard extends LitElement {
     }
     const userNames = [this.hass.user?.name, ...this._currentPersonNames()];
     const isAdmin = userNames.some(n => (this._tallyAdmins || []).includes(n));
-    const limitSelf = (!isAdmin && !this.config.show_all_users) || this.config.only_self;
+    const limitSelf = !isAdmin || this.config.only_self;
     if (limitSelf) {
       const allowedSlugs = this._currentPersonSlugs();
       const uid = this.hass.user?.id;
@@ -304,18 +491,15 @@ class TallyListCard extends LitElement {
     }
     const dueStr = this._formatPrice(due) + ` ${this._currency}`;
     const width = this._normalizeWidth(this.config.max_width);
-    const cardStyle = width ? `max-width:${width};margin:0 auto;` : '';
+    const focusVar = this.config.focus_outline === false ? '--tl-focus-outline:none;' : '--tl-focus-outline:auto;';
+    const cardStyle = width
+      ? `max-width:${width};margin:0 auto;${focusVar}`
+      : `${focusVar}`;
+    const selector = this._renderUserSelector(users, isAdmin);
     return html`
       <ha-card style="${cardStyle}">
-        <div class="controls">
-          <div class="user-select">
-            <label for="user">${this._t('name')}:</label>
-            <select id="user" @change=${this._selectUser.bind(this)}>
-              ${users.map(u => html`<option value="${u.name || u.slug}" ?selected=${(u.name || u.slug)===this.selectedUser}>${u.name}</option>`)}
-            </select>
-          </div>
-        </div>
-          <table>
+        ${selector}
+        <table>
           <thead><tr><th></th><th>${this._t('drink')}</th><th>${this._t('count')}</th><th>${this._t('price')}</th><th>${this._t('sum')}</th></tr></thead>
           <tbody>${rows}</tbody>
           <tfoot>
@@ -341,7 +525,7 @@ class TallyListCard extends LitElement {
   }
 
   _selectUser(ev) {
-    this.selectedUser = ev.target.value;
+    this._setSelectedUser(ev.target.value, 'list');
   }
 
   _selectRemoveDrink(ev) {
@@ -655,6 +839,46 @@ class TallyListCard extends LitElement {
       align-items: center;
       gap: 8px;
     }
+    .user-label {
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    .user-tabs {
+      display: flex;
+      overflow-x: auto;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .user-tabs button {
+      flex: 0 0 auto;
+      padding: 8px 12px;
+      height: 44px;
+      border: none;
+      background: var(--secondary-background-color);
+    }
+    .user-tabs button[aria-selected='true'] {
+      border-bottom: 2px solid var(--primary-color);
+    }
+    .user-grid {
+      display: grid;
+      margin-bottom: 8px;
+    }
+    .user-grid button {
+      min-width: var(--tl-btn-min, 88px);
+      max-width: var(--tl-btn-max, 160px);
+      height: var(--tl-btn-h, 56px);
+      font-size: var(--tl-btn-font, 1rem);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: var(--tl-btn-wrap, nowrap);
+    }
+    .user-grid button[aria-pressed='true'] {
+      outline: 2px solid var(--primary-color);
+    }
+    .user-tabs button:focus,
+    .user-grid button:focus {
+      outline: var(--tl-focus-outline, auto);
+    }
     .user-select select,
     .remove-select {
       padding: 4px 8px;
@@ -720,6 +944,23 @@ class TallyListCardEditor extends LitElement {
   };
 
   setConfig(config) {
+    const tabs = {
+      mode: 'per-letter',
+      grouped_breaks: ['A–E', 'F–J', 'K–O', 'P–T', 'U–Z'],
+      show_all_tab: true,
+      show_misc_tab: true,
+      ...(config?.tabs || {}),
+    };
+    const grid = {
+      columns: 'auto',
+      min_button_width_px: 88,
+      max_button_width_px: 160,
+      gap_px: 8,
+      button_height_px: 56,
+      font_size_rem: 1.0,
+      wrap_labels: false,
+      ...(config?.grid || {}),
+    };
     this._config = {
       lock_ms: 400,
       max_width: '500px',
@@ -728,7 +969,11 @@ class TallyListCardEditor extends LitElement {
       show_all_users: false,
       show_inactive_drinks: false,
       language: 'auto',
+      user_selector: 'list',
+      focus_outline: true,
       ...config,
+      tabs,
+      grid,
     };
   }
 
@@ -766,6 +1011,71 @@ class TallyListCardEditor extends LitElement {
           <input type="checkbox" .checked=${this._config.only_self} @change=${this._selfChanged} />
           ${this._t('only_self')}
         </label>
+      </div>
+      <div class="form">
+        <label>${this._t('user_selector')}</label>
+        <select @change=${this._userSelectorChanged}>
+          <option value="list" ?selected=${this._config.user_selector === 'list'}>${this._t('user_selector_list')}</option>
+          <option value="tabs" ?selected=${this._config.user_selector === 'tabs'}>${this._t('user_selector_tabs')}</option>
+          <option value="grid" ?selected=${this._config.user_selector === 'grid'}>${this._t('user_selector_grid')}</option>
+        </select>
+      </div>
+      ${['tabs', 'grid'].includes(this._config.user_selector)
+        ? html`
+            ${this._config.user_selector === 'tabs'
+              ? html`
+                  <div class="form">
+                    <label>${this._t('tab_mode')}</label>
+                    <select @change=${this._tabModeChanged}>
+                      <option value="per-letter" ?selected=${this._config.tabs.mode === 'per-letter'}>${this._t('per_letter')}</option>
+                      <option value="grouped" ?selected=${this._config.tabs.mode === 'grouped'}>${this._t('grouped')}</option>
+                    </select>
+                  </div>
+                  ${this._config.tabs.mode === 'grouped'
+                    ? html`<div class="form">
+                        <label>${this._t('grouped_breaks')}</label>
+                        <input type="text" .value=${this._config.tabs.grouped_breaks.join(',')} @input=${this._groupedBreaksChanged} />
+                      </div>`
+                    : ''}
+                  <div class="form">
+                    <label><input type="checkbox" .checked=${this._config.tabs.show_all_tab} @change=${this._showAllTabChanged} /> ${this._t('show_all_tab')}</label>
+                  </div>
+                  <div class="form">
+                    <label><input type="checkbox" .checked=${this._config.tabs.show_misc_tab} @change=${this._showMiscTabChanged} /> ${this._t('show_misc_tab')}</label>
+                  </div>
+                `
+              : ''}
+            <div class="form">
+              <label>${this._t('grid_columns')}</label>
+              <input type="text" .value=${this._config.grid.columns} @input=${this._gridColumnsChanged} />
+            </div>
+            <div class="form">
+              <label>${this._t('grid_min_width')}</label>
+              <input type="number" min="1" .value=${this._config.grid.min_button_width_px} @input=${this._gridMinWidthChanged} />
+            </div>
+            <div class="form">
+              <label>${this._t('grid_max_width')}</label>
+              <input type="number" min="1" .value=${this._config.grid.max_button_width_px} @input=${this._gridMaxWidthChanged} />
+            </div>
+            <div class="form">
+              <label>${this._t('grid_gap')}</label>
+              <input type="number" min="0" .value=${this._config.grid.gap_px} @input=${this._gridGapChanged} />
+            </div>
+            <div class="form">
+              <label>${this._t('grid_button_height')}</label>
+              <input type="number" min="1" .value=${this._config.grid.button_height_px} @input=${this._gridButtonHeightChanged} />
+            </div>
+            <div class="form">
+              <label>${this._t('grid_font_size')}</label>
+              <input type="number" step="0.1" min="0.1" .value=${this._config.grid.font_size_rem} @input=${this._gridFontSizeChanged} />
+            </div>
+            <div class="form">
+              <label><input type="checkbox" .checked=${this._config.grid.wrap_labels} @change=${this._gridWrapChanged} /> ${this._t('grid_wrap_labels')}</label>
+            </div>
+          `
+        : ''}
+      <div class="form">
+        <label><input type="checkbox" .checked=${this._config.focus_outline !== false} @change=${this._focusOutlineChanged} /> ${this._t('focus_outline')}</label>
       </div>
       <details class="debug">
         <summary>${this._t('debug')}</summary>
@@ -872,6 +1182,115 @@ class TallyListCardEditor extends LitElement {
         composed: true,
       })
     );
+  }
+
+  _userSelectorChanged(ev) {
+    this._config = { ...this._config, user_selector: ev.target.value };
+    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
+  }
+
+  _tabModeChanged(ev) {
+    this._config = {
+      ...this._config,
+      tabs: { ...this._config.tabs, mode: ev.target.value },
+    };
+    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
+  }
+
+  _groupedBreaksChanged(ev) {
+    const arr = ev.target.value
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+    this._config = {
+      ...this._config,
+      tabs: { ...this._config.tabs, grouped_breaks: arr },
+    };
+    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
+  }
+
+  _showAllTabChanged(ev) {
+    this._config = {
+      ...this._config,
+      tabs: { ...this._config.tabs, show_all_tab: ev.target.checked },
+    };
+    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
+  }
+
+  _showMiscTabChanged(ev) {
+    this._config = {
+      ...this._config,
+      tabs: { ...this._config.tabs, show_misc_tab: ev.target.checked },
+    };
+    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
+  }
+
+  _gridColumnsChanged(ev) {
+    const val = ev.target.value.trim();
+    const columns = val === '' || val === 'auto' ? 'auto' : Math.max(1, Number(val));
+    this._config = {
+      ...this._config,
+      grid: { ...this._config.grid, columns },
+    };
+    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
+  }
+
+  _gridMinWidthChanged(ev) {
+    const v = Math.max(1, Number(ev.target.value));
+    this._config = {
+      ...this._config,
+      grid: { ...this._config.grid, min_button_width_px: v },
+    };
+    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
+  }
+
+  _gridMaxWidthChanged(ev) {
+    const v = Math.max(1, Number(ev.target.value));
+    this._config = {
+      ...this._config,
+      grid: { ...this._config.grid, max_button_width_px: v },
+    };
+    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
+  }
+
+  _gridGapChanged(ev) {
+    const v = Math.max(0, Number(ev.target.value));
+    this._config = {
+      ...this._config,
+      grid: { ...this._config.grid, gap_px: v },
+    };
+    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
+  }
+
+  _gridButtonHeightChanged(ev) {
+    const v = Math.max(1, Number(ev.target.value));
+    this._config = {
+      ...this._config,
+      grid: { ...this._config.grid, button_height_px: v },
+    };
+    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
+  }
+
+  _gridFontSizeChanged(ev) {
+    const v = Math.max(0.1, Number(ev.target.value));
+    this._config = {
+      ...this._config,
+      grid: { ...this._config.grid, font_size_rem: v },
+    };
+    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
+  }
+
+  _gridWrapChanged(ev) {
+    this._config = {
+      ...this._config,
+      grid: { ...this._config.grid, wrap_labels: ev.target.checked },
+    };
+    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
+  }
+
+  _focusOutlineChanged(ev) {
+    this._config = { ...this._config, focus_outline: ev.target.checked };
+    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
   }
 
   static styles = css`

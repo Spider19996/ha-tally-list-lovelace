@@ -32,7 +32,7 @@ After the resource is available, open the dashboard, choose **Add Card**, and se
 ```yaml
 type: custom:tally-list-card
 ```
-All users detected by the integration appear in the dropdown. Admins (as defined in the Tally List integration) may choose any user; regular users can only select themselves. Drink prices are taken from sensors named `sensor.price_list_<drink>_price`. If `sensor.price_list_free_amount` exists, its value is deducted from each user's total. Sensors named `sensor.<name>_amount_due` override the calculated amount due.
+All users detected by the integration appear in the selector. By default this is a dropdown list, but admins (as defined in the Tally List integration) may switch to tabs or a button grid via the `user_selector` option. Regular users only see their own name and cannot change it. Drink prices are taken from sensors named `sensor.price_list_<drink>_price`. If `sensor.price_list_free_amount` exists, its value is deducted from each user's total. Sensors named `sensor.<name>_amount_due` override the calculated amount due.
 
 Pressing **+1** adds a drink:
 
@@ -53,6 +53,7 @@ The card offers the following options in the UI:
 * **Maximum width (px)** – Limit card width. Default `500`.
 * **Show remove menu** – Enable/disable the remove-drink dropdown.
 * **Only show self** – Limit selection to the logged‑in user even for admins.
+* **User selector** – Choose between **list**, **tabs**, or **grid** for selecting users.
 * **Language** – Force **Auto**, **Deutsch**, or **English**.
 * **Version** – Display the installed version.
 
