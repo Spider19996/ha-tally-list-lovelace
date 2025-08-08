@@ -856,8 +856,12 @@ class TallyListCard extends LitElement {
       border: none;
       background: var(--secondary-background-color);
     }
-    .user-tabs button[aria-selected='true'] {
-      border-bottom: 2px solid var(--primary-color);
+    .user-tabs button[aria-selected='true'],
+    .user-grid button[aria-pressed='true'] {
+      background: var(--label-badge-green, var(--primary-color));
+      color: var(--text-primary-color, #fff);
+      border-bottom: none;
+      outline: none;
     }
     .user-grid {
       display: grid;
@@ -871,9 +875,6 @@ class TallyListCard extends LitElement {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: var(--tl-btn-wrap, nowrap);
-    }
-    .user-grid button[aria-pressed='true'] {
-      outline: 2px solid var(--primary-color);
     }
     .user-tabs button:focus,
     .user-grid button:focus {
