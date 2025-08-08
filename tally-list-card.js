@@ -326,7 +326,7 @@ class TallyListCard extends LitElement {
       cols > 0
         ? `grid-template-columns:repeat(${cols},1fr);`
         : `grid-template-columns:repeat(auto-fit,minmax(0,1fr));`;
-    const style = `${columnStyle}--tl-btn-h:32px;`;
+    const style = `${columnStyle}--tl-btn-h:40px;`;
     const pressed = this.selectedUser;
     return html`<div class="user-grid" aria-label="${this._t('name')}" style="${style}">
       ${repeat(list, u => u.user_id || u.slug, u => {
@@ -426,12 +426,11 @@ class TallyListCard extends LitElement {
     this._setTab(tab);
   }
 
-  _renderTabs() {
+  _renderTabHeader() {
     const tabs = this._tabs || [];
-    return html`<div class="user-tabs tabbar" role="tablist" @pointerdown=${this._onTabbarPointerDown}>
-        ${tabs.map(t => html`<button class="tab" role="tab" data-tab="${t.key}" aria-selected="${t.key === this._currentTab}">${t.label}</button>`) }
-      </div>
-      ${this._renderUserButtons(this._visibleUsers, 'tabs')}`;
+    return html`<div class="tabs" role="tablist" @pointerdown=${this._onTabbarPointerDown}>
+      ${tabs.map(t => html`<button class="tab ${t.key === this._currentTab ? 'active' : ''}" role="tab" data-tab="${t.key}" aria-selected="${t.key === this._currentTab}">${t.label}</button>`)}
+    </div>`;
   }
 
   _renderGrid(users) {
@@ -442,12 +441,11 @@ class TallyListCard extends LitElement {
     if (!isAdmin) {
       const own = users.find(u => (u.name || u.slug) === this.selectedUser) || users[0];
       const name = own?.name || own?.slug || '';
-      return html`<div class="controls"><div class="user-label">${name}</div></div>`;
+      return html`<div class="user-label">${name}</div>`;
     }
     const mode = this.config.user_selector || 'list';
-    if (mode === 'tabs') return this._renderTabs();
     if (mode === 'grid') return this._renderGrid(users);
-    return html`<div class="controls"><div class="user-select"><label for="user">${this._t('name')}:</label><select id="user" @change=${this._selectUser.bind(this)}>${users.map(u => html`<option value="${u.name || u.slug}" ?selected=${(u.name || u.slug)===this.selectedUser}>${u.name}</option>`)}</select></div></div>`;
+    return html`<div class="user-select"><label for="user">${this._t('name')}: </label><select id="user" @change=${this._selectUser.bind(this)}>${users.map(u => html`<option value="${u.name || u.slug}" ?selected=${(u.name || u.slug)===this.selectedUser}>${u.name}</option>`)} </select></div>`;
   }
 
   shouldUpdate(changedProps) {
@@ -519,7 +517,7 @@ class TallyListCard extends LitElement {
         return html`<tr>
           <td>
             <button
-              class="add-button"
+              class="action-btn plus"
               @pointerdown=${() => this._addDrink(drink)}
               ?disabled=${this._disabled || !isAvailable}
             >
@@ -562,7 +560,15 @@ class TallyListCard extends LitElement {
     const dueStr = this._formatPrice(due) + ` ${this._currency}`;
     const width = this._normalizeWidth(this.config.max_width);
     const cardStyle = width ? `max-width:${width};margin:0 auto;` : '';
-    const selector = this._renderUserSelector(users, isAdmin);
+    const mode = this.config.user_selector || 'list';
+    let tabHeader = null;
+    let selector;
+    if (isAdmin && mode === 'tabs') {
+      tabHeader = this._renderTabHeader();
+      selector = this._renderUserButtons(this._visibleUsers, 'tabs');
+    } else {
+      selector = this._renderUserSelector(users, isAdmin);
+    }
     if (this.config.show_step_select === false) {
       if (this.selectedCount !== 1) {
         this.selectedCount = 1;
@@ -573,22 +579,23 @@ class TallyListCard extends LitElement {
         ? null
         : html`<div class="count-selector">
             <div class="count-label">${this._t('step_label')}</div>
-            <div class="count-row">
+            <div class="segments">
               ${[1, 3, 5, 10].map(
                 c => html`<button
-                  class=${c === this.selectedCount ? 'selected' : ''}
+                  class="segment ${c === this.selectedCount ? 'active' : ''}"
                   @pointerdown=${e => this._onSelectCount(c, e)}
-                >
-                  ${c}
-                </button>`
+                >${c}</button>`
               )}
             </div>
           </div>`;
     return html`
       <ha-card style="${cardStyle}">
-        ${selector}
-        ${countSelector}
-        <table>
+        <div class="user-actions">
+          ${tabHeader}
+          <div class="content">
+            ${selector}
+            ${countSelector ? html`<div class="spacer"></div>${countSelector}` : ''}
+            <table>
           <thead><tr><th></th><th>${this._t('drink')}</th><th>${this._t('count')}</th><th>${this._t('price')}</th><th>${this._t('sum')}</th></tr></thead>
           <tbody>${rows}</tbody>
           <tfoot>
@@ -599,7 +606,7 @@ class TallyListCard extends LitElement {
             ` : ''}
             ${this.config.show_remove !== false ? html`
               <tr class="remove-row">
-                <td><button class="remove-button" @pointerdown=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${removeDisabled}>-${this.selectedCount}</button></td>
+                <td><button class="action-btn minus" @pointerdown=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${removeDisabled}>-${this.selectedCount}</button></td>
                 <td colspan="4" class="remove-select-cell">
                   <select class="remove-select" @change=${this._selectRemoveDrink.bind(this)}>
                     ${drinks.map(d => html`<option value="${d}" ?selected=${d===this.selectedRemoveDrink}>${d.charAt(0).toUpperCase() + d.slice(1)}</option>`)}
@@ -609,6 +616,8 @@ class TallyListCard extends LitElement {
             ` : ''}
           </tfoot>
         </table>
+      </div>
+    </div>
       </ha-card>
     `;
   }
@@ -963,98 +972,95 @@ class TallyListCard extends LitElement {
       gap: 8px;
     }
     .user-label {
-      font-weight: bold;
+      font-weight: 600;
       margin-bottom: 8px;
     }
     .count-selector {
-      margin: 8px 0;
-      padding-top: 8px;
-      border-top: 1px solid #2a2a2a;
     }
     .count-label {
-      font-size: 0.8rem;
-      margin-bottom: 4px;
+      font-size: 14px;
+      margin-bottom: 8px;
     }
-    .count-row {
+    .segments {
       display: flex;
-      flex-wrap: wrap;
+      margin-top: 8px;
+      border: 1px solid var(--ha-card-border-color, var(--divider-color));
+      border-radius: 10px;
+      overflow: hidden;
     }
-    .count-row button {
+    .segment {
       flex: 1;
-      height: var(--tl-btn-h, 32px);
-      border: 1px solid var(--divider-color);
-      border-right: none;
-      border-radius: 0;
-      background: var(--ha-control-neutral-bg, #2b2b2b);
-      color: var(--text-primary-color, #fff);
-      transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
-    }
-    .count-row button:first-child {
-      border-radius: 4px 0 0 4px;
-    }
-    .count-row button:last-child {
-      border-right: 1px solid var(--divider-color);
-      border-radius: 0 4px 4px 0;
-    }
-    .count-row button.selected {
-      background-color: var(--success-color, #2e7d32);
-      color: var(--text-primary-color, #fff);
+      height: 40px;
+      background: #2b2b2b;
+      color: #ddd;
       border: none;
+      font-size: 14px;
     }
-    .user-tabs {
+    .segment + .segment {
+      border-left: 1px solid var(--ha-card-border-color, var(--divider-color));
+    }
+    .segment.active {
+      background: var(--success-color, #2e7d32);
+      color: #fff;
+    }
+    .tabs {
       display: flex;
       overflow-x: auto;
-      gap: 2px;
-      margin-bottom: 0;
+      border-bottom: 1px solid var(--ha-card-border-color, var(--divider-color));
     }
-    .user-tabs button {
+    .tab {
       flex: 0 0 auto;
-      padding: 0 8px;
-      min-height: var(--tl-btn-h, 32px);
-      height: var(--tl-btn-h, 32px);
-      background: var(--ha-control-neutral-bg, #2b2b2b);
-      color: #fff;
-      border: 1px solid var(--ha-card-border-color, var(--divider-color));
-      border-bottom: none;
-      border-radius: 4px 4px 0 0;
-      transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
-      white-space: normal;
-      overflow-wrap: anywhere;
+      padding: 0 12px;
+      height: 40px;
+      background: #2b2b2b;
+      color: #ddd;
+      border: none;
+      border-right: 1px solid var(--ha-card-border-color, var(--divider-color));
+      font-size: 14px;
     }
-    .user-tabs button[aria-selected='true'] {
-      background: var(--label-badge-green, var(--primary-color));
-      color: var(--text-primary-color, #fff);
-      border-bottom: none;
-      border-bottom-left-radius: 0;
-      border-bottom-right-radius: 0;
+    .tab:first-child {
+      border-top-left-radius: 12px;
+    }
+    .tab:last-child {
+      border-top-right-radius: 12px;
+      border-right: none;
+    }
+    .tab.active {
+      background: var(--success-color, #2e7d32);
+      color: #fff;
+    }
+    .content {
+      padding: 12px 16px;
+    }
+    .spacer {
+      height: 12px;
+    }
+    .user-actions {
+      border: 1px solid var(--ha-card-border-color, var(--divider-color));
+      border-radius: 12px;
+      background: var(--ha-card-background, #1e1e1e);
     }
     .user-grid {
       display: grid;
-      margin: -1px 0 0 0;
       transition: none;
       content-visibility: auto;
       contain-intrinsic-size: 500px 300px;
       gap: 8px;
-      border: 1px solid var(--ha-card-border-color, var(--divider-color));
-      border-top: none;
-      border-top-left-radius: 0;
-      border-top-right-radius: 0;
-      border-bottom-left-radius: 4px;
-      border-bottom-right-radius: 4px;
-      padding: 8px;
+      padding: 8px 0;
+      --tl-btn-h: 40px;
     }
     .user-grid button {
       position: relative;
-      min-height: var(--tl-btn-h, 32px);
+      min-height: var(--tl-btn-h, 40px);
       height: auto;
-      font-size: 1rem;
+      font-size: 14px;
       width: 100%;
       white-space: normal;
       overflow-wrap: anywhere;
       border: none;
-      border-radius: 4px;
-      background: var(--ha-control-neutral-bg, #2b2b2b);
-      color: #fff;
+      border-radius: 10px;
+      background: #2b2b2b;
+      color: #ddd;
       transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
     }
     .user-grid button::before {
@@ -1064,57 +1070,60 @@ class TallyListCard extends LitElement {
       top: 0;
       bottom: 0;
       width: 4px;
-      border-radius: 4px 0 0 4px;
+      border-radius: 10px 0 0 10px;
       background: var(--error-color, #c62828);
     }
     .user-grid button[aria-pressed='true']::before {
       background: var(--success-color, #2e7d32);
     }
-    .user-tabs button:focus,
+    .tab:focus,
+    .segment:focus,
+    .action-btn:focus,
     .user-grid button:focus {
-      outline: none;
+      outline: 2px solid rgba(255,255,255,.25);
     }
-    .user-tabs button:hover,
-    .user-tabs button:focus,
+    .tab:hover,
+    .tab:focus,
+    .segment:hover,
+    .segment:focus,
+    .action-btn:hover,
+    .action-btn:focus,
     .user-grid button:hover,
-    .user-grid button:focus,
-    .count-row button:hover,
-    .count-row button:focus {
+    .user-grid button:focus {
       filter: brightness(1.1);
     }
     .user-select select,
     .remove-select {
       padding: 4px 8px;
       min-width: 120px;
-      font-size: 1rem;
-      height: 32px;
+      font-size: 14px;
+      height: 40px;
       box-sizing: border-box;
+      border-radius: 10px;
     }
     .remove-row td {
       border-bottom: none;
       padding-top: 8px;
       font-weight: normal;
     }
-    .remove-row .remove-button {
-      height: 32px;
-      width: 32px;
+    .action-btn {
+      height: 40px;
+      min-width: 56px;
+      border-radius: 10px;
+      font-weight: 600;
       border: none;
-      border-radius: 4px;
+      font-size: 14px;
     }
-    .remove-button {
-      background-color: var(--error-color, #c62828);
-      color: white;
+    .action-btn.plus {
+      background: var(--success-color, #2e7d32);
+      color: #fff;
+    }
+    .action-btn.minus {
+      background: var(--error-color, #c62828);
+      color: #fff;
     }
     .remove-select-cell {
       text-align: left;
-    }
-    .add-button {
-      height: 32px;
-      width: 32px;
-      background-color: var(--success-color, #2e7d32);
-      color: white;
-      border: none;
-      border-radius: 4px;
     }
     .reset-container,
     .copy-container {
