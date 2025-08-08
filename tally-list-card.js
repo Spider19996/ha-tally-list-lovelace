@@ -320,7 +320,7 @@ class TallyListCard extends LitElement {
     const min = Number(cfg.min_button_width_px || 88);
     const max = Number(cfg.max_button_width_px || 160);
     const gap = Number(cfg.gap_px || 8);
-    const height = Number(cfg.button_height_px || 56);
+    const height = Number(cfg.button_height_px || 32);
     const font = Number(cfg.font_size_rem || 1);
     const wrap = cfg.wrap_labels ? 'normal' : 'nowrap';
     const columnStyle =
@@ -956,7 +956,7 @@ class TallyListCardEditor extends LitElement {
       min_button_width_px: 88,
       max_button_width_px: 160,
       gap_px: 8,
-      button_height_px: 56,
+      button_height_px: 32,
       font_size_rem: 1.0,
       wrap_labels: false,
       ...(config?.grid || {}),
