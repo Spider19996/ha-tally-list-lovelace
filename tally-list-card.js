@@ -1,5 +1,6 @@
 // Tally List Card
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
+import { repeat } from 'https://unpkg.com/lit/directives/repeat.js?module';
 const CARD_VERSION = '08.08.2025';
 
 const TL_STRINGS = {
@@ -190,13 +191,21 @@ class TallyListCard extends LitElement {
     selectedRemoveDrink: { state: true },
     _disabled: { state: true },
     _optimisticCounts: { state: true },
-    _uiState: { state: true },
+    _tabs: { state: true },
+    _visibleUsers: { state: true },
+    _currentTab: { state: true },
   };
 
   selectedRemoveDrink = '';
   _tallyAdmins = [];
   _optimisticCounts = {};
-  _uiState = { tab: 'all' };
+  _tabs = [];
+  _visibleUsers = [];
+  _currentTab = 'all';
+  _buckets = new Map();
+  _sortedUsers = [];
+  _usersKey = '';
+  _ownUser = null;
 
   constructor() {
     super();
@@ -327,18 +336,40 @@ class TallyListCard extends LitElement {
     const style = `${columnStyle}gap:${gap}px;--tl-btn-h:${height}px;--tl-btn-font:${font}rem;--tl-btn-min:${min}px;--tl-btn-max:${max}px;--tl-btn-wrap:${wrap};`;
     const pressed = this.selectedUser;
     return html`<div class="user-grid" aria-label="${this._t('name')}" style="${style}">
-      ${list.map(u => {
+      ${repeat(list, u => u.user_id || u.slug, u => {
         const name = u.name || u.slug;
-        return html`<button class="user-btn" aria-pressed="${name === pressed}" @click=${() => this._setSelectedUser(name, source)}>${name}</button>`;
+        return html`<button class="user-btn" data-id="${name}" data-source="${source}" aria-pressed="${name === pressed}" @pointerdown=${this._onUserPick}>${name}</button>`;
       })}
     </div>`;
   }
 
-  _changeTab(key) {
-    this._uiState = { ...this._uiState, tab: key };
+  _onUserPick(e) {
+    const btn = e.currentTarget;
+    const name = btn.dataset.id;
+    const source = btn.dataset.source;
+    e.preventDefault();
+    this._setSelectedUser(name, source);
   }
 
-  _renderTabs(users) {
+  _ensureBuckets(users) {
+    const locale = detectLang(this.hass, this.config?.language);
+    const uid = this.hass.user?.id;
+    const slugs = this._currentPersonSlugs();
+    const own = users.find(u => u.user_id === uid || slugs.includes(u.slug));
+    const key = users.map(u => u.name || u.slug).join('|') + '|' + (own ? own.name || own.slug : '');
+    if (key === this._usersKey) return;
+    const collator = new Intl.Collator(locale, { sensitivity: 'base', numeric: true });
+    let sorted = [...users].sort((a, b) => collator.compare(a.name || a.slug, b.name || b.slug));
+    if (own) {
+      sorted = [own, ...sorted.filter(u => u !== own)];
+    }
+    this._usersKey = key;
+    this._sortedUsers = sorted;
+    this._ownUser = own;
+    this._updateBuckets(sorted, locale);
+  }
+
+  _updateBuckets(users, locale) {
     const cfg = this.config.tabs || {};
     const data = this._bucketizeUsers(users, cfg);
     let tabs = [];
@@ -347,7 +378,7 @@ class TallyListCard extends LitElement {
         .filter(r => r.users.length > 0)
         .map(r => ({ key: r.key, label: r.key, users: r.users }));
     } else {
-      const letters = Array.from(data.letters.keys()).sort((a, b) => a.localeCompare(b));
+      const letters = Array.from(data.letters.keys()).sort((a, b) => a.localeCompare(b, locale));
       tabs = letters.map(l => ({ key: l, label: l, users: data.letters.get(l) }));
     }
     if (cfg.show_misc_tab !== false && data.misc.length > 0) {
@@ -356,14 +387,37 @@ class TallyListCard extends LitElement {
     if (cfg.show_all_tab !== false) {
       tabs.unshift({ key: 'all', label: this._t('tab_all_label'), users });
     }
-    if (!tabs.some(t => t.key === this._uiState.tab)) {
-      this._uiState = { ...this._uiState, tab: tabs[0]?.key || 'all' };
+    this._tabs = tabs;
+    this._buckets = new Map([
+      ['*ALL*', users],
+      ...tabs.map(t => [t.key, t.key === 'all' ? users : t.users]),
+    ]);
+    if (!this._buckets.has(this._currentTab)) {
+      this._currentTab = tabs[0]?.key || 'all';
     }
-    const active = tabs.find(t => t.key === this._uiState.tab) || tabs[0];
-    return html`<div class="user-tabs" role="tablist">
-        ${tabs.map(t => html`<button role="tab" aria-selected="${t.key === active.key}" @click=${() => this._changeTab(t.key)}>${t.label}</button>`) }
+    this._visibleUsers = this._buckets.get(this._currentTab) || [];
+  }
+
+  _setTab(tab) {
+    this._currentTab = tab;
+    this._visibleUsers = this._buckets.get(tab) || this._buckets.get('*ALL*') || [];
+    this.requestUpdate('_visibleUsers');
+  }
+
+  _onTabbarPointerDown(e) {
+    const btn = e.target.closest('.tab');
+    if (!btn) return;
+    e.preventDefault();
+    const tab = btn.dataset.tab;
+    requestAnimationFrame(() => this._setTab(tab));
+  }
+
+  _renderTabs() {
+    const tabs = this._tabs || [];
+    return html`<div class="user-tabs tabbar" role="tablist" @pointerdown=${this._onTabbarPointerDown}>
+        ${tabs.map(t => html`<button class="tab" role="tab" data-tab="${t.key}" aria-selected="${t.key === this._currentTab}">${t.label}</button>`) }
       </div>
-      ${this._renderUserButtons(active.key === 'all' ? users : active.users, 'tabs')}`;
+      ${this._renderUserButtons(this._visibleUsers, 'tabs')}`;
   }
 
   _renderGrid(users) {
@@ -377,7 +431,7 @@ class TallyListCard extends LitElement {
       return html`<div class="controls"><div class="user-label">${name}</div></div>`;
     }
     const mode = this.config.user_selector || 'list';
-    if (mode === 'tabs') return this._renderTabs(users);
+    if (mode === 'tabs') return this._renderTabs();
     if (mode === 'grid') return this._renderGrid(users);
     return html`<div class="controls"><div class="user-select"><label for="user">${this._t('name')}:</label><select id="user" @change=${this._selectUser.bind(this)}>${users.map(u => html`<option value="${u.name || u.slug}" ?selected=${(u.name || u.slug)===this.selectedUser}>${u.name}</option>`)}</select></div></div>`;
   }
@@ -399,17 +453,9 @@ class TallyListCard extends LitElement {
     if (users.length === 0) {
       return html`<ha-card>${this._t('no_user_access')}</ha-card>`;
     }
-    const uid = this.hass.user?.id;
-    const slugsOfUser = this._currentPersonSlugs();
-    const own = users.find(u => u.user_id === uid || slugsOfUser.includes(u.slug));
-    users = [...users].sort((a, b) => {
-      const nA = a.name || a.slug;
-      const nB = b.name || b.slug;
-      return nA.localeCompare(nB);
-    });
-    if (own) {
-      users = [own, ...users.filter(u => u !== own)];
-    }
+    this._ensureBuckets(users);
+    users = this._sortedUsers;
+    const own = this._ownUser;
     if (!this.selectedUser || !users.some(u => (u.name || u.slug) === this.selectedUser)) {
       // Prefer the current user when available, otherwise pick the first entry
       this.selectedUser = own ? (own.name || own.slug) : (users[0].name || users[0].slug);
@@ -850,6 +896,7 @@ class TallyListCard extends LitElement {
       border: none;
       background: var(--secondary-background-color);
       border-radius: 4px;
+      transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
     }
     .user-tabs button[aria-selected='true'],
     .user-grid button[aria-pressed='true'] {
@@ -861,6 +908,9 @@ class TallyListCard extends LitElement {
     .user-grid {
       display: grid;
       margin-bottom: 8px;
+      transition: none;
+      content-visibility: auto;
+      contain-intrinsic-size: 500px 300px;
     }
     .user-grid button {
       min-width: var(--tl-btn-min, 88px);
@@ -872,6 +922,7 @@ class TallyListCard extends LitElement {
       white-space: var(--tl-btn-wrap, nowrap);
       border: none;
       border-radius: 4px;
+      transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
     }
     .user-tabs button:focus,
     .user-grid button:focus {
