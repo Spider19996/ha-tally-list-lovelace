@@ -22,7 +22,7 @@ const TL_STRINGS = {
     total: 'Total',
     free_amount: 'Free amount',
     amount_due: 'Amount due',
-    step_label: 'Step size (affects + and −)',
+    step_label: 'Amount per click (+ / −)',
     lock_ms: 'Lock duration (ms)',
     max_width: 'Maximum width (px)',
     show_remove_menu: 'Show remove menu',
@@ -84,7 +84,7 @@ const TL_STRINGS = {
     total: 'Gesamt',
     free_amount: 'Freibetrag',
     amount_due: 'Zu zahlen',
-    step_label: 'Schrittweite (wirkt auf + und −)',
+    step_label: 'Menge pro Klick (+ / −)',
     lock_ms: 'Sperrzeit (ms)',
     max_width: 'Maximale Breite (px)',
     show_remove_menu: 'Entfernen-Menü anzeigen',
@@ -1002,7 +1002,8 @@ class TallyListCard extends LitElement {
     .user-tabs {
       display: flex;
       overflow-x: auto;
-      gap: 8px;
+      gap: 2px;
+      border-bottom: 1px solid var(--divider-color);
       margin-bottom: 8px;
     }
     .user-tabs button {
@@ -1010,20 +1011,20 @@ class TallyListCard extends LitElement {
       padding: 0 8px;
       min-height: var(--tl-btn-h, 32px);
       height: var(--tl-btn-h, 32px);
-      border: none;
       background: var(--error-color, #c62828);
       color: #fff;
-      border-radius: 4px;
+      border: 1px solid var(--divider-color);
+      border-bottom: none;
+      border-radius: 4px 4px 0 0;
       transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
       white-space: normal;
       overflow-wrap: anywhere;
     }
-    .user-tabs button[aria-selected='true'],
-    .user-grid button[aria-pressed='true'] {
+    .user-tabs button[aria-selected='true'] {
       background: var(--label-badge-green, var(--primary-color));
       color: var(--text-primary-color, #fff);
-      border: none;
-      outline: none;
+      border-bottom: 1px solid var(--ha-card-background, var(--card-background-color, #fff));
+      margin-bottom: -1px;
     }
     .user-grid {
       display: grid;
@@ -1042,7 +1043,13 @@ class TallyListCard extends LitElement {
       overflow-wrap: anywhere;
       border: none;
       border-radius: 4px;
+      background: var(--error-color, #c62828);
+      color: #fff;
       transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+    }
+    .user-grid button[aria-pressed='true'] {
+      background: var(--label-badge-green, var(--primary-color));
+      color: var(--text-primary-color, #fff);
     }
     .user-tabs button:focus,
     .user-grid button:focus {
