@@ -68,7 +68,6 @@ const TL_STRINGS = {
     grid_button_height: 'Button height (px)',
     grid_font_size: 'Font size (rem)',
     grid_wrap_labels: 'Wrap labels',
-    focus_outline: 'Show focus outline',
   },
   de: {
     card_name: 'Strichliste Karte',
@@ -136,7 +135,6 @@ const TL_STRINGS = {
     grid_button_height: 'Buttonhöhe (px)',
     grid_font_size: 'Schriftgröße (rem)',
     grid_wrap_labels: 'Text umbrechen',
-    focus_outline: 'Fokusrahmen anzeigen',
   },
 };
 
@@ -237,7 +235,6 @@ class TallyListCard extends LitElement {
       show_inactive_drinks: false,
       language: 'auto',
       user_selector: 'list',
-      focus_outline: true,
       ...config,
     };
     this.config.tabs = tabs;
@@ -491,10 +488,7 @@ class TallyListCard extends LitElement {
     }
     const dueStr = this._formatPrice(due) + ` ${this._currency}`;
     const width = this._normalizeWidth(this.config.max_width);
-    const focusVar = this.config.focus_outline === false ? '--tl-focus-outline:none;' : '--tl-focus-outline:auto;';
-    const cardStyle = width
-      ? `max-width:${width};margin:0 auto;${focusVar}`
-      : `${focusVar}`;
+    const cardStyle = width ? `max-width:${width};margin:0 auto;` : '';
     const selector = this._renderUserSelector(users, isAdmin);
     return html`
       <ha-card style="${cardStyle}">
@@ -860,7 +854,7 @@ class TallyListCard extends LitElement {
     .user-grid button[aria-pressed='true'] {
       background: var(--label-badge-green, var(--primary-color));
       color: var(--text-primary-color, #fff);
-      border-bottom: none;
+      border: none;
       outline: none;
     }
     .user-grid {
@@ -875,10 +869,11 @@ class TallyListCard extends LitElement {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: var(--tl-btn-wrap, nowrap);
+      border: none;
     }
     .user-tabs button:focus,
     .user-grid button:focus {
-      outline: var(--tl-focus-outline, auto);
+      outline: none;
     }
     .user-select select,
     .remove-select {
@@ -971,7 +966,6 @@ class TallyListCardEditor extends LitElement {
       show_inactive_drinks: false,
       language: 'auto',
       user_selector: 'list',
-      focus_outline: true,
       ...config,
       tabs,
       grid,
@@ -1075,9 +1069,6 @@ class TallyListCardEditor extends LitElement {
             </div>
           `
         : ''}
-      <div class="form">
-        <label><input type="checkbox" .checked=${this._config.focus_outline !== false} @change=${this._focusOutlineChanged} /> ${this._t('focus_outline')}</label>
-      </div>
       <details class="debug">
         <summary>${this._t('debug')}</summary>
         <div class="form">
@@ -1286,11 +1277,6 @@ class TallyListCardEditor extends LitElement {
       ...this._config,
       grid: { ...this._config.grid, wrap_labels: ev.target.checked },
     };
-    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
-  }
-
-  _focusOutlineChanged(ev) {
-    this._config = { ...this._config, focus_outline: ev.target.checked };
     this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
   }
 
