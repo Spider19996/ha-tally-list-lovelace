@@ -336,6 +336,15 @@ class TallyListCard extends LitElement {
     </div>`;
   }
 
+  _renderUserChips(list) {
+    const pressed = this.selectedUser;
+    return repeat(list, u => u.user_id || u.slug, u => {
+      const name = u.name || u.slug;
+      const cls = `user-chip ${name === pressed ? 'active' : 'inactive'}`;
+      return html`<button class="${cls}" data-id="${name}" data-source="tabs" aria-pressed="${name === pressed}" @pointerdown=${this._onUserPick}>${name}</button>`;
+    });
+  }
+
   _updateButtonHeight() {
     const grid = this.renderRoot?.querySelector('.user-grid');
     if (!grid) return;
@@ -561,11 +570,14 @@ class TallyListCard extends LitElement {
     const width = this._normalizeWidth(this.config.max_width);
     const cardStyle = width ? `max-width:${width};margin:0 auto;` : '';
     const mode = this.config.user_selector || 'list';
-    let tabHeader = null;
     let selector;
+    let userActions = null;
     if (isAdmin && mode === 'tabs') {
-      tabHeader = this._renderTabHeader();
-      selector = this._renderUserButtons(this._visibleUsers, 'tabs');
+      userActions = html`
+        <div class="user-actions">
+          <div class="alpha-tabs">${this._renderTabHeader()}</div>
+          <div class="user-list">${this._renderUserChips(this._visibleUsers)}</div>
+        </div>`;
     } else {
       selector = this._renderUserSelector(users, isAdmin);
     }
@@ -590,12 +602,11 @@ class TallyListCard extends LitElement {
           </div>`;
     return html`
       <ha-card style="${cardStyle}">
-        <div class="user-actions">
-          ${tabHeader}
-          <div class="content">
-            ${selector}
-            ${countSelector ? html`<div class="spacer"></div>${countSelector}` : ''}
-            <table>
+        ${userActions}
+        <div class="content">
+          ${selector ? html`${selector}` : ''}
+          ${countSelector ? html`<div class="spacer"></div>${countSelector}` : ''}
+          <table>
           <thead><tr><th></th><th>${this._t('drink')}</th><th>${this._t('count')}</th><th>${this._t('price')}</th><th>${this._t('sum')}</th></tr></thead>
           <tbody>${rows}</tbody>
           <tfoot>
@@ -607,8 +618,8 @@ class TallyListCard extends LitElement {
             ${this.config.show_remove !== false ? html`
               <tr class="remove-row">
                 <td colspan="5">
-                  <div class="input-group">
-                    <button class="action-btn minus" @pointerdown=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${removeDisabled}>-${this.selectedCount}</button>
+                  <div class="input-group minus-group">
+                    <button class="action-btn minus" @pointerdown=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${removeDisabled}>&minus;${this.selectedCount}</button>
                     <ha-select class="drink-select" .value=${this.selectedRemoveDrink} @selected=${this._selectRemoveDrink.bind(this)} @closed=${e => e.stopPropagation()}>
                       ${drinks.map(d => html`<mwc-list-item value="${d}">${d.charAt(0).toUpperCase() + d.slice(1)}</mwc-list-item>`)}
                     </ha-select>
@@ -619,7 +630,6 @@ class TallyListCard extends LitElement {
           </tfoot>
         </table>
       </div>
-    </div>
       </ha-card>
     `;
   }
@@ -1008,7 +1018,6 @@ class TallyListCard extends LitElement {
     .tabs {
       display: flex;
       overflow-x: auto;
-      margin-bottom: 12px;
     }
     .tab {
       flex: 0 0 auto;
@@ -1018,18 +1027,22 @@ class TallyListCard extends LitElement {
       color: #ddd;
       border: none;
       border-right: 1px solid var(--ha-card-border-color, var(--divider-color));
+      border-bottom: 1px solid var(--ha-card-border-color, var(--divider-color));
       font-size: 14px;
     }
     .tab:first-child {
-      border-top-left-radius: 12px;
+      border-top-left-radius: 14px;
     }
     .tab:last-child {
-      border-top-right-radius: 12px;
+      border-top-right-radius: 14px;
       border-right: none;
     }
-    .tab.active {
+    .alpha-tabs .tab.active {
       background: var(--success-color, #2e7d32);
       color: #fff;
+      border-bottom: none;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
     }
     .content {
       padding: 12px 16px;
@@ -1039,8 +1052,48 @@ class TallyListCard extends LitElement {
     }
     .user-actions {
       border: 1px solid var(--ha-card-border-color, var(--divider-color));
-      border-radius: 12px;
+      border-radius: 14px;
       background: var(--ha-card-background, #1e1e1e);
+      overflow: hidden;
+    }
+    .alpha-tabs {
+      border-bottom: 1px solid var(--ha-card-border-color, var(--divider-color));
+    }
+    .user-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 12px 16px;
+      margin-top: -1px;
+      border-top: 1px solid var(--ha-card-border-color, var(--divider-color));
+    }
+    .user-chip {
+      position: relative;
+      border-radius: 12px;
+      background: #2b2b2b;
+      color: #ddd;
+      border: none;
+      padding: 0 12px;
+      height: 32px;
+    }
+    .user-chip.active {
+      background: var(--success-color, #2e7d32);
+      color: #fff;
+    }
+    .user-chip.inactive {
+      background: #2b2b2b;
+      color: #ddd;
+    }
+    .user-chip::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      box-shadow: inset 4px 0 0 0 var(--chip-indicator, #E74C3C);
+      pointer-events: none;
+    }
+    .user-chip.active::before {
+      --chip-indicator: var(--success-color, #2e7d32);
     }
     .user-grid {
       display: grid;
@@ -1063,18 +1116,28 @@ class TallyListCard extends LitElement {
       border-radius: 12px;
       background: #2b2b2b;
       color: #ddd;
-      box-shadow: inset 4px 0 0 0 var(--error-color, #c62828);
       transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+    }
+    .user-grid button::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      box-shadow: inset 4px 0 0 0 var(--chip-indicator, var(--error-color, #c62828));
+      pointer-events: none;
     }
     .user-grid button[aria-pressed='true'] {
       background: var(--success-color, #2e7d32);
       color: #fff;
-      box-shadow: inset 4px 0 0 0 var(--success-color, #2e7d32);
+    }
+    .user-grid button[aria-pressed='true']::before {
+      --chip-indicator: var(--success-color, #2e7d32);
     }
     .tab:focus,
     .segment:focus,
     .action-btn:focus,
-    .user-grid button:focus {
+    .user-grid button:focus,
+    .user-chip:focus {
       outline: 2px solid rgba(255,255,255,.25);
     }
     .tab:hover,
@@ -1084,7 +1147,9 @@ class TallyListCard extends LitElement {
     .action-btn:hover,
     .action-btn:focus,
     .user-grid button:hover,
-    .user-grid button:focus {
+    .user-grid button:focus,
+    .user-chip:hover,
+    .user-chip:focus {
       filter: brightness(1.1);
     }
     .user-select select {
@@ -1108,6 +1173,8 @@ class TallyListCard extends LitElement {
       font-weight: 600;
       border: none;
       font-size: 14px;
+      line-height: 44px;
+      text-align: center;
     }
     .action-btn.plus {
       background: var(--success-color, #2e7d32);
@@ -1116,27 +1183,38 @@ class TallyListCard extends LitElement {
     .action-btn.minus {
       background: var(--error-color, #c62828);
       color: #fff;
+      border-radius: 12px 0 0 12px;
+      margin: 0;
     }
     .input-group {
       display: flex;
       align-items: center;
       gap: 0;
     }
-    .input-group .action-btn.minus {
-      height: 44px;
-      width: 44px;
-      border-radius: 12px 0 0 12px;
-      margin: 0;
-    }
-    .input-group .drink-select {
+    .drink-select {
       height: 44px;
       border-radius: 0 12px 12px 0;
       margin: 0;
+      flex: 1 1 auto;
+      min-width: 180px;
     }
-    .input-group .drink-select::part(control),
-    .input-group .drink-select .mdc-select {
+    .drink-select::part(control) {
+      height: 44px;
+    }
+    .drink-select .mdc-select,
+    .drink-select .mdc-select__anchor {
       height: 44px;
       min-height: 44px;
+    }
+    .drink-select .mdc-select__selected-text {
+      line-height: 44px;
+    }
+    .action-btn.minus,
+    .drink-select {
+      margin: 0 !important;
+    }
+    .minus-group {
+      margin-left: var(--plus-button-offset, 0px);
     }
     .reset-container,
     .copy-container {
