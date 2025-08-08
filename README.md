@@ -78,5 +78,4 @@ Options:
 * **max_entries** – Limit how many users are shown (`0` = no limit).
 * **hide_free** – Hide users who owe nothing.
 * **show_copy** – Show the "Tabelle kopieren" button.
-* **show_step_select** – Show buttons to select the step size.
 

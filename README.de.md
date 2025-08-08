@@ -77,5 +77,4 @@ Optionen:
 * **max_entries** – Anzahl angezeigter Nutzer begrenzen (`0` = unbegrenzt).
 * **hide_free** – Nutzer ohne offenen Betrag ausblenden.
 * **show_copy** – Schaltfläche **Tabelle kopieren** anzeigen.
-* **show_step_select** – Auswahl der Schrittweiten anzeigen.
 
