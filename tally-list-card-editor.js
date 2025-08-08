@@ -32,7 +32,6 @@ const TL_STRINGS = {
     grid_button_height: 'Button height (px)',
     grid_font_size: 'Font size (rem)',
     grid_wrap_labels: 'Wrap labels',
-    focus_outline: 'Show focus outline',
   },
   de: {
     lock_ms: 'Sperrzeit (ms)',
@@ -64,7 +63,6 @@ const TL_STRINGS = {
     grid_button_height: 'Buttonhöhe (px)',
     grid_font_size: 'Schriftgröße (rem)',
     grid_wrap_labels: 'Text umbrechen',
-    focus_outline: 'Fokusrahmen anzeigen',
   },
 };
 
@@ -122,7 +120,6 @@ class TallyListCardEditor extends LitElement {
       show_inactive_drinks: false,
       language: 'auto',
       user_selector: 'list',
-      focus_outline: true,
       ...config,
       tabs,
       grid,
@@ -226,9 +223,6 @@ class TallyListCardEditor extends LitElement {
             </div>
           `
         : ''}
-      <div class="form">
-        <label><input type="checkbox" .checked=${this._config.focus_outline !== false} @change=${this._focusOutlineChanged} /> ${this._t('focus_outline')}</label>
-      </div>
       <details class="debug">
         <summary>${this._t('debug')}</summary>
         <div class="form">
@@ -395,11 +389,6 @@ class TallyListCardEditor extends LitElement {
       ...this._config,
       grid: { ...this._config.grid, wrap_labels: ev.target.checked },
     };
-    fireEvent(this, 'config-changed', { config: this._config });
-  }
-
-  _focusOutlineChanged(ev) {
-    this._config = { ...this._config, focus_outline: ev.target.checked };
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
