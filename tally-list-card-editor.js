@@ -1,5 +1,5 @@
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
-const CARD_VERSION = 'v06.08.2025';
+const CARD_VERSION = '08.08.2025';
 
 const TL_STRINGS = {
   en: {
@@ -15,6 +15,16 @@ const TL_STRINGS = {
     german: 'German',
     english: 'English',
     version: 'Version',
+    general: 'General',
+    user_selection: 'User selection',
+    tabs_section: 'Tabs',
+    grid_section: 'Grid',
+    labels_section: 'Labels',
+    accessibility: 'Accessibility',
+    title: 'Title',
+    currency_override: 'Currency override',
+    tab_all_label_label: '"All" tab label',
+    tab_misc_label_label: '"#" tab label',
     user_selector: 'User selector',
     user_selector_list: 'List',
     user_selector_tabs: 'Tabs',
@@ -47,6 +57,16 @@ const TL_STRINGS = {
     german: 'Deutsch',
     english: 'Englisch',
     version: 'Version',
+    general: 'Allgemein',
+    user_selection: 'Nutzerauswahl',
+    tabs_section: 'Tabs',
+    grid_section: 'Grid',
+    labels_section: 'Beschriftungen',
+    accessibility: 'Barrierefreiheit',
+    title: 'Titel',
+    currency_override: 'Währung überschreiben',
+    tab_all_label_label: 'Tab "Alle" Beschriftung',
+    tab_misc_label_label: 'Tab "#" Beschriftung',
     user_selector: 'Nutzerauswahl',
     user_selector_list: 'Liste',
     user_selector_tabs: 'Tabs',
@@ -113,6 +133,11 @@ class TallyListCardEditor extends LitElement {
       wrap_labels: false,
       ...(config?.grid || {}),
     };
+    const i18n = {
+      tab_all_label: 'All',
+      tab_misc_label: '#',
+      ...(config?.i18n || {}),
+    };
     this._config = {
       lock_ms: 400,
       max_width: '500px',
@@ -123,9 +148,12 @@ class TallyListCardEditor extends LitElement {
       language: 'auto',
       user_selector: 'list',
       focus_outline: true,
+      title: '',
+      currency_override: '',
       ...config,
       tabs,
       grid,
+      i18n,
     };
   }
 
@@ -135,68 +163,71 @@ class TallyListCardEditor extends LitElement {
 
   render() {
     if (!this._config) return html``;
+    const showTabs = this._config.user_selector === 'tabs';
+    const showGrid = ['tabs', 'grid'].includes(this._config.user_selector);
     return html`
-      <div class="form">
-        <label>${this._t('lock_ms')}</label>
-        <input
-          type="number"
-          .value=${this._config.lock_ms}
-          @input=${this._lockChanged}
-        />
-      </div>
-      <div class="form">
-        <label>${this._t('max_width')}</label>
-        <input
-          type="number"
-          .value=${(this._config.max_width ?? '').replace(/px$/, '')}
-          @input=${this._widthChanged}
-        />
-      </div>
-      <div class="form">
-        <label>
-          <input type="checkbox" .checked=${this._config.show_remove} @change=${this._removeChanged} />
-          ${this._t('show_remove_menu')}
-        </label>
-      </div>
-      <div class="form">
-        <label>
-          <input type="checkbox" .checked=${this._config.only_self} @change=${this._selfChanged} />
-          ${this._t('only_self')}
-        </label>
-      </div>
-      <div class="form">
-        <label>${this._t('user_selector')}</label>
-        <select @change=${this._userSelectorChanged}>
-          <option value="list" ?selected=${this._config.user_selector === 'list'}>${this._t('user_selector_list')}</option>
-          <option value="tabs" ?selected=${this._config.user_selector === 'tabs'}>${this._t('user_selector_tabs')}</option>
-          <option value="grid" ?selected=${this._config.user_selector === 'grid'}>${this._t('user_selector_grid')}</option>
-        </select>
-      </div>
-      ${['tabs', 'grid'].includes(this._config.user_selector)
-        ? html`
-            ${this._config.user_selector === 'tabs'
-              ? html`
-                  <div class="form">
-                    <label>${this._t('tab_mode')}</label>
-                    <select @change=${this._tabModeChanged}>
-                      <option value="per-letter" ?selected=${this._config.tabs.mode === 'per-letter'}>${this._t('per_letter')}</option>
-                      <option value="grouped" ?selected=${this._config.tabs.mode === 'grouped'}>${this._t('grouped')}</option>
-                    </select>
-                  </div>
-                  ${this._config.tabs.mode === 'grouped'
-                    ? html`<div class="form">
-                        <label>${this._t('grouped_breaks')}</label>
-                        <input type="text" .value=${this._config.tabs.grouped_breaks.join(',')} @input=${this._groupedBreaksChanged} />
-                      </div>`
-                    : ''}
-                  <div class="form">
-                    <label><input type="checkbox" .checked=${this._config.tabs.show_all_tab} @change=${this._showAllTabChanged} /> ${this._t('show_all_tab')}</label>
-                  </div>
-                  <div class="form">
-                    <label><input type="checkbox" .checked=${this._config.tabs.show_misc_tab} @change=${this._showMiscTabChanged} /> ${this._t('show_misc_tab')}</label>
-                  </div>
-                `
+      <ha-expansion-panel .header=${this._t('general')}>
+        <div class="form">
+          <label>${this._t('lock_ms')}</label>
+          <input type="number" .value=${this._config.lock_ms} @input=${this._lockChanged} />
+        </div>
+        <div class="form">
+          <label>${this._t('max_width')}</label>
+          <input type="number" .value=${(this._config.max_width ?? '').replace(/px$/, '')} @input=${this._widthChanged} />
+        </div>
+        <div class="form">
+          <label><input type="checkbox" .checked=${this._config.show_remove} @change=${this._removeChanged} /> ${this._t('show_remove_menu')}</label>
+        </div>
+        <div class="form">
+          <label><input type="checkbox" .checked=${this._config.only_self} @change=${this._selfChanged} /> ${this._t('only_self')}</label>
+        </div>
+        <div class="form">
+          <label>${this._t('title')}</label>
+          <input type="text" .value=${this._config.title || ''} @input=${this._titleChanged} />
+        </div>
+        <div class="form">
+          <label>${this._t('currency_override')}</label>
+          <input type="text" .value=${this._config.currency_override || ''} @input=${this._currencyChanged} />
+        </div>
+      </ha-expansion-panel>
+
+      <ha-expansion-panel .header=${this._t('user_selection')}>
+        <div class="form">
+          <label>${this._t('user_selector')}</label>
+          <select @change=${this._userSelectorChanged}>
+            <option value="list" ?selected=${this._config.user_selector === 'list'}>${this._t('user_selector_list')}</option>
+            <option value="tabs" ?selected=${this._config.user_selector === 'tabs'}>${this._t('user_selector_tabs')}</option>
+            <option value="grid" ?selected=${this._config.user_selector === 'grid'}>${this._t('user_selector_grid')}</option>
+          </select>
+        </div>
+      </ha-expansion-panel>
+
+      ${showTabs
+        ? html`<ha-expansion-panel .header=${this._t('tabs_section')}>
+            <div class="form">
+              <label>${this._t('tab_mode')}</label>
+              <select @change=${this._tabModeChanged}>
+                <option value="per-letter" ?selected=${this._config.tabs.mode === 'per-letter'}>${this._t('per_letter')}</option>
+                <option value="grouped" ?selected=${this._config.tabs.mode === 'grouped'}>${this._t('grouped')}</option>
+              </select>
+            </div>
+            ${this._config.tabs.mode === 'grouped'
+              ? html`<div class="form">
+                  <label>${this._t('grouped_breaks')}</label>
+                  <input type="text" .value=${this._config.tabs.grouped_breaks.join(',')} @input=${this._groupedBreaksChanged} />
+                </div>`
               : ''}
+            <div class="form">
+              <label><input type="checkbox" .checked=${this._config.tabs.show_all_tab} @change=${this._showAllTabChanged} /> ${this._t('show_all_tab')}</label>
+            </div>
+            <div class="form">
+              <label><input type="checkbox" .checked=${this._config.tabs.show_misc_tab} @change=${this._showMiscTabChanged} /> ${this._t('show_misc_tab')}</label>
+            </div>
+          </ha-expansion-panel>`
+        : ''}
+
+      ${showGrid
+        ? html`<ha-expansion-panel .header=${this._t('grid_section')}>
             <div class="form">
               <label>${this._t('grid_columns')}</label>
               <input type="text" .value=${this._config.grid.columns} @input=${this._gridColumnsChanged} />
@@ -224,24 +255,33 @@ class TallyListCardEditor extends LitElement {
             <div class="form">
               <label><input type="checkbox" .checked=${this._config.grid.wrap_labels} @change=${this._gridWrapChanged} /> ${this._t('grid_wrap_labels')}</label>
             </div>
-          `
+          </ha-expansion-panel>`
         : ''}
-      <div class="form">
-        <label><input type="checkbox" .checked=${this._config.focus_outline !== false} @change=${this._focusOutlineChanged} /> ${this._t('focus_outline')}</label>
-      </div>
+
+      <ha-expansion-panel .header=${this._t('labels_section')}>
+        <div class="form">
+          <label>${this._t('tab_all_label_label')}</label>
+          <input type="text" .value=${this._config.i18n.tab_all_label} @input=${this._tabAllLabelChanged} />
+        </div>
+        <div class="form">
+          <label>${this._t('tab_misc_label_label')}</label>
+          <input type="text" .value=${this._config.i18n.tab_misc_label} @input=${this._tabMiscLabelChanged} />
+        </div>
+      </ha-expansion-panel>
+
+      <ha-expansion-panel .header=${this._t('accessibility')}>
+        <div class="form">
+          <label><input type="checkbox" .checked=${this._config.focus_outline !== false} @change=${this._focusOutlineChanged} /> ${this._t('focus_outline')}</label>
+        </div>
+      </ha-expansion-panel>
+
       <details class="debug">
         <summary>${this._t('debug')}</summary>
         <div class="form">
-          <label>
-            <input type="checkbox" .checked=${this._config.show_all_users} @change=${this._debugAllChanged} />
-            ${this._t('show_all_users')}
-          </label>
+          <label><input type="checkbox" .checked=${this._config.show_all_users} @change=${this._debugAllChanged} /> ${this._t('show_all_users')}</label>
         </div>
         <div class="form">
-          <label>
-            <input type="checkbox" .checked=${this._config.show_inactive_drinks} @change=${this._debugInactiveChanged} />
-            ${this._t('show_inactive_drinks')}
-          </label>
+          <label><input type="checkbox" .checked=${this._config.show_inactive_drinks} @change=${this._debugInactiveChanged} /> ${this._t('show_inactive_drinks')}</label>
         </div>
         <div class="form">
           <label>${this._t('language')}</label>
@@ -276,6 +316,16 @@ class TallyListCardEditor extends LitElement {
 
   _selfChanged(ev) {
     this._config = { ...this._config, only_self: ev.target.checked };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _titleChanged(ev) {
+    this._config = { ...this._config, title: ev.target.value };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _currencyChanged(ev) {
+    this._config = { ...this._config, currency_override: ev.target.value };
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
@@ -394,6 +444,22 @@ class TallyListCardEditor extends LitElement {
     this._config = {
       ...this._config,
       grid: { ...this._config.grid, wrap_labels: ev.target.checked },
+    };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _tabAllLabelChanged(ev) {
+    this._config = {
+      ...this._config,
+      i18n: { ...this._config.i18n, tab_all_label: ev.target.value },
+    };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _tabMiscLabelChanged(ev) {
+    this._config = {
+      ...this._config,
+      i18n: { ...this._config.i18n, tab_misc_label: ev.target.value },
     };
     fireEvent(this, 'config-changed', { config: this._config });
   }
