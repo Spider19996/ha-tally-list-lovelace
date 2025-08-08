@@ -34,16 +34,19 @@ type: custom:tally-list-card
 ```
 All users detected by the integration appear in the selector. By default this is a dropdown list, but admins (as defined in the Tally List integration) may switch to tabs or a button grid via the `user_selector` option. Regular users only see their own name and cannot change it. Drink prices are taken from sensors named `sensor.price_list_<drink>_price`. If `sensor.price_list_free_amount` exists, its value is deducted from each user's total. Sensors named `sensor.<name>_amount_due` override the calculated amount due.
 
-Pressing **+1** adds a drink:
+Below the user selection a row of buttons lets you choose how many drinks to add or remove at once (1, 3, 5, or 10). The highlighted value is used for all subsequent actions.
+
+Pressing **+X** adds the selected number of drinks:
 
 ```yaml
 action: tally_list.add_drink
 data:
   user: Robin
   drink: Wasser
+  count: 3
 ```
 
-The **Remove drink** button subtracts a drink with a `tally_list.remove_drink` call.
+The **Remove drink** button subtracts drinks with a `tally_list.remove_drink` call. If `count` is omitted, both services default to `1`.
 
 ## Configuration options
 
