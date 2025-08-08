@@ -915,11 +915,14 @@ class TallyListCard extends LitElement {
     .user-tabs button {
       flex: 0 0 auto;
       padding: 8px 12px;
-      height: 44px;
+      min-height: 44px;
+      height: auto;
       border: none;
       background: var(--secondary-background-color);
       border-radius: 4px;
       transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+      white-space: normal;
+      overflow-wrap: anywhere;
     }
     .user-tabs button[aria-selected='true'],
     .user-grid button[aria-pressed='true'] {
@@ -938,7 +941,8 @@ class TallyListCard extends LitElement {
     .user-grid button {
       min-width: var(--tl-btn-min, 88px);
       max-width: var(--tl-btn-max, 160px);
-      height: var(--tl-btn-h, 32px);
+      min-height: var(--tl-btn-h, 32px);
+      height: auto;
       font-size: var(--tl-btn-font, 1rem);
       white-space: normal;
       overflow-wrap: anywhere;
