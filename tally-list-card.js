@@ -1,7 +1,6 @@
 // Tally List Card
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
-const CARD_VERSION = '08.08.2025';
-console.info(`%cTally List Card%c ${CARD_VERSION}`, 'font-weight: bold;', '');
+const CARD_VERSION = 'v06.08.2025';
 
 const TL_STRINGS = {
   en: {
@@ -229,11 +228,6 @@ class TallyListCard extends LitElement {
       wrap_labels: false,
       ...(config?.grid || {}),
     };
-    const i18n = {
-      tab_all_label: 'All',
-      tab_misc_label: '#',
-      ...(config?.i18n || {}),
-    };
     this.config = {
       lock_ms: 400,
       max_width: '500px',
@@ -244,14 +238,10 @@ class TallyListCard extends LitElement {
       language: 'auto',
       user_selector: 'list',
       focus_outline: true,
-      title: '',
-      currency_override: '',
       ...config,
     };
     this.config.tabs = tabs;
     this.config.grid = grid;
-    this.config.i18n = i18n;
-    this._currency = this.config.currency_override || this._currency;
     this._disabled = false;
     const width = this._normalizeWidth(this.config.max_width);
     if (width) {
@@ -268,7 +258,7 @@ class TallyListCard extends LitElement {
   }
 
   _t(key) {
-    return this.config?.i18n?.[key] || t(this.hass, this.config?.language, key);
+    return t(this.hass, this.config?.language, key);
   }
 
   _setSelectedUser(name, source) {
@@ -330,19 +320,19 @@ class TallyListCard extends LitElement {
     const min = Number(cfg.min_button_width_px || 88);
     const max = Number(cfg.max_button_width_px || 160);
     const gap = Number(cfg.gap_px || 8);
+    const height = Number(cfg.button_height_px || 56);
     const font = Number(cfg.font_size_rem || 1);
     const wrap = cfg.wrap_labels ? 'normal' : 'nowrap';
     const columnStyle =
       cols && cols !== 'auto'
         ? `grid-template-columns:repeat(${cols},1fr);`
         : `grid-template-columns:repeat(auto-fit,minmax(${min}px,1fr));`;
-    const style = `${columnStyle}gap:${gap}px;--tl-btn-font:${font}rem;--tl-btn-min:${min}px;--tl-btn-max:${max}px;--tl-btn-wrap:${wrap};`;
+    const style = `${columnStyle}gap:${gap}px;--tl-btn-h:${height}px;--tl-btn-font:${font}rem;--tl-btn-min:${min}px;--tl-btn-max:${max}px;--tl-btn-wrap:${wrap};`;
     const pressed = this.selectedUser;
     return html`<div class="user-grid" aria-label="${this._t('name')}" style="${style}">
       ${list.map(u => {
         const name = u.name || u.slug;
-        const isActive = name === pressed;
-        return html`<button class="user-btn${isActive ? ' is-active' : ''}" aria-pressed="${isActive}" @click=${() => this._setSelectedUser(name, source)}>${name}</button>`;
+        return html`<button class="user-btn" aria-pressed="${name === pressed}" @click=${() => this._setSelectedUser(name, source)}>${name}</button>`;
       })}
     </div>`;
   }
@@ -387,8 +377,7 @@ class TallyListCard extends LitElement {
     if (!isAdmin) {
       const own = users.find(u => (u.name || u.slug) === this.selectedUser) || users[0];
       const name = own?.name || own?.slug || '';
-      this.selectedUser = name;
-      return html`<div class="controls"><button class="user-btn" aria-pressed="true" disabled>${name}</button></div>`;
+      return html`<div class="controls"><div class="user-label">${name}</div></div>`;
     }
     const mode = this.config.user_selector || 'list';
     if (mode === 'tabs') return this._renderTabs(users);
@@ -398,9 +387,6 @@ class TallyListCard extends LitElement {
 
   render() {
     if (!this.hass || !this.config) return html``;
-    if (this.config.currency_override) this._currency = this.config.currency_override;
-    const h = this.config?.grid?.button_height_px ?? 56;
-    this.style.setProperty('--tally-action-button-height', `${h}px`);
     let users = this.config.users || this._autoUsers || [];
     if (users.length === 0) {
       return html`<ha-card>${this._t('integration_missing')}</ha-card>`;
@@ -511,7 +497,7 @@ class TallyListCard extends LitElement {
       : `${focusVar}`;
     const selector = this._renderUserSelector(users, isAdmin);
     return html`
-      <ha-card .header=${this.config.title || ''} style="${cardStyle}">
+      <ha-card style="${cardStyle}">
         ${selector}
         <table>
           <thead><tr><th></th><th>${this._t('drink')}</th><th>${this._t('count')}</th><th>${this._t('price')}</th><th>${this._t('sum')}</th></tr></thead>
@@ -831,7 +817,6 @@ class TallyListCard extends LitElement {
   static styles = css`
     :host {
       display: block;
-      --tally-action-button-height: 56px;
     }
     ha-card {
       padding: 16px;
@@ -853,6 +838,10 @@ class TallyListCard extends LitElement {
       justify-content: flex-start;
       align-items: center;
       gap: 8px;
+    }
+    .user-label {
+      font-weight: bold;
+      margin-bottom: 8px;
     }
     .user-tabs {
       display: flex;
@@ -877,28 +866,14 @@ class TallyListCard extends LitElement {
     .user-grid button {
       min-width: var(--tl-btn-min, 88px);
       max-width: var(--tl-btn-max, 160px);
+      height: var(--tl-btn-h, 56px);
       font-size: var(--tl-btn-font, 1rem);
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: var(--tl-btn-wrap, nowrap);
     }
-    .user-btn,
-    .add-button {
-      height: var(--tally-action-button-height);
-      line-height: var(--tally-action-button-height);
-    }
-    .user-btn {
-      border: 1px solid var(--divider-color);
-      background: var(--card-background-color);
-      transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
-    }
-    .user-btn[aria-pressed='true'] {
-      border-color: transparent;
-      background: var(--success-color, #2e7d32);
-      color: var(--text-primary-color-on-success, #fff);
-    }
-    .user-btn:active {
-      filter: brightness(0.95);
+    .user-grid button[aria-pressed='true'] {
+      outline: 2px solid var(--primary-color);
     }
     .user-tabs button:focus,
     .user-grid button:focus {
@@ -931,7 +906,8 @@ class TallyListCard extends LitElement {
       text-align: left;
     }
     .add-button {
-      width: var(--tally-action-button-height);
+      height: 32px;
+      width: 32px;
       background-color: var(--success-color, #2e7d32);
       color: white;
       border: none;
