@@ -967,7 +967,9 @@ class TallyListCard extends LitElement {
       margin-bottom: 8px;
     }
     .count-selector {
-      margin-bottom: 8px;
+      margin: 8px 0;
+      padding-top: 8px;
+      border-top: 1px solid #2a2a2a;
     }
     .count-label {
       font-size: 0.8rem;
@@ -983,8 +985,8 @@ class TallyListCard extends LitElement {
       border: 1px solid var(--divider-color);
       border-right: none;
       border-radius: 0;
-      background: var(--secondary-background-color);
-      color: var(--primary-text-color);
+      background: var(--ha-control-neutral-bg, #2b2b2b);
+      color: var(--text-primary-color, #fff);
       transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
     }
     .count-row button:first-child {
@@ -1003,17 +1005,16 @@ class TallyListCard extends LitElement {
       display: flex;
       overflow-x: auto;
       gap: 2px;
-      border-bottom: 1px solid var(--divider-color);
-      margin-bottom: 8px;
+      margin-bottom: 0;
     }
     .user-tabs button {
       flex: 0 0 auto;
       padding: 0 8px;
       min-height: var(--tl-btn-h, 32px);
       height: var(--tl-btn-h, 32px);
-      background: var(--error-color, #c62828);
+      background: var(--ha-control-neutral-bg, #2b2b2b);
       color: #fff;
-      border: 1px solid var(--divider-color);
+      border: 1px solid var(--ha-card-border-color, var(--divider-color));
       border-bottom: none;
       border-radius: 4px 4px 0 0;
       transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
@@ -1023,18 +1024,27 @@ class TallyListCard extends LitElement {
     .user-tabs button[aria-selected='true'] {
       background: var(--label-badge-green, var(--primary-color));
       color: var(--text-primary-color, #fff);
-      border-bottom: 1px solid var(--ha-card-background, var(--card-background-color, #fff));
-      margin-bottom: -1px;
+      border-bottom: none;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
     }
     .user-grid {
       display: grid;
-      margin-bottom: 8px;
+      margin: -1px 0 0 0;
       transition: none;
       content-visibility: auto;
       contain-intrinsic-size: 500px 300px;
       gap: 8px;
+      border: 1px solid var(--ha-card-border-color, var(--divider-color));
+      border-top: none;
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+      border-bottom-left-radius: 4px;
+      border-bottom-right-radius: 4px;
+      padding: 8px;
     }
     .user-grid button {
+      position: relative;
       min-height: var(--tl-btn-h, 32px);
       height: auto;
       font-size: 1rem;
@@ -1043,17 +1053,34 @@ class TallyListCard extends LitElement {
       overflow-wrap: anywhere;
       border: none;
       border-radius: 4px;
-      background: var(--error-color, #c62828);
+      background: var(--ha-control-neutral-bg, #2b2b2b);
       color: #fff;
       transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
     }
-    .user-grid button[aria-pressed='true'] {
-      background: var(--label-badge-green, var(--primary-color));
-      color: var(--text-primary-color, #fff);
+    .user-grid button::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      border-radius: 4px 0 0 4px;
+      background: var(--error-color, #c62828);
+    }
+    .user-grid button[aria-pressed='true']::before {
+      background: var(--success-color, #2e7d32);
     }
     .user-tabs button:focus,
     .user-grid button:focus {
       outline: none;
+    }
+    .user-tabs button:hover,
+    .user-tabs button:focus,
+    .user-grid button:hover,
+    .user-grid button:focus,
+    .count-row button:hover,
+    .count-row button:focus {
+      filter: brightness(1.1);
     }
     .user-select select,
     .remove-select {
