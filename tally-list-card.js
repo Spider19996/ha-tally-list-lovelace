@@ -175,6 +175,7 @@ class TallyListCard extends LitElement {
     _currency: { state: true },
     _tallyAdmins: { state: true },
     selectedRemoveDrink: { state: true },
+    selectedCount: { state: true },
     _disabled: { state: true },
     _optimisticCounts: { state: true },
     _tabs: { state: true },
@@ -183,6 +184,7 @@ class TallyListCard extends LitElement {
   };
 
   selectedRemoveDrink = '';
+  selectedCount = 1;
   _tallyAdmins = [];
   _optimisticCounts = {};
   _tabs = [];
@@ -497,7 +499,7 @@ class TallyListCard extends LitElement {
               @click=${() => this._addDrink(drink)}
               ?disabled=${this._disabled || !isAvailable}
             >
-              +1
+              +${this.selectedCount}
             </button>
           </td>
           <td>${displayDrink}</td>
@@ -518,10 +520,10 @@ class TallyListCard extends LitElement {
       selectedState &&
       selectedState.state !== 'unavailable' &&
       selectedState.state !== 'unknown';
-    const selectedCount =
+    const currentCount =
       this._optimisticCounts[selectedEntity] ?? this._toNumber(selectedState?.state);
     const removeDisabled =
-      this._disabled || !selectedAvailable || selectedCount <= 0;
+      this._disabled || !selectedAvailable || currentCount < this.selectedCount;
 
     const totalStr = this._formatPrice(total) + ` ${this._currency}`;
     const freeAmountStr = this._formatPrice(freeAmount) + ` ${this._currency}`;
@@ -537,9 +539,22 @@ class TallyListCard extends LitElement {
     const width = this._normalizeWidth(this.config.max_width);
     const cardStyle = width ? `max-width:${width};margin:0 auto;` : '';
     const selector = this._renderUserSelector(users, isAdmin);
+    const countSelector = html`
+      <div class="count-row">
+        ${[1, 3, 5, 10].map(
+          c => html`<button
+            class=${c === this.selectedCount ? 'selected' : ''}
+            @click=${() => (this.selectedCount = c)}
+          >
+            ${c}
+          </button>`
+        )}
+      </div>
+    `;
     return html`
       <ha-card style="${cardStyle}">
         ${selector}
+        ${countSelector}
         <table>
           <thead><tr><th></th><th>${this._t('drink')}</th><th>${this._t('count')}</th><th>${this._t('price')}</th><th>${this._t('sum')}</th></tr></thead>
           <tbody>${rows}</tbody>
@@ -551,7 +566,7 @@ class TallyListCard extends LitElement {
             ` : ''}
             ${this.config.show_remove !== false ? html`
               <tr class="remove-row">
-                <td><button class="remove-button" @click=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${removeDisabled}>-1</button></td>
+                <td><button class="remove-button" @click=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${removeDisabled}>-${this.selectedCount}</button></td>
                 <td colspan="4" class="remove-select-cell">
                   <select class="remove-select" @change=${this._selectRemoveDrink.bind(this)}>
                     ${drinks.map(d => html`<option value="${d}" ?selected=${d===this.selectedRemoveDrink}>${d.charAt(0).toUpperCase() + d.slice(1)}</option>`)}
@@ -589,6 +604,7 @@ class TallyListCard extends LitElement {
     this.hass.callService('tally_list', 'add_drink', {
       user: this.selectedUser,
       drink: displayDrink,
+      count: this.selectedCount,
     });
 
     const users = this.config.users || this._autoUsers || [];
@@ -597,7 +613,7 @@ class TallyListCard extends LitElement {
     if (entity) {
       const stateObj = this.hass.states[entity];
       const base = this._optimisticCounts[entity] ?? this._toNumber(stateObj?.state);
-      this._optimisticCounts = { ...this._optimisticCounts, [entity]: base + 1 };
+      this._optimisticCounts = { ...this._optimisticCounts, [entity]: base + this.selectedCount };
       this.hass.callService('homeassistant', 'update_entity', {
         entity_id: entity,
       });
@@ -618,7 +634,7 @@ class TallyListCard extends LitElement {
       stateObj.state !== 'unavailable' &&
       stateObj.state !== 'unknown';
     const count = this._optimisticCounts[entity] ?? this._toNumber(stateObj?.state);
-    if (!isAvailable || count <= 0) {
+    if (!isAvailable || count < this.selectedCount) {
       return;
     }
 
@@ -634,11 +650,12 @@ class TallyListCard extends LitElement {
     this.hass.callService('tally_list', 'remove_drink', {
       user: this.selectedUser,
       drink: displayDrink,
+      count: this.selectedCount,
     });
 
     if (entity) {
       const base = this._optimisticCounts[entity] ?? count;
-      this._optimisticCounts = { ...this._optimisticCounts, [entity]: base - 1 };
+      this._optimisticCounts = { ...this._optimisticCounts, [entity]: base - this.selectedCount };
       this.hass.callService('homeassistant', 'update_entity', {
         entity_id: entity,
       });
@@ -886,6 +903,28 @@ class TallyListCard extends LitElement {
     .user-label {
       font-weight: bold;
       margin-bottom: 8px;
+    }
+    .count-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .count-row button {
+      flex: 1;
+      height: 32px;
+      border: 1px solid var(--divider-color);
+      border-radius: 4px;
+      background: var(
+        --card-background-color,
+        var(--ha-card-background, transparent)
+      );
+      color: var(--primary-text-color);
+      transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+    }
+    .count-row button.selected {
+      background-color: var(--success-color, #2e7d32);
+      color: var(--text-primary-color, #fff);
+      border: none;
     }
     .user-tabs {
       display: flex;
