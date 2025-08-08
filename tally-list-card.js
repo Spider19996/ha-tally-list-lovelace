@@ -351,7 +351,9 @@ class TallyListCard extends LitElement {
     const name = btn.dataset.id;
     const source = btn.dataset.source;
     e.preventDefault();
+    e.stopPropagation();
     this._setSelectedUser(name, source);
+    this.requestUpdate('selectedUser');
   }
 
   _ensureBuckets(users) {
@@ -405,14 +407,16 @@ class TallyListCard extends LitElement {
     this._currentTab = tab;
     this._visibleUsers = this._buckets.get(tab) || this._buckets.get('*ALL*') || [];
     this.requestUpdate('_visibleUsers');
+    this.requestUpdate('_currentTab');
   }
 
   _onTabbarPointerDown(e) {
     const btn = e.target.closest('.tab');
     if (!btn) return;
     e.preventDefault();
+    e.stopPropagation();
     const tab = btn.dataset.tab;
-    requestAnimationFrame(() => this._setTab(tab));
+    this._setTab(tab);
   }
 
   _renderTabs() {
@@ -437,6 +441,19 @@ class TallyListCard extends LitElement {
     if (mode === 'tabs') return this._renderTabs();
     if (mode === 'grid') return this._renderGrid(users);
     return html`<div class="controls"><div class="user-select"><label for="user">${this._t('name')}:</label><select id="user" @change=${this._selectUser.bind(this)}>${users.map(u => html`<option value="${u.name || u.slug}" ?selected=${(u.name || u.slug)===this.selectedUser}>${u.name}</option>`)}</select></div></div>`;
+  }
+
+  shouldUpdate(changedProps) {
+    return (
+      changedProps.has('hass') ||
+      changedProps.has('selectedUser') ||
+      changedProps.has('selectedCount') ||
+      changedProps.has('config') ||
+      changedProps.has('_visibleUsers') ||
+      changedProps.has('_optimisticCounts') ||
+      changedProps.has('_disabled') ||
+      changedProps.has('_currentTab')
+    );
   }
 
   render() {
@@ -496,7 +513,7 @@ class TallyListCard extends LitElement {
           <td>
             <button
               class="add-button"
-              @click=${() => this._addDrink(drink)}
+              @pointerdown=${() => this._addDrink(drink)}
               ?disabled=${this._disabled || !isAvailable}
             >
               +${this.selectedCount}
@@ -544,7 +561,7 @@ class TallyListCard extends LitElement {
         ${[1, 3, 5, 10].map(
           c => html`<button
             class=${c === this.selectedCount ? 'selected' : ''}
-            @click=${() => (this.selectedCount = c)}
+            @pointerdown=${(e) => this._onSelectCount(c, e)}
           >
             ${c}
           </button>`
@@ -566,7 +583,7 @@ class TallyListCard extends LitElement {
             ` : ''}
             ${this.config.show_remove !== false ? html`
               <tr class="remove-row">
-                <td><button class="remove-button" @click=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${removeDisabled}>-${this.selectedCount}</button></td>
+                <td><button class="remove-button" @pointerdown=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${removeDisabled}>-${this.selectedCount}</button></td>
                 <td colspan="4" class="remove-select-cell">
                   <select class="remove-select" @change=${this._selectRemoveDrink.bind(this)}>
                     ${drinks.map(d => html`<option value="${d}" ?selected=${d===this.selectedRemoveDrink}>${d.charAt(0).toUpperCase() + d.slice(1)}</option>`)}
@@ -589,6 +606,13 @@ class TallyListCard extends LitElement {
     this.requestUpdate();
   }
 
+  _onSelectCount(count, ev) {
+    ev?.preventDefault();
+    ev?.stopPropagation();
+    this.selectedCount = count;
+    this.requestUpdate('selectedCount');
+  }
+
   _addDrink(drink) {
     if (this._disabled) {
       return;
@@ -601,11 +625,6 @@ class TallyListCard extends LitElement {
       this.requestUpdate();
     }, delay);
     const displayDrink = drink.charAt(0).toUpperCase() + drink.slice(1);
-    this.hass.callService('tally_list', 'add_drink', {
-      user: this.selectedUser,
-      drink: displayDrink,
-      count: this.selectedCount,
-    });
 
     const users = this.config.users || this._autoUsers || [];
     const user = users.find(u => (u.name || u.slug) === this.selectedUser);
@@ -613,11 +632,27 @@ class TallyListCard extends LitElement {
     if (entity) {
       const stateObj = this.hass.states[entity];
       const base = this._optimisticCounts[entity] ?? this._toNumber(stateObj?.state);
-      this._optimisticCounts = { ...this._optimisticCounts, [entity]: base + this.selectedCount };
-      this.hass.callService('homeassistant', 'update_entity', {
-        entity_id: entity,
-      });
+      this._optimisticCounts = {
+        ...this._optimisticCounts,
+        [entity]: base + this.selectedCount,
+      };
+      this.requestUpdate('_optimisticCounts');
     }
+
+    setTimeout(() => {
+      this.hass
+        .callService('tally_list', 'add_drink', {
+          user: this.selectedUser,
+          drink: displayDrink,
+          count: this.selectedCount,
+        })
+        .catch(e => console.error(e));
+      if (entity) {
+        this.hass.callService('homeassistant', 'update_entity', {
+          entity_id: entity,
+        });
+      }
+    }, 0);
   }
 
   _removeDrink(drink) {
@@ -647,19 +682,30 @@ class TallyListCard extends LitElement {
     }, delay);
 
     const displayDrink = drink.charAt(0).toUpperCase() + drink.slice(1);
-    this.hass.callService('tally_list', 'remove_drink', {
-      user: this.selectedUser,
-      drink: displayDrink,
-      count: this.selectedCount,
-    });
 
     if (entity) {
       const base = this._optimisticCounts[entity] ?? count;
-      this._optimisticCounts = { ...this._optimisticCounts, [entity]: base - this.selectedCount };
-      this.hass.callService('homeassistant', 'update_entity', {
-        entity_id: entity,
-      });
+      this._optimisticCounts = {
+        ...this._optimisticCounts,
+        [entity]: base - this.selectedCount,
+      };
+      this.requestUpdate('_optimisticCounts');
     }
+
+    setTimeout(() => {
+      this.hass
+        .callService('tally_list', 'remove_drink', {
+          user: this.selectedUser,
+          drink: displayDrink,
+          count: this.selectedCount,
+        })
+        .catch(e => console.error(e));
+      if (entity) {
+        this.hass.callService('homeassistant', 'update_entity', {
+          entity_id: entity,
+        });
+      }
+    }, 0);
   }
 
   updated(changedProps) {
