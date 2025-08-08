@@ -66,9 +66,7 @@ const TL_STRINGS = {
     grid_min_width: 'Min button width (px)',
     grid_max_width: 'Max button width (px)',
     grid_gap: 'Gap (px)',
-    grid_button_height: 'Button height (px)',
     grid_font_size: 'Font size (rem)',
-    grid_wrap_labels: 'Wrap labels',
   },
   de: {
     card_name: 'Strichliste Karte',
@@ -133,9 +131,7 @@ const TL_STRINGS = {
     grid_min_width: 'Minimale Buttonbreite (px)',
     grid_max_width: 'Maximale Buttonbreite (px)',
     grid_gap: 'Abstand (px)',
-    grid_button_height: 'Buttonhöhe (px)',
     grid_font_size: 'Schriftgröße (rem)',
-    grid_wrap_labels: 'Text umbrechen',
   },
 };
 
@@ -194,6 +190,7 @@ class TallyListCard extends LitElement {
     _tabs: { state: true },
     _visibleUsers: { state: true },
     _currentTab: { state: true },
+    _buttonHeight: { state: true },
   };
 
   selectedRemoveDrink = '';
@@ -206,6 +203,7 @@ class TallyListCard extends LitElement {
   _sortedUsers = [];
   _usersKey = '';
   _ownUser = null;
+  _buttonHeight = 32;
 
   constructor() {
     super();
@@ -230,9 +228,7 @@ class TallyListCard extends LitElement {
       min_button_width_px: 88,
       max_button_width_px: 160,
       gap_px: 8,
-      button_height_px: 32,
       font_size_rem: 1.0,
-      wrap_labels: false,
       ...(config?.grid || {}),
     };
     this.config = {
@@ -326,14 +322,13 @@ class TallyListCard extends LitElement {
     const min = Number(cfg.min_button_width_px || 88);
     const max = Number(cfg.max_button_width_px || 160);
     const gap = Number(cfg.gap_px || 8);
-    const height = Number(cfg.button_height_px || 32);
+    const height = this._buttonHeight;
     const font = Number(cfg.font_size_rem || 1);
-    const wrap = cfg.wrap_labels ? 'normal' : 'nowrap';
     const columnStyle =
       cols && cols !== 'auto'
         ? `grid-template-columns:repeat(${cols},1fr);`
         : `grid-template-columns:repeat(auto-fit,minmax(${min}px,1fr));`;
-    const style = `${columnStyle}gap:${gap}px;--tl-btn-h:${height}px;--tl-btn-font:${font}rem;--tl-btn-min:${min}px;--tl-btn-max:${max}px;--tl-btn-wrap:${wrap};`;
+    const style = `${columnStyle}gap:${gap}px;--tl-btn-h:${height}px;--tl-btn-font:${font}rem;--tl-btn-min:${min}px;--tl-btn-max:${max}px;`;
     const pressed = this.selectedUser;
     return html`<div class="user-grid" aria-label="${this._t('name')}" style="${style}">
       ${repeat(list, u => u.user_id || u.slug, u => {
@@ -349,6 +344,18 @@ class TallyListCard extends LitElement {
     const source = btn.dataset.source;
     e.preventDefault();
     this._setSelectedUser(name, source);
+  }
+
+  _updateButtonHeight() {
+    const buttons = this.renderRoot.querySelectorAll('.user-grid button');
+    let needsTall = false;
+    buttons.forEach(btn => {
+      if (btn.scrollHeight > 32) needsTall = true;
+    });
+    const desired = needsTall ? 40 : 32;
+    if (this._buttonHeight !== desired) {
+      this._buttonHeight = desired;
+    }
   }
 
   _ensureBuckets(users) {
@@ -675,6 +682,7 @@ class TallyListCard extends LitElement {
         this._optimisticCounts = updated;
       }
     }
+    this._updateButtonHeight();
   }
 
   _gatherUsers() {
@@ -918,8 +926,7 @@ class TallyListCard extends LitElement {
       height: var(--tl-btn-h, 32px);
       font-size: var(--tl-btn-font, 1rem);
       overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: var(--tl-btn-wrap, nowrap);
+      white-space: normal;
       border: none;
       border-radius: 4px;
       transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
@@ -1022,9 +1029,7 @@ class TallyListCardEditor extends LitElement {
       min_button_width_px: 88,
       max_button_width_px: 160,
       gap_px: 8,
-      button_height_px: 32,
       font_size_rem: 1.0,
-      wrap_labels: false,
       ...(config?.grid || {}),
     };
     this._config = {
@@ -1126,17 +1131,10 @@ class TallyListCardEditor extends LitElement {
               <label>${this._t('grid_gap')}</label>
               <input type="number" min="0" .value=${this._config.grid.gap_px} @input=${this._gridGapChanged} />
             </div>
-            <div class="form">
-              <label>${this._t('grid_button_height')}</label>
-              <input type="number" min="1" .value=${this._config.grid.button_height_px} @input=${this._gridButtonHeightChanged} />
-            </div>
-            <div class="form">
-              <label>${this._t('grid_font_size')}</label>
-              <input type="number" step="0.1" min="0.1" .value=${this._config.grid.font_size_rem} @input=${this._gridFontSizeChanged} />
-            </div>
-            <div class="form">
-              <label><input type="checkbox" .checked=${this._config.grid.wrap_labels} @change=${this._gridWrapChanged} /> ${this._t('grid_wrap_labels')}</label>
-            </div>
+              <div class="form">
+                <label>${this._t('grid_font_size')}</label>
+                <input type="number" step="0.1" min="0.1" .value=${this._config.grid.font_size_rem} @input=${this._gridFontSizeChanged} />
+              </div>
           `
         : ''}
       <details class="debug">
@@ -1324,28 +1322,11 @@ class TallyListCardEditor extends LitElement {
     this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
   }
 
-  _gridButtonHeightChanged(ev) {
-    const v = Math.max(1, Number(ev.target.value));
-    this._config = {
-      ...this._config,
-      grid: { ...this._config.grid, button_height_px: v },
-    };
-    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
-  }
-
   _gridFontSizeChanged(ev) {
     const v = Math.max(0.1, Number(ev.target.value));
     this._config = {
       ...this._config,
       grid: { ...this._config.grid, font_size_rem: v },
-    };
-    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
-  }
-
-  _gridWrapChanged(ev) {
-    this._config = {
-      ...this._config,
-      grid: { ...this._config.grid, wrap_labels: ev.target.checked },
     };
     this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
   }
