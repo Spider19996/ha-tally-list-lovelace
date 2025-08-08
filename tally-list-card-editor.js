@@ -24,7 +24,6 @@ const TL_STRINGS = {
     grouped: 'Grouped',
     grouped_breaks: 'Grouped breaks',
     show_all_tab: 'Show "All" tab',
-    show_misc_tab: 'Show "#" tab',
     grid_columns: 'Grid columns',
     grid_min_width: 'Min button width (px)',
     grid_max_width: 'Max button width (px)',
@@ -53,7 +52,6 @@ const TL_STRINGS = {
     grouped: 'Gruppiert',
     grouped_breaks: 'Gruppierte Bereiche',
     show_all_tab: 'Tab "Alle" anzeigen',
-    show_misc_tab: 'Tab "#" anzeigen',
     grid_columns: 'Spalten',
     grid_min_width: 'Minimale Buttonbreite (px)',
     grid_max_width: 'Maximale Buttonbreite (px)',
@@ -94,7 +92,6 @@ class TallyListCardEditor extends LitElement {
       mode: 'per-letter',
       grouped_breaks: ['A–E', 'F–J', 'K–O', 'P–T', 'U–Z'],
       show_all_tab: true,
-      show_misc_tab: true,
       ...(config?.tabs || {}),
     };
     const grid = {
@@ -182,9 +179,6 @@ class TallyListCardEditor extends LitElement {
                     : ''}
                   <div class="form">
                     <label><input type="checkbox" .checked=${this._config.tabs.show_all_tab} @change=${this._showAllTabChanged} /> ${this._t('show_all_tab')}</label>
-                  </div>
-                  <div class="form">
-                    <label><input type="checkbox" .checked=${this._config.tabs.show_misc_tab} @change=${this._showMiscTabChanged} /> ${this._t('show_misc_tab')}</label>
                   </div>
                 `
               : ''}
@@ -304,14 +298,6 @@ class TallyListCardEditor extends LitElement {
     this._config = {
       ...this._config,
       tabs: { ...this._config.tabs, show_all_tab: ev.target.checked },
-    };
-    fireEvent(this, 'config-changed', { config: this._config });
-  }
-
-  _showMiscTabChanged(ev) {
-    this._config = {
-      ...this._config,
-      tabs: { ...this._config.tabs, show_misc_tab: ev.target.checked },
     };
     fireEvent(this, 'config-changed', { config: this._config });
   }
