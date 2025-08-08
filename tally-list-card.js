@@ -849,6 +849,7 @@ class TallyListCard extends LitElement {
       height: 44px;
       border: none;
       background: var(--secondary-background-color);
+      border-radius: 4px;
     }
     .user-tabs button[aria-selected='true'],
     .user-grid button[aria-pressed='true'] {
@@ -870,6 +871,7 @@ class TallyListCard extends LitElement {
       text-overflow: ellipsis;
       white-space: var(--tl-btn-wrap, nowrap);
       border: none;
+      border-radius: 4px;
     }
     .user-tabs button:focus,
     .user-grid button:focus {
@@ -908,6 +910,23 @@ class TallyListCard extends LitElement {
       color: white;
       border: none;
       border-radius: 4px;
+    }
+    .reset-container,
+    .copy-container {
+      text-align: right;
+      margin-top: 8px;
+    }
+    .copy-container button,
+    .reset-container button {
+      padding: 4px 8px;
+      height: 32px;
+      box-sizing: border-box;
+      border: none;
+      border-radius: 4px;
+    }
+    .reset-container button {
+      background-color: var(--error-color, #c62828);
+      color: white;
     }
     table {
       width: 100%;
@@ -1370,6 +1389,8 @@ class TallyDueRankingCard extends LitElement {
         padding: 4px 8px;
         height: 32px;
         box-sizing: border-box;
+        border: none;
+        border-radius: 4px;
       }
     `,
   ];
