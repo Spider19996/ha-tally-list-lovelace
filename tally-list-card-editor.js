@@ -3,12 +3,6 @@ const CARD_VERSION = '08.08.2025';
 
 const TL_STRINGS = {
   en: {
-    general: 'General',
-    user_global: 'User selection',
-    tabs_section: 'Tabs',
-    grid_section: 'Grid',
-    labels_section: 'Labels',
-    accessibility_section: 'Accessibility',
     lock_ms: 'Lock duration (ms)',
     max_width: 'Maximum width (px)',
     show_remove_menu: 'Show remove menu',
@@ -38,19 +32,9 @@ const TL_STRINGS = {
     grid_button_height: 'Button height (px)',
     grid_font_size: 'Font size (rem)',
     grid_wrap_labels: 'Wrap labels',
-    tab_all_label: 'Label for "All" tab',
-    tab_misc_label: 'Label for "#" tab',
     focus_outline: 'Show focus outline',
-    keyboard_hint: 'Keyboard: Tab to focus, Enter/Space to activate.',
-    title: 'Title',
   },
   de: {
-    general: 'Allgemein',
-    user_global: 'Nutzerauswahl',
-    tabs_section: 'Tabs',
-    grid_section: 'Grid',
-    labels_section: 'Beschriftungen',
-    accessibility_section: 'Barrierefreiheit',
     lock_ms: 'Sperrzeit (ms)',
     max_width: 'Maximale Breite (px)',
     show_remove_menu: 'Entfernen-Menü anzeigen',
@@ -80,11 +64,7 @@ const TL_STRINGS = {
     grid_button_height: 'Buttonhöhe (px)',
     grid_font_size: 'Schriftgröße (rem)',
     grid_wrap_labels: 'Text umbrechen',
-    tab_all_label: 'Beschriftung "Alle" Tab',
-    tab_misc_label: 'Beschriftung "#" Tab',
     focus_outline: 'Fokusrahmen anzeigen',
-    keyboard_hint: 'Tastatur: Mit Tab wechseln, Enter/Leertaste auslösen.',
-    title: 'Titel',
   },
 };
 
@@ -133,13 +113,7 @@ class TallyListCardEditor extends LitElement {
       wrap_labels: false,
       ...(config?.grid || {}),
     };
-    const i18n = {
-      tab_all_label: 'Alle',
-      tab_misc_label: '#',
-      ...(config?.i18n || {}),
-    };
     this._config = {
-      title: config?.title,
       lock_ms: 400,
       max_width: '500px',
       show_remove: true,
@@ -152,7 +126,6 @@ class TallyListCardEditor extends LitElement {
       ...config,
       tabs,
       grid,
-      i18n,
     };
   }
 
@@ -160,406 +133,295 @@ class TallyListCardEditor extends LitElement {
     return t(this.hass, this._config?.language, key);
   }
 
-  get _generalSchema() {
-    return [
-      { name: 'title', label: this._t('title'), selector: { text: {} } },
-      { name: 'lock_ms', label: this._t('lock_ms'), selector: { number: { min: 0 } } },
-      { name: 'max_width', label: this._t('max_width'), selector: { text: {} } },
-      {
-        name: 'show_remove',
-        label: this._t('show_remove_menu'),
-        selector: { boolean: {} },
-      },
-      {
-        name: 'user_selector',
-        label: this._t('user_selector'),
-        selector: {
-          select: {
-            options: [
-              { value: 'list', label: this._t('user_selector_list') },
-              { value: 'tabs', label: this._t('user_selector_tabs') },
-              { value: 'grid', label: this._t('user_selector_grid') },
-            ],
-          },
-        },
-      },
-    ];
-  }
-
-  get _userGlobalSchema() {
-    return [
-      {
-        name: 'only_self',
-        label: this._t('only_self'),
-        selector: { boolean: {} },
-      },
-    ];
-  }
-
-  get _tabsSchema() {
-    const schema = [
-      {
-        name: 'mode',
-        label: this._t('tab_mode'),
-        selector: {
-          select: {
-            options: [
-              { value: 'per-letter', label: this._t('per_letter') },
-              { value: 'grouped', label: this._t('grouped') },
-            ],
-          },
-        },
-      },
-    ];
-    if (this._config.tabs?.mode === 'grouped') {
-      schema.push({
-        name: 'grouped_breaks',
-        label: this._t('grouped_breaks'),
-        selector: { text: {} },
-      });
-    }
-    schema.push(
-      {
-        name: 'show_all_tab',
-        label: this._t('show_all_tab'),
-        selector: { boolean: {} },
-      },
-      {
-        name: 'show_misc_tab',
-        label: this._t('show_misc_tab'),
-        selector: { boolean: {} },
-      }
-    );
-    return schema;
-  }
-
-  get _gridSchema() {
-    return [
-      {
-        name: 'columns',
-        label: this._t('grid_columns'),
-        selector: { text: {} },
-      },
-      {
-        name: 'min_button_width_px',
-        label: this._t('grid_min_width'),
-        selector: { number: { min: 1 } },
-      },
-      {
-        name: 'max_button_width_px',
-        label: this._t('grid_max_width'),
-        selector: { number: { min: 1 } },
-      },
-      {
-        name: 'gap_px',
-        label: this._t('grid_gap'),
-        selector: { number: { min: 0 } },
-      },
-      {
-        name: 'button_height_px',
-        label: this._t('grid_button_height'),
-        selector: { number: { min: 1 } },
-      },
-      {
-        name: 'font_size_rem',
-        label: this._t('grid_font_size'),
-        selector: { number: { min: 0.1, step: 0.1 } },
-      },
-      {
-        name: 'wrap_labels',
-        label: this._t('grid_wrap_labels'),
-        selector: { boolean: {} },
-      },
-    ];
-  }
-
-  get _i18nSchema() {
-    return [
-      {
-        name: 'tab_all_label',
-        label: this._t('tab_all_label'),
-        selector: { text: {} },
-      },
-      {
-        name: 'tab_misc_label',
-        label: this._t('tab_misc_label'),
-        selector: { text: {} },
-      },
-    ];
-  }
-
-  get _a11ySchema() {
-    return [
-      {
-        name: 'focus_outline',
-        label: this._t('focus_outline'),
-        selector: { boolean: {} },
-      },
-    ];
-  }
-
-  get _debugSchema() {
-    return [
-      {
-        name: 'show_all_users',
-        label: this._t('show_all_users'),
-        selector: { boolean: {} },
-      },
-      {
-        name: 'show_inactive_drinks',
-        label: this._t('show_inactive_drinks'),
-        selector: { boolean: {} },
-      },
-      {
-        name: 'language',
-        label: this._t('language'),
-        selector: {
-          select: {
-            options: [
-              { value: 'auto', label: this._t('auto') },
-              { value: 'de', label: this._t('german') },
-              { value: 'en', label: this._t('english') },
-            ],
-          },
-        },
-      },
-    ];
-  }
-
   render() {
     if (!this._config) return html``;
-    const usePanels = customElements.get('ha-expansion-panel');
-    const wrap = (title, content, expanded = false) =>
-      usePanels
-        ? html`<ha-expansion-panel .expanded=${expanded}>
-            <span slot="header">${title}</span>
-            ${content}
-          </ha-expansion-panel>`
-        : html`<div class="section">
-            <h3>${title}</h3>
-            ${content}
-          </div>`;
-
     return html`
-      ${wrap(
-        this._t('general'),
-        html`<ha-form
-          .data=${this._generalData}
-          .schema=${this._generalSchema}
-          @value-changed=${this._generalChanged}
-        ></ha-form>`,
-        true
-      )}
-
-      ${wrap(
-        this._t('user_global'),
-        html`<ha-form
-          .data=${this._userGlobalData}
-          .schema=${this._userGlobalSchema}
-          @value-changed=${this._userGlobalChanged}
-        ></ha-form>`
-      )}
-
-      ${this._config.user_selector === 'tabs'
-        ? wrap(
-            this._t('tabs_section'),
-            html`<ha-form
-              .data=${this._tabsData}
-              .schema=${this._tabsSchema}
-              @value-changed=${this._tabsChanged}
-            ></ha-form>`
-          )
-        : ''}
-
+      <div class="form">
+        <label>${this._t('lock_ms')}</label>
+        <input
+          type="number"
+          .value=${this._config.lock_ms}
+          @input=${this._lockChanged}
+        />
+      </div>
+      <div class="form">
+        <label>${this._t('max_width')}</label>
+        <input
+          type="number"
+          .value=${(this._config.max_width ?? '').replace(/px$/, '')}
+          @input=${this._widthChanged}
+        />
+      </div>
+      <div class="form">
+        <label>
+          <input type="checkbox" .checked=${this._config.show_remove} @change=${this._removeChanged} />
+          ${this._t('show_remove_menu')}
+        </label>
+      </div>
+      <div class="form">
+        <label>
+          <input type="checkbox" .checked=${this._config.only_self} @change=${this._selfChanged} />
+          ${this._t('only_self')}
+        </label>
+      </div>
+      <div class="form">
+        <label>${this._t('user_selector')}</label>
+        <select @change=${this._userSelectorChanged}>
+          <option value="list" ?selected=${this._config.user_selector === 'list'}>${this._t('user_selector_list')}</option>
+          <option value="tabs" ?selected=${this._config.user_selector === 'tabs'}>${this._t('user_selector_tabs')}</option>
+          <option value="grid" ?selected=${this._config.user_selector === 'grid'}>${this._t('user_selector_grid')}</option>
+        </select>
+      </div>
       ${['tabs', 'grid'].includes(this._config.user_selector)
-        ? wrap(
-            this._t('grid_section'),
-            html`<ha-form
-              .data=${this._gridData}
-              .schema=${this._gridSchema}
-              @value-changed=${this._gridChanged}
-            ></ha-form>`
-          )
+        ? html`
+            ${this._config.user_selector === 'tabs'
+              ? html`
+                  <div class="form">
+                    <label>${this._t('tab_mode')}</label>
+                    <select @change=${this._tabModeChanged}>
+                      <option value="per-letter" ?selected=${this._config.tabs.mode === 'per-letter'}>${this._t('per_letter')}</option>
+                      <option value="grouped" ?selected=${this._config.tabs.mode === 'grouped'}>${this._t('grouped')}</option>
+                    </select>
+                  </div>
+                  ${this._config.tabs.mode === 'grouped'
+                    ? html`<div class="form">
+                        <label>${this._t('grouped_breaks')}</label>
+                        <input type="text" .value=${this._config.tabs.grouped_breaks.join(',')} @input=${this._groupedBreaksChanged} />
+                      </div>`
+                    : ''}
+                  <div class="form">
+                    <label><input type="checkbox" .checked=${this._config.tabs.show_all_tab} @change=${this._showAllTabChanged} /> ${this._t('show_all_tab')}</label>
+                  </div>
+                  <div class="form">
+                    <label><input type="checkbox" .checked=${this._config.tabs.show_misc_tab} @change=${this._showMiscTabChanged} /> ${this._t('show_misc_tab')}</label>
+                  </div>
+                `
+              : ''}
+            <div class="form">
+              <label>${this._t('grid_columns')}</label>
+              <input type="text" .value=${this._config.grid.columns} @input=${this._gridColumnsChanged} />
+            </div>
+            <div class="form">
+              <label>${this._t('grid_min_width')}</label>
+              <input type="number" min="1" .value=${this._config.grid.min_button_width_px} @input=${this._gridMinWidthChanged} />
+            </div>
+            <div class="form">
+              <label>${this._t('grid_max_width')}</label>
+              <input type="number" min="1" .value=${this._config.grid.max_button_width_px} @input=${this._gridMaxWidthChanged} />
+            </div>
+            <div class="form">
+              <label>${this._t('grid_gap')}</label>
+              <input type="number" min="0" .value=${this._config.grid.gap_px} @input=${this._gridGapChanged} />
+            </div>
+            <div class="form">
+              <label>${this._t('grid_button_height')}</label>
+              <input type="number" min="1" .value=${this._config.grid.button_height_px} @input=${this._gridButtonHeightChanged} />
+            </div>
+            <div class="form">
+              <label>${this._t('grid_font_size')}</label>
+              <input type="number" step="0.1" min="0.1" .value=${this._config.grid.font_size_rem} @input=${this._gridFontSizeChanged} />
+            </div>
+            <div class="form">
+              <label><input type="checkbox" .checked=${this._config.grid.wrap_labels} @change=${this._gridWrapChanged} /> ${this._t('grid_wrap_labels')}</label>
+            </div>
+          `
         : ''}
-
-      ${wrap(
-        this._t('labels_section'),
-        html`<ha-form
-          .data=${this._i18nData}
-          .schema=${this._i18nSchema}
-          @value-changed=${this._i18nChanged}
-        ></ha-form>`
-      )}
-
-      ${wrap(
-        this._t('accessibility_section'),
-        html`<p class="hint">${this._t('keyboard_hint')}</p>
-          <ha-form
-            .data=${this._a11yData}
-            .schema=${this._a11ySchema}
-            @value-changed=${this._a11yChanged}
-          ></ha-form>`
-      )}
-
-      ${wrap(
-        this._t('debug'),
-        html`<ha-form
-            .data=${this._debugData}
-            .schema=${this._debugSchema}
-            @value-changed=${this._debugChanged}
-          ></ha-form>
-          <div class="version">${this._t('version')}: ${CARD_VERSION}</div>`
-      )}
+      <div class="form">
+        <label><input type="checkbox" .checked=${this._config.focus_outline !== false} @change=${this._focusOutlineChanged} /> ${this._t('focus_outline')}</label>
+      </div>
+      <details class="debug">
+        <summary>${this._t('debug')}</summary>
+        <div class="form">
+          <label>
+            <input type="checkbox" .checked=${this._config.show_all_users} @change=${this._debugAllChanged} />
+            ${this._t('show_all_users')}
+          </label>
+        </div>
+        <div class="form">
+          <label>
+            <input type="checkbox" .checked=${this._config.show_inactive_drinks} @change=${this._debugInactiveChanged} />
+            ${this._t('show_inactive_drinks')}
+          </label>
+        </div>
+        <div class="form">
+          <label>${this._t('language')}</label>
+          <select @change=${this._languageChanged}>
+            <option value="auto" ?selected=${this._config.language === 'auto'}>${this._t('auto')}</option>
+            <option value="de" ?selected=${this._config.language === 'de'}>${this._t('german')}</option>
+            <option value="en" ?selected=${this._config.language === 'en'}>${this._t('english')}</option>
+          </select>
+        </div>
+        <div class="version">${this._t('version')}: ${CARD_VERSION}</div>
+      </details>
     `;
   }
 
-  get _generalData() {
-    return {
-      title: this._config.title || '',
-      lock_ms: this._config.lock_ms,
-      max_width: (this._config.max_width || '').replace(/px$/, ''),
-      show_remove: this._config.show_remove,
-      user_selector: this._config.user_selector,
-    };
-  }
-
-  get _userGlobalData() {
-    return { only_self: this._config.only_self };
-  }
-
-  get _tabsData() {
-    return {
-      ...this._config.tabs,
-      grouped_breaks: this._config.tabs.grouped_breaks.join(','),
-    };
-  }
-
-  get _gridData() {
-    return { ...this._config.grid, columns: String(this._config.grid.columns) };
-  }
-
-  get _i18nData() {
-    return { ...this._config.i18n };
-  }
-
-  get _a11yData() {
-    return { focus_outline: this._config.focus_outline !== false };
-  }
-
-  get _debugData() {
-    return {
-      show_all_users: this._config.show_all_users,
-      show_inactive_drinks: this._config.show_inactive_drinks,
-      language: this._config.language,
-    };
-  }
-
-  _emitConfig() {
+  _lockChanged(ev) {
+    const value = Number(ev.target.value);
+    this._config = { ...this._config, lock_ms: isNaN(value) ? 400 : value };
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
-  _generalChanged(ev) {
-    const data = ev.detail.value;
-    const max_width = data.max_width ? `${Number(data.max_width)}px` : '';
+  _widthChanged(ev) {
+    const raw = ev.target.value.trim();
+    const width = raw ? `${raw}px` : '';
+    this._config = { ...this._config, max_width: width };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _removeChanged(ev) {
+    this._config = { ...this._config, show_remove: ev.target.checked };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _selfChanged(ev) {
+    this._config = { ...this._config, only_self: ev.target.checked };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _debugAllChanged(ev) {
+    this._config = { ...this._config, show_all_users: ev.target.checked };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _debugInactiveChanged(ev) {
+    this._config = { ...this._config, show_inactive_drinks: ev.target.checked };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _languageChanged(ev) {
+    this._config = { ...this._config, language: ev.target.value };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _userSelectorChanged(ev) {
+    this._config = { ...this._config, user_selector: ev.target.value };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _tabModeChanged(ev) {
     this._config = {
       ...this._config,
-      title: data.title || undefined,
-      lock_ms: Number(data.lock_ms),
-      max_width,
-      show_remove: data.show_remove,
-      user_selector: data.user_selector,
+      tabs: { ...this._config.tabs, mode: ev.target.value },
     };
-    this._emitConfig();
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 
-  _userGlobalChanged(ev) {
-    const data = ev.detail.value;
-    this._config = { ...this._config, only_self: data.only_self };
-    this._emitConfig();
-  }
-
-  _tabsChanged(ev) {
-    const data = ev.detail.value;
-    const tabs = {
-      ...this._config.tabs,
-      mode: data.mode,
-      show_all_tab: data.show_all_tab,
-      show_misc_tab: data.show_misc_tab,
-    };
-    if (data.grouped_breaks !== undefined) {
-      tabs.grouped_breaks = data.grouped_breaks
-        .split(',')
-        .map(s => s.trim())
-        .filter(Boolean);
-    }
-    this._config = { ...this._config, tabs };
-    this._emitConfig();
-  }
-
-  _gridChanged(ev) {
-    const d = ev.detail.value;
-    const columns = d.columns === '' || d.columns === 'auto'
-      ? 'auto'
-      : Math.max(1, Number(d.columns));
-    const grid = {
-      ...this._config.grid,
-      columns,
-      min_button_width_px: Math.max(1, Number(d.min_button_width_px)),
-      max_button_width_px: Math.max(1, Number(d.max_button_width_px)),
-      gap_px: Math.max(0, Number(d.gap_px)),
-      button_height_px: Math.max(1, Number(d.button_height_px)),
-      font_size_rem: Math.max(0.1, Number(d.font_size_rem)),
-      wrap_labels: d.wrap_labels,
-    };
-    this._config = { ...this._config, grid };
-    this._emitConfig();
-  }
-
-  _i18nChanged(ev) {
-    const data = ev.detail.value;
-    const i18n = { ...this._config.i18n, ...data };
-    this._config = { ...this._config, i18n };
-    this._emitConfig();
-  }
-
-  _a11yChanged(ev) {
-    const data = ev.detail.value;
-    this._config = { ...this._config, focus_outline: data.focus_outline };
-    this._emitConfig();
-  }
-
-  _debugChanged(ev) {
-    const data = ev.detail.value;
+  _groupedBreaksChanged(ev) {
+    const arr = ev.target.value
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
     this._config = {
       ...this._config,
-      show_all_users: data.show_all_users,
-      show_inactive_drinks: data.show_inactive_drinks,
-      language: data.language,
+      tabs: { ...this._config.tabs, grouped_breaks: arr },
     };
-    this._emitConfig();
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _showAllTabChanged(ev) {
+    this._config = {
+      ...this._config,
+      tabs: { ...this._config.tabs, show_all_tab: ev.target.checked },
+    };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _showMiscTabChanged(ev) {
+    this._config = {
+      ...this._config,
+      tabs: { ...this._config.tabs, show_misc_tab: ev.target.checked },
+    };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _gridColumnsChanged(ev) {
+    const val = ev.target.value.trim();
+    const columns = val === '' || val === 'auto' ? 'auto' : Math.max(1, Number(val));
+    this._config = {
+      ...this._config,
+      grid: { ...this._config.grid, columns },
+    };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _gridMinWidthChanged(ev) {
+    const v = Math.max(1, Number(ev.target.value));
+    this._config = {
+      ...this._config,
+      grid: { ...this._config.grid, min_button_width_px: v },
+    };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _gridMaxWidthChanged(ev) {
+    const v = Math.max(1, Number(ev.target.value));
+    this._config = {
+      ...this._config,
+      grid: { ...this._config.grid, max_button_width_px: v },
+    };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _gridGapChanged(ev) {
+    const v = Math.max(0, Number(ev.target.value));
+    this._config = {
+      ...this._config,
+      grid: { ...this._config.grid, gap_px: v },
+    };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _gridButtonHeightChanged(ev) {
+    const v = Math.max(1, Number(ev.target.value));
+    this._config = {
+      ...this._config,
+      grid: { ...this._config.grid, button_height_px: v },
+    };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _gridFontSizeChanged(ev) {
+    const v = Math.max(0.1, Number(ev.target.value));
+    this._config = {
+      ...this._config,
+      grid: { ...this._config.grid, font_size_rem: v },
+    };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _gridWrapChanged(ev) {
+    this._config = {
+      ...this._config,
+      grid: { ...this._config.grid, wrap_labels: ev.target.checked },
+    };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _focusOutlineChanged(ev) {
+    this._config = { ...this._config, focus_outline: ev.target.checked };
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 
   static styles = css`
-    ha-expansion-panel {
-      margin-bottom: 8px;
-    }
-    .section {
-      border: 1px solid var(--divider-color);
-      border-radius: var(--ha-card-border-radius, 12px);
-      margin-bottom: 8px;
-    }
-    .section h3 {
-      margin: 0;
+    .form {
       padding: 16px;
-      font-weight: var(--ha-font-weight-medium);
+    }
+    input {
+      width: 100%;
+      box-sizing: border-box;
+    }
+    details.debug {
+      padding: 0 16px 16px;
+    }
+    details.debug summary {
+      cursor: pointer;
+      font-weight: bold;
+      outline: none;
     }
     .version {
       padding: 0 16px 16px;
       text-align: center;
-      color: var(--secondary-text-color);
-    }
-    .hint {
-      padding: 0 16px;
       color: var(--secondary-text-color);
     }
   `;
