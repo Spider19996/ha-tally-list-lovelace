@@ -108,7 +108,7 @@ class TallyListCardEditor extends LitElement {
       min_button_width_px: 88,
       max_button_width_px: 160,
       gap_px: 8,
-      button_height_px: 56,
+      button_height_px: 32,
       font_size_rem: 1.0,
       wrap_labels: false,
       ...(config?.grid || {}),
