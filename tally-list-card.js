@@ -1,6 +1,5 @@
 // Tally List Card
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
-import { cache } from 'https://unpkg.com/lit/directives/cache.js?module';
 const CARD_VERSION = '08.08.2025';
 
 const TL_STRINGS = {
@@ -198,10 +197,6 @@ class TallyListCard extends LitElement {
   _tallyAdmins = [];
   _optimisticCounts = {};
   _uiState = { tab: 'all' };
-  _tabCacheKey = '';
-  _tabCacheTabs = [];
-  _tabContentCache = {};
-  _tabCacheUser = '';
 
   constructor() {
     super();
@@ -343,65 +338,32 @@ class TallyListCard extends LitElement {
     this._uiState = { ...this._uiState, tab: key };
   }
 
-  _onTabPointerDown(e, key) {
-    e.preventDefault();
-    e.stopPropagation();
-    this._changeTab(key);
-  }
-
   _renderTabs(users) {
     const cfg = this.config.tabs || {};
-    const cacheKey = `${JSON.stringify(cfg)}|${users
-      .map(u => u.name || u.slug)
-      .join('|')}`;
-    if (cacheKey !== this._tabCacheKey || this._tabCacheUser !== this.selectedUser) {
-      const data = this._bucketizeUsers(users, cfg);
-      let tabs = [];
-      if (cfg.mode === 'grouped') {
-        tabs = data.ranges
-          .filter(r => r.users.length > 0)
-          .map(r => ({ key: r.key, label: r.key, users: r.users }));
-      } else {
-        const letters = Array.from(data.letters.keys()).sort((a, b) => a.localeCompare(b));
-        tabs = letters.map(l => ({ key: l, label: l, users: data.letters.get(l) }));
-      }
-      if (cfg.show_misc_tab !== false && data.misc.length > 0) {
-        tabs.push({ key: '#', label: this._t('tab_misc_label'), users: data.misc });
-      }
-      if (cfg.show_all_tab !== false) {
-        tabs.unshift({ key: 'all', label: this._t('tab_all_label'), users });
-      }
-      this._tabCacheKey = cacheKey;
-      this._tabCacheTabs = tabs;
-      this._tabCacheUser = this.selectedUser;
-      this._tabContentCache = {};
-      for (const tab of tabs) {
-        const list = tab.key === 'all' ? users : tab.users;
-        this._tabContentCache[tab.key] = {
-          user: this.selectedUser,
-          tpl: this._renderUserButtons(list, 'tabs'),
-        };
-      }
+    const data = this._bucketizeUsers(users, cfg);
+    let tabs = [];
+    if (cfg.mode === 'grouped') {
+      tabs = data.ranges
+        .filter(r => r.users.length > 0)
+        .map(r => ({ key: r.key, label: r.key, users: r.users }));
+    } else {
+      const letters = Array.from(data.letters.keys()).sort((a, b) => a.localeCompare(b));
+      tabs = letters.map(l => ({ key: l, label: l, users: data.letters.get(l) }));
     }
-    const tabs = this._tabCacheTabs;
+    if (cfg.show_misc_tab !== false && data.misc.length > 0) {
+      tabs.push({ key: '#', label: this._t('tab_misc_label'), users: data.misc });
+    }
+    if (cfg.show_all_tab !== false) {
+      tabs.unshift({ key: 'all', label: this._t('tab_all_label'), users });
+    }
     if (!tabs.some(t => t.key === this._uiState.tab)) {
       this._uiState = { ...this._uiState, tab: tabs[0]?.key || 'all' };
     }
     const active = tabs.find(t => t.key === this._uiState.tab) || tabs[0];
-    const entry = this._tabContentCache[active.key];
     return html`<div class="user-tabs" role="tablist">
-        ${tabs.map(
-          t => html`<button
-            role="tab"
-            aria-selected="${t.key === active.key}"
-            @pointerdown=${e => this._onTabPointerDown(e, t.key)}
-            @click=${e => {
-              if (e.detail === 0) this._changeTab(t.key);
-            }}
-          >${t.label}</button>`
-        ) }
+        ${tabs.map(t => html`<button role="tab" aria-selected="${t.key === active.key}" @click=${() => this._changeTab(t.key)}>${t.label}</button>`) }
       </div>
-      ${cache(entry.tpl)}`;
+      ${this._renderUserButtons(active.key === 'all' ? users : active.users, 'tabs')}`;
   }
 
   _renderGrid(users) {
@@ -888,7 +850,6 @@ class TallyListCard extends LitElement {
       border: none;
       background: var(--secondary-background-color);
       border-radius: 4px;
-      touch-action: manipulation;
     }
     .user-tabs button[aria-selected='true'],
     .user-grid button[aria-pressed='true'] {
