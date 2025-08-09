@@ -185,6 +185,11 @@ class TallyListCard extends LitElement {
     _tabs: { state: true },
     _visibleUsers: { state: true },
     _currentTab: { state: true },
+    // Performance states
+    loading: { state: true },
+    showLoader: { state: true },
+    users: { state: true },
+    drinks: { state: true },
   };
 
   selectedRemoveDrink = '';
@@ -198,6 +203,10 @@ class TallyListCard extends LitElement {
   _sortedUsers = [];
   _usersKey = '';
   _ownUser = null;
+  loading = false;
+  showLoader = false;
+  users = [];
+  drinks = [];
 
   constructor() {
     super();
@@ -211,6 +220,23 @@ class TallyListCard extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    // warm start from cache
+    try {
+      const uCache = sessionStorage.getItem('tally_users');
+      if (uCache) this.users = JSON.parse(uCache);
+      const dCache = sessionStorage.getItem('tally_drinks');
+      if (dCache) this.drinks = JSON.parse(dCache);
+    } catch (e) {
+      // ignore
+    }
+    this.loading = true;
+    this.showLoader = false;
+    setTimeout(() => {
+      if (this.loading) {
+        this.showLoader = true;
+        this.requestUpdate();
+      }
+    }, 150);
     this._resizeHandler = () => this._updateButtonHeight();
     window.addEventListener('resize', this._resizeHandler);
   }
@@ -218,6 +244,47 @@ class TallyListCard extends LitElement {
   disconnectedCallback() {
     window.removeEventListener('resize', this._resizeHandler);
     super.disconnectedCallback();
+  }
+
+  firstUpdated() {
+    requestAnimationFrame(() => {
+      const p1 = this.hass?.callWS({ type: 'tally_list/users_min' });
+      const p2 = this.hass?.callWS({ type: 'tally_list/drinks_min' });
+      Promise.allSettled([p1, p2]).then(([u, d]) => {
+        this.users = u?.status === 'fulfilled' ? u.value : [];
+        this.drinks = d?.status === 'fulfilled' ? d.value : [];
+        try {
+          sessionStorage.setItem('tally_users', JSON.stringify(this.users));
+          sessionStorage.setItem('tally_drinks', JSON.stringify(this.drinks));
+        } catch (e) {
+          // ignore
+        }
+        this.loading = false;
+        this.showLoader = false;
+        this.requestUpdate();
+        if (typeof requestIdleCallback === 'function') {
+          requestIdleCallback(() => this.enrichAfterIdle());
+        } else {
+          this.enrichAfterIdle();
+        }
+      });
+    });
+  }
+
+  enrichAfterIdle() {
+    // heavy computations after initial paint
+    if (!this.config) return;
+    if (!this.config.users) {
+      this._autoUsers = this._gatherUsers();
+    }
+    if (!this.config.prices) {
+      this._autoPrices = this._gatherPrices();
+    }
+    if (!this.config.free_amount) {
+      this._freeAmount = this._gatherFreeAmount();
+    }
+    this._fetchTallyAdmins();
+    this.requestUpdate();
   }
 
   setConfig(config) {
@@ -471,6 +538,20 @@ class TallyListCard extends LitElement {
   }
 
   render() {
+    if (this.loading) {
+      return html`<ha-card>
+        ${this.showLoader ? html`<ha-circular-progress active></ha-circular-progress>` : ''}
+        ${this.users?.length
+          ? html`<div class="user-list">
+              ${repeat(
+                this.users,
+                u => u.id || u.name,
+                u => html`<div class="user-chip">${u.name}</div>`
+              )}
+            </div>`
+          : ''}
+      </ha-card>`;
+    }
     if (!this.hass || !this.config) return html``;
     let users = this.config.users || this._autoUsers || [];
     if (users.length === 0) {
@@ -1064,6 +1145,8 @@ class TallyListCard extends LitElement {
       padding: 12px 16px;
       margin-top: -1px;
       border-top: 1px solid var(--ha-card-border-color, var(--divider-color));
+      content-visibility: auto;
+      contain-intrinsic-size: 1px 44px;
     }
     .user-chip {
       position: relative;
