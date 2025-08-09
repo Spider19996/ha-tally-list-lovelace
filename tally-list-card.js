@@ -1551,50 +1551,83 @@ class TallyDueRankingCard extends LitElement {
     }
   }
 
-  static styles = [
-    TallyListCard.styles,
-    css`
-      .controls {
-        display: flex;
-        justify-content: flex-start;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 8px;
-        flex-wrap: wrap;
-      }
-      .controls select {
-        padding: 4px 8px;
-        min-width: 160px;
-        font-size: 1rem;
-        height: 32px;
-        box-sizing: border-box;
-      }
-      .reset-container {
-        text-align: right;
-        margin-top: 8px;
-      }
-      .reset-container button {
-        padding: 4px 8px;
-        height: 32px;
-        box-sizing: border-box;
-        background-color: var(--error-color, #c62828);
-        color: white;
-        border: none;
-        border-radius: 4px;
-      }
-      .copy-container {
-        text-align: right;
-        margin-top: 8px;
-      }
-      .copy-container button {
-        padding: 4px 8px;
-        height: 32px;
-        box-sizing: border-box;
-        border: none;
-        border-radius: 4px;
-      }
-    `,
-  ];
+  static styles = css`
+    :host {
+      display: block;
+    }
+    .ranking-scope {
+      --card-bg: var(--ha-card-background, #151515);
+      --card-border: var(--ha-card-border-color, #2a2a2a);
+      --radius: 12px;
+      --row-h: 44px;
+      --text: #fff;
+      --muted: #cfcfcf;
+      --header-bg: #222;
+      --btn-neutral: #3b3b3b;
+      --btn-danger: #d9534f;
+    }
+    .ranking-scope.ranking-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 16px;
+      color: var(--text);
+    }
+    .ranking-scope .ranking-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .ranking-scope .ranking-table thead tr {
+      background: var(--header-bg);
+      color: var(--text);
+      height: var(--row-h);
+    }
+    .ranking-scope .ranking-table thead th {
+      padding: 0 12px;
+      font-weight: 700;
+    }
+    .ranking-scope .ranking-table tbody td {
+      padding: 10px 12px;
+    }
+    .ranking-scope .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .ranking-scope .sort-select {
+      height: var(--row-h);
+      border-radius: var(--radius);
+      background: var(--btn-neutral);
+      color: var(--text);
+      padding: 0 12px;
+    }
+    .ranking-scope .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .ranking-scope .btn {
+      height: var(--row-h);
+      border-radius: var(--radius);
+      padding: 0 16px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+    }
+    .ranking-scope .btn--neutral {
+      background: var(--btn-neutral);
+      color: var(--text);
+    }
+    .ranking-scope .btn--danger {
+      background: var(--btn-danger);
+      color: #fff;
+    }
+  `;
 
   setConfig(config) {
     this.config = {
@@ -1688,33 +1721,31 @@ class TallyDueRankingCard extends LitElement {
     const sortMenu = this.config.sort_menu
       ? html`<div class="controls">
           <label>${this._t('sort_label')}</label>
-          <select @change=${this._sortMenuChanged}>
+          <select class="sort-select" @change=${this._sortMenuChanged}>
             <option value="due_desc" ?selected=${sortBy === 'due_desc'}>${this._t('sort_due_desc')}</option>
             <option value="due_asc" ?selected=${sortBy === 'due_asc'}>${this._t('sort_due_asc')}</option>
             <option value="name" ?selected=${sortBy === 'name'}>${this._t('sort_name')}</option>
           </select>
         </div>`
       : '';
-    const copyButton = this.config.show_copy !== false
-      ? html`<div class="copy-container"><button @click=${this._copyRanking}>${this._t('copy_table')}</button></div>`
-      : '';
-    const resetButton = (isAdmin || this.config.show_reset_everyone) &&
-      this.config.show_reset !== false
-      ? html`<div class="reset-container">
-          <button @click=${this._resetAllTallies}>${this._t('reset_all')}</button>
-        </div>`
-      : '';
+    const buttons = [];
+    if (this.config.show_copy !== false) {
+      buttons.push(html`<button class="btn btn--neutral" @click=${this._copyRanking}>${this._t('copy_table')}</button>`);
+    }
+    if ((isAdmin || this.config.show_reset_everyone) && this.config.show_reset !== false) {
+      buttons.push(html`<button class="btn btn--danger" @click=${this._resetAllTallies}>${this._t('reset_all')}</button>`);
+    }
+    const buttonRow = buttons.length ? html`<div class="button-row">${buttons}</div>` : '';
     return html`
-      <ha-card style="${cardStyle}">
+      <div class="ranking-scope ranking-card" style="${cardStyle}">
         ${sortMenu}
-        <table>
+        <table class="ranking-table">
           <thead><tr><th>#</th><th>${this._t('name')}</th><th>${this._t('amount_due')}</th></tr></thead>
           <tbody>${rows}</tbody>
           ${totalRow}
         </table>
-        ${copyButton}
-        ${resetButton}
-      </ha-card>
+        ${buttonRow}
+      </div>
     `;
   }
 
