@@ -1727,7 +1727,7 @@ class TallyDueRankingCard extends LitElement {
     .ranking-card .sort-select {
       height: var(--row-h);
       line-height: var(--row-h);
-      border-radius: var(--radius);
+      border-radius: 12px;
       background: var(--btn-neutral);
       color: var(--primary-text-color, #fff);
       padding: 0 12px;
