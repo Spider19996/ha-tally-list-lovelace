@@ -960,11 +960,34 @@ class TallyListCard extends LitElement {
     :host {
       display: block;
     }
+    :root,
+    .tally-theme {
+      --card-bg: var(--ha-card-background, #151515);
+      --card-border: var(--ha-card-border-color, #2a2a2a);
+      --radius: 12px;
+      --row-h: 44px;
+      --text: #fff;
+      --muted: #cfcfcf;
+      --header-bg: #222;
+      --btn-neutral: #3b3b3b;
+      --btn-danger: #d9534f;
+    }
     ha-card {
       padding: 16px;
       text-align: center;
       margin: 0 auto;
       max-width: var(--dcc-max-width, none);
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      color: var(--text);
+    }
+    .ranking-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 16px;
+      color: var(--text);
     }
     .controls {
       display: flex;
@@ -1220,6 +1243,57 @@ class TallyListCard extends LitElement {
     .reset-container button {
       background-color: var(--error-color, #c62828);
       color: white;
+    }
+    .table--head,
+    .ranking-table thead tr {
+      background: var(--header-bg);
+      color: var(--text);
+      height: var(--row-h);
+    }
+    .ranking-table thead th {
+      padding: 0 12px;
+      font-weight: 700;
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+    }
+    .ranking-table tbody td {
+      padding: 10px 12px;
+    }
+    .sort-select {
+      height: var(--row-h);
+      border-radius: var(--radius);
+      background: var(--btn-neutral);
+      color: var(--text);
+      padding: 0 12px;
+      border: none;
+    }
+    .btn {
+      height: var(--row-h);
+      border-radius: var(--radius);
+      padding: 0 16px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+    }
+    .btn--neutral {
+      background: var(--btn-neutral);
+      color: var(--text);
+    }
+    .btn--danger {
+      background: var(--btn-danger);
+      color: #fff;
+    }
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .button-row .btn {
+      flex: 1 1 auto;
+      min-width: 160px;
     }
     table {
       width: 100%;
@@ -1554,51 +1628,9 @@ class TallyDueRankingCard extends LitElement {
   static styles = [
     TallyListCard.styles,
     css`
-      .controls {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-bottom: 8px;
-      }
-      .controls select {
-        padding: 4px 8px;
-        min-width: 120px;
-        font-size: 14px;
-        height: 44px;
-        box-sizing: border-box;
-        border: 1px solid var(--ha-card-border-color, var(--divider-color));
-        border-radius: 12px;
-        background: #2b2b2b;
-        color: #ddd;
-      }
-      table thead tr {
-        background: var(--ha-card-background, #1e1e1e);
-      }
-      table th {
-        font-weight: 600;
-      }
-      .button-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 8px;
-      }
-      .button-row button {
-        flex: 1 1 auto;
-        min-width: 140px;
-        padding: 4px 8px;
-        height: 32px;
-        box-sizing: border-box;
-        border: none;
-        border-radius: 4px;
-        background: #2b2b2b;
-        color: #ddd;
-      }
-      .button-row button.reset-btn {
-        background-color: var(--error-color, #c62828);
-        color: white;
+      .ranking-table {
+        width: 100%;
+        border-collapse: collapse;
       }
     `,
   ];
@@ -1695,7 +1727,7 @@ class TallyDueRankingCard extends LitElement {
     const sortMenu = this.config.sort_menu
       ? html`<div class="controls">
           <label>${this._t('sort_label')}</label>
-          <select @change=${this._sortMenuChanged}>
+          <select class="sort-select" @change=${this._sortMenuChanged}>
             <option value="due_desc" ?selected=${sortBy === 'due_desc'}>${this._t('sort_due_desc')}</option>
             <option value="due_asc" ?selected=${sortBy === 'due_asc'}>${this._t('sort_due_asc')}</option>
             <option value="name" ?selected=${sortBy === 'name'}>${this._t('sort_name')}</option>
@@ -1703,20 +1735,20 @@ class TallyDueRankingCard extends LitElement {
         </div>`
       : '';
     const copyBtn = this.config.show_copy !== false
-      ? html`<button class="copy-btn" @click=${this._copyRanking}>${this._t('copy_table')}</button>`
+      ? html`<button class="btn btn--neutral" @click=${this._copyRanking}>${this._t('copy_table')}</button>`
       : '';
     const resetBtn = (isAdmin || this.config.show_reset_everyone) &&
       this.config.show_reset !== false
-      ? html`<button class="reset-btn" @click=${this._resetAllTallies}>${this._t('reset_all')}</button>`
+      ? html`<button class="btn btn--danger" @click=${this._resetAllTallies}>${this._t('reset_all')}</button>`
       : '';
     const buttonRow = copyBtn || resetBtn
       ? html`<div class="button-row">${copyBtn}${resetBtn}</div>`
       : '';
     return html`
-      <ha-card style="${cardStyle}">
+      <ha-card class="ranking-card" style="${cardStyle}">
         ${sortMenu}
-        <table>
-          <thead><tr><th>#</th><th>${this._t('name')}</th><th>${this._t('amount_due')}</th></tr></thead>
+        <table class="ranking-table">
+          <thead class="table--head"><tr><th>#</th><th>${this._t('name')}</th><th>${this._t('amount_due')}</th></tr></thead>
           <tbody>${rows}</tbody>
           ${totalRow}
         </table>
