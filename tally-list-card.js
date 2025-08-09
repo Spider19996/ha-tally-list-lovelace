@@ -1752,6 +1752,10 @@ class TallyDueRankingCard extends LitElement {
       background: var(--btn-danger);
       color: #fff;
     }
+    .ranking-card .btn:active {
+      filter: brightness(0.9);
+      transform: scale(0.97);
+    }
   `;
 
   async firstUpdated() {}
