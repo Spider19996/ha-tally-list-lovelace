@@ -1,6 +1,8 @@
 // Tally List Card
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
 import { repeat } from 'https://unpkg.com/lit/directives/repeat.js?module';
+import { cache } from 'https://unpkg.com/lit/directives/cache.js?module';
+import { guard } from 'https://unpkg.com/lit/directives/guard.js?module';
 const CARD_VERSION = '08.08.2025';
 
 const TL_STRINGS = {
@@ -52,6 +54,7 @@ const TL_STRINGS = {
     version: 'Version',
     copy_success: 'Text copied to clipboard!',
     reset_confirm_prompt: 'Type "YES I WANT TO" to reset all tallies:',
+    retry: 'Retry',
     tab_all_label: 'All',
     tab_misc_label: '#',
     user_selector: 'User selector',
@@ -114,6 +117,7 @@ const TL_STRINGS = {
     version: 'Version',
     copy_success: 'Text in die Zwischenablage kopiert!',
     reset_confirm_prompt: 'Zum Zurücksetzen aller Striche "JA ICH WILL" eingeben:',
+    retry: 'Erneut versuchen',
     tab_all_label: 'Alle',
     tab_misc_label: '#',
     user_selector: 'Nutzerauswahl',
@@ -185,6 +189,22 @@ class TallyListCard extends LitElement {
     _tabs: { state: true },
     _visibleUsers: { state: true },
     _currentTab: { state: true },
+    // Performance states
+    loading: { state: true },
+    showLoader: { state: true },
+    users: { state: true },
+    drinks: { state: true },
+    _rows: { state: true },
+    _drinkOptions: { state: true },
+    _totalStr: { state: true },
+    _freeAmountStr: { state: true },
+    _freeAmountVal: { state: true },
+    _dueStr: { state: true },
+    _removeDisabled: { state: true },
+    _computedUsers: { state: true },
+    _isAdmin: { state: true },
+    _configEditing: { state: true },
+    error: { state: true },
   };
 
   selectedRemoveDrink = '';
@@ -198,6 +218,23 @@ class TallyListCard extends LitElement {
   _sortedUsers = [];
   _usersKey = '';
   _ownUser = null;
+  loading = false;
+  showLoader = false;
+  users = [];
+  drinks = [];
+  _rows = [];
+  _drinkOptions = [];
+  _totalStr = '';
+  _freeAmountStr = '';
+  _freeAmountVal = 0;
+  _dueStr = '';
+  _removeDisabled = true;
+  _computedUsers = [];
+  _isAdmin = false;
+  _configEditing = false;
+  _configEditTimer = null;
+  error = '';
+  _loaderT = undefined;
 
   constructor() {
     super();
@@ -209,15 +246,108 @@ class TallyListCard extends LitElement {
     }
   }
 
+  async waitForService(domain, timeout = 6000) {
+    const start = performance.now();
+    const steps = [100, 200, 400, 800, 1200, 1800, 2400];
+    let i = 0;
+    while (performance.now() - start < timeout) {
+      if (this.hass?.services && this.hass.services[domain]) return true;
+      await new Promise(r => setTimeout(r, steps[Math.min(i++, steps.length - 1)]));
+    }
+    return !!(this.hass?.services && this.hass.services[domain]);
+  }
+
   connectedCallback() {
-    super.connectedCallback();
+    super.connectedCallback?.();
+    // warm start from cache
+    try {
+      const uCache = sessionStorage.getItem('tally_users');
+      if (uCache) this.users = JSON.parse(uCache);
+      const dCache = sessionStorage.getItem('tally_drinks');
+      if (dCache) this.drinks = JSON.parse(dCache);
+    } catch (e) {
+      // ignore
+    }
+    this.loading = true;
+    this.showLoader = false;
+    this._loaderT = window.setTimeout(() => {
+      if (this.loading) {
+        this.showLoader = true;
+        this.requestUpdate();
+      }
+    }, 150);
     this._resizeHandler = () => this._updateButtonHeight();
     window.addEventListener('resize', this._resizeHandler);
   }
 
   disconnectedCallback() {
     window.removeEventListener('resize', this._resizeHandler);
-    super.disconnectedCallback();
+    if (this._loaderT) {
+      clearTimeout(this._loaderT);
+      this._loaderT = undefined;
+    }
+    super.disconnectedCallback?.();
+  }
+
+  firstUpdated() {
+    this.initCard();
+  }
+
+  async initCard() {
+    this.loading = true;
+    this.showLoader = false;
+    if (this._loaderT) clearTimeout(this._loaderT);
+    this._loaderT = window.setTimeout(() => {
+      if (this.loading) {
+        this.showLoader = true;
+        this.requestUpdate();
+      }
+    }, 150);
+    const ok = await this.waitForService('tally_list', 6000);
+    if (!ok) {
+      this.loading = false;
+      this.showLoader = false;
+      this.error = `${this._t('integration_missing')}`;
+      this.requestUpdate();
+      return;
+    }
+    const p1 = this.hass.callWS({ type: 'tally_list/users_min' });
+    const p2 = this.hass.callWS({ type: 'tally_list/drinks_min' });
+    const [u, d] = await Promise.allSettled([p1, p2]);
+    this.users = u.status === 'fulfilled' ? u.value : [];
+    this.drinks = d.status === 'fulfilled' ? d.value : [];
+    try {
+      sessionStorage.setItem('tally_users', JSON.stringify(this.users));
+      sessionStorage.setItem('tally_drinks', JSON.stringify(this.drinks));
+    } catch (e) {
+      // ignore
+    }
+    this.loading = false;
+    this.showLoader = false;
+    this.error = '';
+    this._computeUserData();
+    this.requestUpdate();
+    if (typeof requestIdleCallback === 'function') {
+      requestIdleCallback(() => this.enrichAfterIdle());
+    } else {
+      this.enrichAfterIdle();
+    }
+  }
+
+  enrichAfterIdle() {
+    // heavy computations after initial paint
+    if (!this.config) return;
+    if (!this.config.users) {
+      this._autoUsers = this._gatherUsers();
+    }
+    if (!this.config.prices) {
+      this._autoPrices = this._gatherPrices();
+    }
+    if (!this.config.free_amount) {
+      this._freeAmount = this._gatherFreeAmount();
+    }
+    this._fetchTallyAdmins();
+    this.requestUpdate();
   }
 
   setConfig(config) {
@@ -245,7 +375,6 @@ class TallyListCard extends LitElement {
     };
     this.config.tabs = tabs;
     this.config.grid = grid;
-    this._disabled = false;
     const width = this._normalizeWidth(this.config.max_width);
     if (width) {
       this.style.setProperty('--dcc-max-width', width);
@@ -254,10 +383,12 @@ class TallyListCard extends LitElement {
       this.style.removeProperty('--dcc-max-width');
       this.config.max_width = '';
     }
-    if (config.users && Array.isArray(config.users)) {
-      // Prefer the configured name to preserve capitalization
-      this.selectedUser = config.users[0]?.name || config.users[0]?.slug;
-    }
+    this._configEditing = true;
+    clearTimeout(this._configEditTimer);
+    this._configEditTimer = setTimeout(() => {
+      this._configEditing = false;
+      this.requestUpdate();
+    }, 200);
   }
 
   _t(key) {
@@ -457,7 +588,138 @@ class TallyListCard extends LitElement {
     return html`<div class="user-select"><label for="user">${this._t('name')}: </label><select id="user" @change=${this._selectUser.bind(this)}>${users.map(u => html`<option value="${u.name || u.slug}" ?selected=${(u.name || u.slug)===this.selectedUser}>${u.name}</option>`)} </select></div>`;
   }
 
+  _computeUserData() {
+    let users = this.config.users || this._autoUsers || [];
+    if (users.length === 0) {
+      this._computedUsers = [];
+      this._rows = [];
+      this._drinkOptions = [];
+      this._totalStr = '';
+      this._freeAmountStr = '';
+      this._freeAmountVal = 0;
+      this._dueStr = '';
+      this._removeDisabled = true;
+      this._isAdmin = false;
+      return;
+    }
+    const userNames = [this.hass.user?.name, ...this._currentPersonNames()];
+    const isAdmin = userNames.some(n => (this._tallyAdmins || []).includes(n));
+    const limitSelf = !isAdmin || this.config.only_self;
+    if (limitSelf) {
+      const allowedSlugs = this._currentPersonSlugs();
+      const uid = this.hass.user?.id;
+      users = users.filter(u => u.user_id === uid || allowedSlugs.includes(u.slug));
+    }
+    this._isAdmin = isAdmin;
+    if (users.length === 0) {
+      this._computedUsers = [];
+      this._rows = [];
+      this._drinkOptions = [];
+      this._totalStr = '';
+      this._freeAmountStr = '';
+      this._freeAmountVal = 0;
+      this._dueStr = '';
+      this._removeDisabled = true;
+      return;
+    }
+    this._ensureBuckets(users);
+    users = this._sortedUsers;
+    this._computedUsers = users;
+    const own = this._ownUser;
+    if (!this.selectedUser || !users.some(u => (u.name || u.slug) === this.selectedUser)) {
+      this.selectedUser = own ? (own.name || own.slug) : (users[0].name || users[0].slug);
+    }
+    const user = users.find(u => (u.name || u.slug) === this.selectedUser);
+    if (!user || !user.drinks || Object.keys(user.drinks).length === 0) {
+      this._rows = [];
+      this._drinkOptions = [];
+      this._totalStr = '';
+      this._freeAmountStr = '';
+      this._freeAmountVal = 0;
+      this._dueStr = '';
+      this._removeDisabled = true;
+      return;
+    }
+    const prices = this.config.prices || this._autoPrices || {};
+    const freeAmount = Number(this.config.free_amount ?? this._freeAmount ?? 0);
+    const drinkEntries = Object.entries(user.drinks)
+      .filter(([d, e]) => {
+        if (this.config.show_inactive_drinks) return true;
+        const st = this.hass.states[e]?.state;
+        return st !== 'unavailable' && st !== 'unknown';
+      })
+      .sort((a, b) => a[0].localeCompare(b[0]));
+    if (drinkEntries.length === 0) {
+      this._rows = [];
+      this._drinkOptions = [];
+      this._totalStr = '';
+      this._freeAmountStr = '';
+      this._freeAmountVal = 0;
+      this._dueStr = '';
+      this._removeDisabled = true;
+      return;
+    }
+    let total = 0;
+    const rows = drinkEntries.map(([drink, entity]) => {
+      const stateObj = this.hass.states[entity];
+      const isAvailable =
+        stateObj && stateObj.state !== 'unavailable' && stateObj.state !== 'unknown';
+      const count = this._optimisticCounts[entity] ?? this._toNumber(stateObj?.state);
+      const price = this._toNumber(prices[drink]);
+      const priceStr = this._formatPrice(price) + ` ${this._currency}`;
+      const cost = count * price;
+      total += cost;
+      const costStr = this._formatPrice(cost) + ` ${this._currency}`;
+      const displayDrink = drink.charAt(0).toUpperCase() + drink.slice(1);
+      return {
+        key: drink,
+        displayDrink,
+        count,
+        priceStr,
+        costStr,
+        entity,
+        isAvailable,
+      };
+    });
+    const drinks = drinkEntries.map(([d]) => d);
+    if (!this.selectedRemoveDrink || !drinks.includes(this.selectedRemoveDrink)) {
+      this.selectedRemoveDrink = drinks[0] || '';
+    }
+    const selectedEntity = user.drinks[this.selectedRemoveDrink];
+    const selectedState = selectedEntity ? this.hass.states[selectedEntity] : null;
+    const selectedAvailable =
+      selectedState &&
+      selectedState.state !== 'unavailable' &&
+      selectedState.state !== 'unknown';
+    const currentCount =
+      this._optimisticCounts[selectedEntity] ?? this._toNumber(selectedState?.state);
+    const removeDisabled =
+      this._disabled || !selectedAvailable || currentCount < this.selectedCount;
+    const totalStr = this._formatPrice(total) + ` ${this._currency}`;
+    const freeAmountStr = this._formatPrice(freeAmount) + ` ${this._currency}`;
+    let due;
+    if (user.amount_due_entity) {
+      const dueState = this.hass.states[user.amount_due_entity];
+      const val = parseFloat(dueState?.state);
+      due = isNaN(val) ? Math.max(total - freeAmount, 0) : val;
+    } else {
+      due = Math.max(total - freeAmount, 0);
+    }
+    const dueStr = this._formatPrice(due) + ` ${this._currency}`;
+    this._rows = rows;
+    this._drinkOptions = drinks.map(d => ({
+      value: d,
+      label: d.charAt(0).toUpperCase() + d.slice(1),
+    }));
+    this._totalStr = totalStr;
+    this._freeAmountStr = freeAmountStr;
+    this._freeAmountVal = freeAmount;
+    this._dueStr = dueStr;
+    this._removeDisabled = removeDisabled;
+  }
+
   shouldUpdate(changedProps) {
+    if (this._configEditing) return false;
     return (
       changedProps.has('hass') ||
       changedProps.has('selectedUser') ||
@@ -470,166 +732,161 @@ class TallyListCard extends LitElement {
     );
   }
 
+  willUpdate(changedProps) {
+    if (
+      !this.loading &&
+      !this._configEditing &&
+      (
+        changedProps.has('hass') ||
+        changedProps.has('selectedUser') ||
+        changedProps.has('_optimisticCounts') ||
+        changedProps.has('config') ||
+        changedProps.has('_autoUsers') ||
+        changedProps.has('_autoPrices') ||
+        changedProps.has('_freeAmount') ||
+        changedProps.has('users') ||
+        changedProps.has('drinks')
+      )
+    ) {
+      this._computeUserData();
+    }
+  }
+
   render() {
     if (!this.hass || !this.config) return html``;
-    let users = this.config.users || this._autoUsers || [];
-    if (users.length === 0) {
-      return html`<ha-card>${this._t('integration_missing')}</ha-card>`;
-    }
-    const userNames = [this.hass.user?.name, ...this._currentPersonNames()];
-    const isAdmin = userNames.some(n => (this._tallyAdmins || []).includes(n));
-    const limitSelf = !isAdmin || this.config.only_self;
-    if (limitSelf) {
-      const allowedSlugs = this._currentPersonSlugs();
-      const uid = this.hass.user?.id;
-      users = users.filter(u => u.user_id === uid || allowedSlugs.includes(u.slug));
-    }
-    if (users.length === 0) {
-      return html`<ha-card>${this._t('no_user_access')}</ha-card>`;
-    }
-    this._ensureBuckets(users);
-    users = this._sortedUsers;
-    const own = this._ownUser;
-    if (!this.selectedUser || !users.some(u => (u.name || u.slug) === this.selectedUser)) {
-      // Prefer the current user when available, otherwise pick the first entry
-      this.selectedUser = own ? (own.name || own.slug) : (users[0].name || users[0].slug);
-    }
-    const user = users.find(u => (u.name || u.slug) === this.selectedUser);
-    if (!user) return html`<ha-card>${this._t('unknown_user')}</ha-card>`;
-    if (!user.drinks || Object.keys(user.drinks).length === 0) {
-      return html`<ha-card>${this._t('no_drinks')}</ha-card>`;
-    }
-    const prices = this.config.prices || this._autoPrices || {};
-    const freeAmount = Number(this.config.free_amount ?? this._freeAmount ?? 0);
-    const drinkEntries = Object.entries(user.drinks).filter(([d, e]) => {
-      if (this.config.show_inactive_drinks) return true;
-      const st = this.hass.states[e]?.state;
-      return st !== 'unavailable' && st !== 'unknown';
-    });
-    if (drinkEntries.length === 0) {
-      return html`<ha-card>${this._t('no_drinks')}</ha-card>`;
-    }
-    let total = 0;
-    const rows = drinkEntries
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([drink, entity]) => {
-        const stateObj = this.hass.states[entity];
-        const isAvailable =
-          stateObj && stateObj.state !== 'unavailable' && stateObj.state !== 'unknown';
-        const count = this._optimisticCounts[entity] ?? this._toNumber(stateObj?.state);
-        const price = this._toNumber(prices[drink]);
-        const priceStr = this._formatPrice(price) + ` ${this._currency}`;
-        const cost = count * price;
-        total += cost;
-        const costStr = this._formatPrice(cost) + ` ${this._currency}`;
-        const displayDrink = drink.charAt(0).toUpperCase() + drink.slice(1);
-        return html`<tr>
-          <td>
-            <button
-              class="action-btn plus plus-btn"
-              @pointerdown=${() => this._addDrink(drink)}
-              ?disabled=${this._disabled || !isAvailable}
-            >
-              +${this.selectedCount}
-            </button>
-          </td>
-          <td>${displayDrink}</td>
-          <td>${count}</td>
-          <td>${priceStr}</td>
-          <td>${costStr}</td>
-        </tr>`;
-      });
-
-    const drinks = drinkEntries.map(([d]) => d).sort((a, b) => a.localeCompare(b));
-    if (!this.selectedRemoveDrink || !drinks.includes(this.selectedRemoveDrink)) {
-      this.selectedRemoveDrink = drinks[0] || '';
-    }
-
-    const selectedEntity = user.drinks[this.selectedRemoveDrink];
-    const selectedState = selectedEntity ? this.hass.states[selectedEntity] : null;
-    const selectedAvailable =
-      selectedState &&
-      selectedState.state !== 'unavailable' &&
-      selectedState.state !== 'unknown';
-    const currentCount =
-      this._optimisticCounts[selectedEntity] ?? this._toNumber(selectedState?.state);
-    const removeDisabled =
-      this._disabled || !selectedAvailable || currentCount < this.selectedCount;
-
-    const totalStr = this._formatPrice(total) + ` ${this._currency}`;
-    const freeAmountStr = this._formatPrice(freeAmount) + ` ${this._currency}`;
-    let due;
-    if (user.amount_due_entity) {
-      const dueState = this.hass.states[user.amount_due_entity];
-      const val = parseFloat(dueState?.state);
-      due = isNaN(val) ? Math.max(total - freeAmount, 0) : val;
-    } else {
-      due = Math.max(total - freeAmount, 0);
-    }
-    const dueStr = this._formatPrice(due) + ` ${this._currency}`;
     const width = this._normalizeWidth(this.config.max_width);
     const cardStyle = width ? `max-width:${width};margin:0 auto;` : '';
-    const mode = this.config.user_selector || 'list';
-    let selector;
-    let userActions = null;
-    if (isAdmin && mode === 'tabs') {
-      userActions = html`
-        <div class="user-actions">
-          <div class="alpha-tabs">${this._renderTabHeader()}</div>
-          <div class="user-list">${this._renderUserChips(this._visibleUsers)}</div>
+    let body;
+    if (this.error) {
+      body = html`<div class="error">${this.error}
+          <button class="retry-btn" @click=${this.initCard}>${this._t('retry')}</button>
         </div>`;
+    } else if (this.loading) {
+      body = html`
+        ${this.showLoader ? html`<ha-circular-progress active></ha-circular-progress>` : ''}
+        ${this.users?.length
+          ? html`<div class="user-list">
+              ${repeat(
+                this.users,
+                u => u.id || u.name,
+                u => html`<div class="user-chip">${u.name}</div>`
+              )}
+            </div>`
+          : ''}`;
     } else {
-      selector = this._renderUserSelector(users, isAdmin);
-    }
-    if (this.config.show_step_select === false) {
-      if (this.selectedCount !== 1) {
-        this.selectedCount = 1;
+      const users = this._computedUsers || [];
+      if (users.length === 0) {
+        body = html`${this._t('integration_missing')}`;
+      } else if (!users.some(u => (u.name || u.slug) === this.selectedUser)) {
+        body = html`${this._t('no_user_access')}`;
+      } else {
+        const user = users.find(u => (u.name || u.slug) === this.selectedUser);
+        if (!user) {
+          body = html`${this._t('unknown_user')}`;
+        } else if (this._drinkOptions.length === 0) {
+          body = html`${this._t('no_drinks')}`;
+        } else {
+          const mode = this.config.user_selector || 'list';
+          const isAdmin = this._isAdmin;
+          let selector;
+          let userActions = null;
+          if (isAdmin && mode === 'tabs') {
+            userActions = html`
+              <div class="user-actions">
+                <div class="alpha-tabs">${this._renderTabHeader()}</div>
+                <div class="user-list">${this._renderUserChips(this._visibleUsers)}</div>
+              </div>`;
+          } else {
+            selector = this._renderUserSelector(users, isAdmin);
+          }
+          if (this.config.show_step_select === false && this.selectedCount !== 1) {
+            this.selectedCount = 1;
+          }
+          const countSelector =
+            this.config.show_step_select === false
+              ? null
+              : html`<div class="count-selector">
+                  <div class="count-label">${this._t('step_label')}</div>
+                  <div class="segments">
+                    ${[1, 3, 5, 10].map(
+                      c => html`<button
+                        class="segment ${c === this.selectedCount ? 'active' : ''}"
+                        @pointerdown=${e => this._onSelectCount(c, e)}
+                      >${c}</button>`
+                    )}
+                  </div>
+                </div>`;
+          body = html`
+            ${userActions}
+            <div class="content">
+              ${selector ? html`${selector}` : ''}
+              ${countSelector ? html`<div class="spacer"></div>${countSelector}` : ''}
+              ${guard([
+                this._rows,
+                this._drinkOptions,
+                this._totalStr,
+                this._freeAmountStr,
+                this._dueStr,
+                this._removeDisabled,
+                this.selectedCount,
+              ], () => html`
+                <div class="container-grid">
+                  <table class="obere-zeile drink-table">
+                    <thead><tr><th></th><th>${this._t('drink')}</th><th>${this._t('count')}</th><th>${this._t('price')}</th><th>${this._t('sum')}</th></tr></thead>
+                    <tbody>
+                      ${cache(
+                        repeat(
+                          this._rows,
+                          r => r.key,
+                          r => html`<tr>
+                              <td>
+                                <button
+                                  class="action-btn plus plus-btn"
+                                  @pointerdown=${() => this._addDrink(r.key)}
+                                  ?disabled=${this._disabled || !r.isAvailable}
+                                >
+                                  +${this.selectedCount}
+                                </button>
+                              </td>
+                              <td>${r.displayDrink}</td>
+                              <td>${r.count}</td>
+                              <td>${r.priceStr}</td>
+                              <td>${r.costStr}</td>
+                            </tr>`
+                        )
+                      )}
+                    </tbody>
+                    <tfoot>
+                      <tr><td colspan="4"><b>${this._t('total')}</b></td><td>${this._totalStr}</td></tr>
+                      ${this._freeAmountVal > 0
+                        ? html`
+                            <tr><td colspan="4"><b>${this._t('free_amount')}</b></td><td>- ${this._freeAmountStr}</td></tr>
+                            <tr><td colspan="4"><b>${this._t('amount_due')}</b></td><td>${this._dueStr}</td></tr>
+                          `
+                        : ''}
+                    </tfoot>
+                  </table>
+                  ${this.config.show_remove !== false
+                    ? html`<div class="input-group minus-group">
+                        <button class="action-btn minus" @pointerdown=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${this._removeDisabled}>&minus;${this.selectedCount}</button>
+                        <select class="drink-select-native" .value=${this.selectedRemoveDrink} @change=${this._selectRemoveDrink.bind(this)}>
+                          ${cache(
+                            repeat(
+                              this._drinkOptions,
+                              d => d.value,
+                              d => html`<option value="${d.value}">${d.label}</option>`
+                            )
+                          )}
+                        </select>
+                      </div>`
+                    : ''}
+                </div>`)}
+            </div>
+          `;
+        }
       }
     }
-    const countSelector =
-      this.config.show_step_select === false
-        ? null
-        : html`<div class="count-selector">
-            <div class="count-label">${this._t('step_label')}</div>
-            <div class="segments">
-              ${[1, 3, 5, 10].map(
-                c => html`<button
-                  class="segment ${c === this.selectedCount ? 'active' : ''}"
-                  @pointerdown=${e => this._onSelectCount(c, e)}
-                >${c}</button>`
-              )}
-            </div>
-          </div>`;
-    return html`
-      <ha-card style="${cardStyle}">
-        ${userActions}
-        <div class="content">
-          ${selector ? html`${selector}` : ''}
-          ${countSelector ? html`<div class="spacer"></div>${countSelector}` : ''}
-          <div class="container-grid">
-            <table class="obere-zeile">
-            <thead><tr><th></th><th>${this._t('drink')}</th><th>${this._t('count')}</th><th>${this._t('price')}</th><th>${this._t('sum')}</th></tr></thead>
-            <tbody>${rows}</tbody>
-            <tfoot>
-              <tr><td colspan="4"><b>${this._t('total')}</b></td><td>${totalStr}</td></tr>
-              ${freeAmount > 0 ? html`
-                <tr><td colspan="4"><b>${this._t('free_amount')}</b></td><td>- ${freeAmountStr}</td></tr>
-                <tr><td colspan="4"><b>${this._t('amount_due')}</b></td><td>${dueStr}</td></tr>
-              ` : ''}
-            </tfoot>
-            </table>
-            ${this.config.show_remove !== false ? html`
-              <div class="input-group minus-group">
-                <button class="action-btn minus" @pointerdown=${() => this._removeDrink(this.selectedRemoveDrink)} ?disabled=${removeDisabled}>&minus;${this.selectedCount}</button>
-                <select class="drink-select-native" .value=${this.selectedRemoveDrink} @change=${this._selectRemoveDrink.bind(this)}>
-                  ${drinks.map(d => html`<option value="${d}">${d.charAt(0).toUpperCase() + d.slice(1)}</option>`)}
-                </select>
-              </div>
-            ` : ''}
-          </div>
-      </div>
-      </ha-card>
-    `;
+    return html`<ha-card style="${cardStyle}">${body}</ha-card>`;
   }
 
   _selectUser(ev) {
@@ -674,7 +931,11 @@ class TallyListCard extends LitElement {
       this.requestUpdate('_optimisticCounts');
     }
 
-    setTimeout(() => {
+    setTimeout(async () => {
+      if (!this.hass.services?.tally_list) {
+        const ok = await this.waitForService('tally_list', 2000);
+        if (!ok) return;
+      }
       this.hass
         .callService('tally_list', 'add_drink', {
           user: this.selectedUser,
@@ -727,7 +988,11 @@ class TallyListCard extends LitElement {
       this.requestUpdate('_optimisticCounts');
     }
 
-    setTimeout(() => {
+    setTimeout(async () => {
+      if (!this.hass.services?.tally_list) {
+        const ok = await this.waitForService('tally_list', 2000);
+        if (!ok) return;
+      }
       this.hass
         .callService('tally_list', 'remove_drink', {
           user: this.selectedUser,
@@ -744,17 +1009,17 @@ class TallyListCard extends LitElement {
   }
 
   updated(changedProps) {
+    if (this._configEditing) return;
     if (changedProps.has('hass')) {
-      if (!this.config.users) {
-        this._autoUsers = this._gatherUsers();
+      // Defer heavy gathering so the initial paint isn't blocked
+      const enrich = () => this.enrichAfterIdle();
+      if (!this.loading) {
+        if (typeof requestIdleCallback === 'function') {
+          requestIdleCallback(enrich);
+        } else {
+          setTimeout(enrich, 0);
+        }
       }
-      if (!this.config.prices) {
-        this._autoPrices = this._gatherPrices();
-      }
-      if (!this.config.free_amount) {
-        this._freeAmount = this._gatherFreeAmount();
-      }
-      this._fetchTallyAdmins();
 
       // Sync optimistic counts with real states when updates arrive
       const updated = { ...this._optimisticCounts };
@@ -857,6 +1122,10 @@ class TallyListCard extends LitElement {
 
   async _fetchTallyAdmins() {
     if (!this.hass?.connection) return;
+    if (!this.hass.services?.tally_list) {
+      const ok = await this.waitForService('tally_list', 2000);
+      if (!ok) return;
+    }
     try {
       const resp = await this.hass.connection.sendMessagePromise({ type: 'tally_list/get_admins' });
       this._tallyAdmins = Array.isArray(resp?.admins) ? resp.admins : [];
@@ -1064,6 +1333,8 @@ class TallyListCard extends LitElement {
       padding: 12px 16px;
       margin-top: -1px;
       border-top: 1px solid var(--ha-card-border-color, var(--divider-color));
+      content-visibility: auto;
+      contain-intrinsic-size: 1px 44px;
     }
     .user-chip {
       position: relative;
@@ -1195,6 +1466,10 @@ class TallyListCard extends LitElement {
       grid-template-columns: 56px 1fr;
       gap: 0;
     }
+    .drink-table {
+      content-visibility: auto;
+      contain-intrinsic-size: 1px 44px;
+    }
     .obere-zeile {
       grid-column: 1 / -1;
     }
@@ -1220,6 +1495,17 @@ class TallyListCard extends LitElement {
     .reset-container button {
       background-color: var(--error-color, #c62828);
       color: white;
+    }
+    .error {
+      color: var(--error-color, #c62828);
+      text-align: center;
+    }
+    .retry-btn {
+      padding: 4px 8px;
+      height: 32px;
+      box-sizing: border-box;
+      border: none;
+      border-radius: 4px;
     }
     table {
       width: 100%;
@@ -1537,9 +1823,12 @@ class TallyDueRankingCard extends LitElement {
     _currency: { state: true },
     _sortBy: { state: true },
     _tallyAdmins: { state: true },
+    _configEditing: { state: true },
   };
 
   _tallyAdmins = [];
+  _configEditing = false;
+  _configEditTimer = null;
 
   constructor() {
     super();
@@ -1549,6 +1838,17 @@ class TallyDueRankingCard extends LitElement {
     } catch (err) {
       this._tallyAdmins = [];
     }
+  }
+
+  async waitForService(domain, timeout = 6000) {
+    const start = performance.now();
+    const steps = [100, 200, 400, 800, 1200, 1800, 2400];
+    let i = 0;
+    while (performance.now() - start < timeout) {
+      if (this.hass?.services && this.hass.services[domain]) return true;
+      await new Promise(r => setTimeout(r, steps[Math.min(i++, steps.length - 1)]));
+    }
+    return !!(this.hass?.services && this.hass.services[domain]);
   }
 
   static styles = css`
@@ -1572,6 +1872,8 @@ class TallyDueRankingCard extends LitElement {
       border-radius: var(--radius);
       padding: 16px;
       color: var(--text);
+      content-visibility: auto;
+      contain-intrinsic-size: 1px 44px;
     }
     .ranking-scope .ranking-table {
       width: 100%;
@@ -1652,6 +1954,16 @@ class TallyDueRankingCard extends LitElement {
       this.style.removeProperty('--dcc-max-width');
       this.config.max_width = '';
     }
+    this._configEditing = true;
+    clearTimeout(this._configEditTimer);
+    this._configEditTimer = setTimeout(() => {
+      this._configEditing = false;
+      this.requestUpdate();
+    }, 200);
+  }
+
+  shouldUpdate() {
+    return !this._configEditing;
   }
 
   _t(key) {
@@ -1751,16 +2063,24 @@ class TallyDueRankingCard extends LitElement {
 
   updated(changedProps) {
     if (changedProps.has('hass')) {
-      if (!this.config.users) {
-        this._autoUsers = this._gatherUsers();
+      const enrich = () => {
+        if (!this.config.users) {
+          this._autoUsers = this._gatherUsers();
+        }
+        if (!this.config.prices) {
+          this._autoPrices = this._gatherPrices();
+        }
+        if (!this.config.free_amount) {
+          this._freeAmount = this._gatherFreeAmount();
+        }
+        this._fetchTallyAdmins();
+        this.requestUpdate();
+      };
+      if (typeof requestIdleCallback === 'function') {
+        requestIdleCallback(enrich);
+      } else {
+        setTimeout(enrich, 0);
       }
-      if (!this.config.prices) {
-        this._autoPrices = this._gatherPrices();
-      }
-      if (!this.config.free_amount) {
-        this._freeAmount = this._gatherFreeAmount();
-      }
-      this._fetchTallyAdmins();
     }
   }
 
@@ -1857,6 +2177,10 @@ class TallyDueRankingCard extends LitElement {
 
   async _fetchTallyAdmins() {
     if (!this.hass?.connection) return;
+    if (!this.hass.services?.tally_list) {
+      const ok = await this.waitForService('tally_list', 2000);
+      if (!ok) return;
+    }
     try {
       const resp = await this.hass.connection.sendMessagePromise({ type: 'tally_list/get_admins' });
       this._tallyAdmins = Array.isArray(resp?.admins) ? resp.admins : [];
