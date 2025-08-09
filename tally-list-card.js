@@ -1142,9 +1142,6 @@ class TallyListCard extends LitElement {
       border-bottom-left-radius: 0;
       border-bottom-right-radius: 0;
     }
-    .content {
-      padding: 12px 16px;
-    }
     .spacer {
       height: 12px;
     }
