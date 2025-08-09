@@ -1334,6 +1334,10 @@ class TallyListCard extends LitElement {
     button {
       padding: 4px;
     }
+    button:active {
+      filter: brightness(0.9);
+      transform: scale(0.97);
+    }
     button:disabled {
       opacity: 0.5;
       cursor: not-allowed;
