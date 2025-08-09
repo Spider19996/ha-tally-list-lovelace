@@ -661,7 +661,7 @@ class TallyListCard extends LitElement {
           ${selector ? html`${selector}` : ''}
           ${countSelector ? html`<div class="spacer"></div>${countSelector}` : ''}
           <div class="container-grid">
-            <table class="obere-zeile ranking-table">
+            <table class="obere-zeile">
             <thead><tr><th></th><th>${this._t('drink')}</th><th>${this._t('count')}</th><th>${this._t('price')}</th><th>${this._t('sum')}</th></tr></thead>
             <tbody>${repeat(table.rows, r => r.entity, r => html`<tr>
               <td>
@@ -1321,22 +1321,15 @@ class TallyListCard extends LitElement {
       background-color: var(--error-color, #c62828);
       color: white;
     }
-    .ranking-table {
+    table {
       width: 100%;
       border-collapse: collapse;
     }
-    .ranking-table thead tr {
-      height: var(--row-h, 44px);
-      background: var(--table-header-background, #222);
-    }
-    .ranking-table thead th,
-    .ranking-table tbody td {
-      padding: 10px 12px;
+    th,
+    td {
+      padding: 4px;
       border-bottom: 1px solid var(--divider-color);
       text-align: center;
-    }
-    .ranking-table thead th {
-      font-weight: 700;
     }
     button {
       padding: 4px;
@@ -1349,7 +1342,7 @@ class TallyListCard extends LitElement {
       opacity: 0.5;
       cursor: not-allowed;
     }
-    .ranking-table tfoot td {
+    tfoot td {
       font-weight: bold;
     }
   `;
@@ -1701,30 +1694,25 @@ class TallyDueRankingCard extends LitElement {
     }
     .ranking-card .header,
     .ranking-card .controls,
-    .ranking-table,
+    .ranking-card .ranking-table,
     .ranking-card .button-row,
     .ranking-card .section {
       background: transparent;
     }
-    .ranking-table {
+    .ranking-card .ranking-table {
       width: 100%;
       border-collapse: collapse;
     }
-    .ranking-table thead tr {
-      height: var(--row-h, 44px);
+    .ranking-card .ranking-table thead tr {
+      height: var(--row-h);
       background: var(--table-header-background, #222);
     }
-    .ranking-table thead th,
-    .ranking-table tbody td {
+    .ranking-card .ranking-table thead th {
       padding: 10px 12px;
-      border-bottom: 1px solid var(--divider-color);
-      text-align: center;
-    }
-    .ranking-table thead th {
       font-weight: 700;
     }
-    .ranking-table tfoot td {
-      font-weight: bold;
+    .ranking-card .ranking-table tbody td {
+      padding: 10px 12px;
     }
     .ranking-card .controls {
       display: flex;
