@@ -1725,15 +1725,17 @@ class TallyDueRankingCard extends LitElement {
       flex-wrap: wrap;
     }
     .ranking-card .sort-select {
-      height: var(--row-h);
-      line-height: var(--row-h);
-      border-radius: var(--radius);
-      background: var(--btn-neutral);
-      color: var(--primary-text-color, #fff);
       padding: 0 12px;
-      border: 1px solid var(--ha-card-border-color);
-      appearance: none;
+      min-width: 120px;
+      font-size: 14px;
+      height: 44px;
+      line-height: 44px;
       box-sizing: border-box;
+      border-radius: 12px;
+      border: 1px solid var(--ha-card-border-color);
+      background: var(--btn-neutral, #2b2b2b);
+      color: var(--primary-text-color, #fff);
+      appearance: none;
     }
     .ranking-card .button-row {
       display: flex;
