@@ -1556,42 +1556,49 @@ class TallyDueRankingCard extends LitElement {
     css`
       .controls {
         display: flex;
-        justify-content: flex-start;
+        justify-content: space-between;
         align-items: center;
+        flex-wrap: wrap;
         gap: 8px;
         margin-bottom: 8px;
-        flex-wrap: wrap;
       }
       .controls select {
         padding: 4px 8px;
-        min-width: 160px;
-        font-size: 1rem;
-        height: 32px;
+        min-width: 120px;
+        font-size: 14px;
+        height: 44px;
         box-sizing: border-box;
+        border: 1px solid var(--ha-card-border-color, var(--divider-color));
+        border-radius: 12px;
+        background: #2b2b2b;
+        color: #ddd;
       }
-      .reset-container {
-        text-align: right;
+      table thead tr {
+        background: var(--ha-card-background, #1e1e1e);
+      }
+      table th {
+        font-weight: 600;
+      }
+      .button-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
         margin-top: 8px;
       }
-      .reset-container button {
+      .button-row button {
+        flex: 1 1 auto;
+        min-width: 140px;
         padding: 4px 8px;
         height: 32px;
         box-sizing: border-box;
+        border: none;
+        border-radius: 4px;
+        background: #2b2b2b;
+        color: #ddd;
+      }
+      .button-row button.reset-btn {
         background-color: var(--error-color, #c62828);
         color: white;
-        border: none;
-        border-radius: 4px;
-      }
-      .copy-container {
-        text-align: right;
-        margin-top: 8px;
-      }
-      .copy-container button {
-        padding: 4px 8px;
-        height: 32px;
-        box-sizing: border-box;
-        border: none;
-        border-radius: 4px;
       }
     `,
   ];
@@ -1695,14 +1702,15 @@ class TallyDueRankingCard extends LitElement {
           </select>
         </div>`
       : '';
-    const copyButton = this.config.show_copy !== false
-      ? html`<div class="copy-container"><button @click=${this._copyRanking}>${this._t('copy_table')}</button></div>`
+    const copyBtn = this.config.show_copy !== false
+      ? html`<button class="copy-btn" @click=${this._copyRanking}>${this._t('copy_table')}</button>`
       : '';
-    const resetButton = (isAdmin || this.config.show_reset_everyone) &&
+    const resetBtn = (isAdmin || this.config.show_reset_everyone) &&
       this.config.show_reset !== false
-      ? html`<div class="reset-container">
-          <button @click=${this._resetAllTallies}>${this._t('reset_all')}</button>
-        </div>`
+      ? html`<button class="reset-btn" @click=${this._resetAllTallies}>${this._t('reset_all')}</button>`
+      : '';
+    const buttonRow = copyBtn || resetBtn
+      ? html`<div class="button-row">${copyBtn}${resetBtn}</div>`
       : '';
     return html`
       <ha-card style="${cardStyle}">
@@ -1712,8 +1720,7 @@ class TallyDueRankingCard extends LitElement {
           <tbody>${rows}</tbody>
           ${totalRow}
         </table>
-        ${copyButton}
-        ${resetButton}
+        ${buttonRow}
       </ha-card>
     `;
   }
