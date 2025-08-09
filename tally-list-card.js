@@ -1745,8 +1745,9 @@ class TallyDueRankingCard extends LitElement {
       border: none;
     }
     .ranking-card .btn--neutral {
-      background: var(--btn-neutral);
-      color: var(--primary-text-color, #fff);
+      background: #2b2b2b;
+      color: #fff;
+      border: 1px solid var(--ha-card-border-color);
     }
     .ranking-card .btn--danger {
       background: var(--btn-danger);
