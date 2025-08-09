@@ -1703,16 +1703,14 @@ class TallyDueRankingCard extends LitElement {
       width: 100%;
       border-collapse: collapse;
     }
-    .ranking-card .ranking-table thead tr {
-      height: var(--row-h);
-      background: var(--table-header-background, #222);
+    .ranking-card .ranking-table th,
+    .ranking-card .ranking-table td {
+      padding: 4px;
+      border-bottom: 1px solid var(--divider-color);
+      text-align: center;
     }
-    .ranking-card .ranking-table thead th {
-      padding: 10px 12px;
-      font-weight: 700;
-    }
-    .ranking-card .ranking-table tbody td {
-      padding: 10px 12px;
+    .ranking-card .ranking-table tfoot td {
+      font-weight: bold;
     }
     .ranking-card .controls {
       display: flex;
