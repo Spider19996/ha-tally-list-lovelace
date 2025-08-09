@@ -567,11 +567,6 @@ class TallyListCard extends LitElement {
     const hasTally =
       (this.hass.services && 'tally_list' in this.hass.services) ||
       Object.keys(states).some(id => id.startsWith('sensor.price_list_'));
-    console.info('TALLY DEBUG', {
-      hasTally,
-      services: Object.keys(this.hass.services || {}),
-      priceSensors: Object.keys(states).filter(id => id.startsWith('sensor.price_list_')).length,
-    });
     if (!hasTally) return html`<ha-card>Keine Tally-Entities gefunden.</ha-card>`;
     if (!this.config) return html`<ha-card>...</ha-card>`;
     let users = this.config.users || this._autoUsers || [];
@@ -764,8 +759,7 @@ class TallyListCard extends LitElement {
           user: this.selectedUser,
           drink: displayDrink,
           count: this.selectedCount,
-        })
-        .catch(e => console.error(e));
+        });
       if (entity) {
         this.hass.callService('homeassistant', 'update_entity', {
           entity_id: entity,
@@ -817,8 +811,7 @@ class TallyListCard extends LitElement {
           user: this.selectedUser,
           drink: displayDrink,
           count: this.selectedCount,
-        })
-        .catch(e => console.error(e));
+        });
       if (entity) {
         this.hass.callService('homeassistant', 'update_entity', {
           entity_id: entity,
@@ -1798,11 +1791,6 @@ class TallyDueRankingCard extends LitElement {
     const hasTally =
       (this.hass.services && 'tally_list' in this.hass.services) ||
       Object.keys(states).some(id => id.startsWith('sensor.price_list_'));
-    console.info('TALLY DEBUG', {
-      hasTally,
-      services: Object.keys(this.hass.services || {}),
-      priceSensors: Object.keys(states).filter(id => id.startsWith('sensor.price_list_')).length,
-    });
     if (!hasTally) return html`<ha-card>Keine Tally-Entities gefunden.</ha-card>`;
     if (!this.config) return html`<ha-card>...</ha-card>`;
     let users = this.config.users || this._autoUsers || [];
