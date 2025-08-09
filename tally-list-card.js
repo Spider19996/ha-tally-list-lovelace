@@ -1235,12 +1235,15 @@ class TallyListCard extends LitElement {
       filter: brightness(1.1);
     }
     .user-select select {
-      padding: 4px 8px;
+      padding: 0 12px;
       min-width: 120px;
       font-size: 14px;
       height: 44px;
       box-sizing: border-box;
       border-radius: 12px;
+      border: 1px solid var(--ha-card-border-color);
+      background: var(--btn-neutral, #2b2b2b);
+      color: var(--primary-text-color, #fff);
     }
     .action-btn {
       display: inline-flex;
@@ -1725,6 +1728,7 @@ class TallyDueRankingCard extends LitElement {
       background: var(--btn-neutral);
       color: var(--primary-text-color, #fff);
       padding: 0 12px;
+      border: 1px solid var(--ha-card-border-color);
     }
     .ranking-card .button-row {
       display: flex;
