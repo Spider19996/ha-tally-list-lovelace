@@ -215,6 +215,7 @@ class TallyListCard extends LitElement {
 
   constructor() {
     super();
+    this._uid = crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
     try {
       const stored = window.localStorage.getItem('tally-list-admins');
       this._tallyAdmins = stored ? JSON.parse(stored) : [];
@@ -230,6 +231,10 @@ class TallyListCard extends LitElement {
     this._selectRemoveDrink = this._selectRemoveDrink.bind(this);
     this._bootstrapped = true;
     this._loading = false;
+  }
+
+  _fid(key) {
+    return `tally-${this._uid}-${key}`;
   }
 
   set hass(h) {
@@ -489,7 +494,8 @@ class TallyListCard extends LitElement {
     }
     const mode = this.config.user_selector || 'list';
     if (mode === 'grid') return this._renderGrid(users);
-    return html`<div class="user-select"><label for="user">${this._t('name')}: </label><select id="user" @change=${this._selectUser}>${repeat(users, u => u.user_id || u.slug, u => html`<option value="${u.name || u.slug}" ?selected=${(u.name || u.slug)===this.selectedUser}>${u.name}</option>`)} </select></div>`;
+    const idUser = this._fid('user');
+    return html`<div class="user-select"><label for="${idUser}">${this._t('name')}: </label><select id="${idUser}" name="user" @change=${this._selectUser}>${repeat(users, u => u.user_id || u.slug, u => html`<option value="${u.name || u.slug}" ?selected=${(u.name || u.slug)===this.selectedUser}>${u.name}</option>`)} </select></div>`;
   }
 
   _computeTable(user, prices) {
@@ -652,6 +658,7 @@ class TallyListCard extends LitElement {
               >${c}</button>`)}
             </div>
           </div>`;
+    const idRemoveSelect = this._fid('remove-drink');
     return html`
       <ha-card style="${cardStyle}">
         ${userActions}
@@ -682,8 +689,8 @@ class TallyListCard extends LitElement {
             ${this.config.show_remove !== false ? html`
               <div class="input-group minus-group">
                 <button class="action-btn minus" data-drink="${this.selectedRemoveDrink}" @pointerdown=${this._onRemoveDrink} ?disabled=${removeDisabled}>&minus;${this.selectedCount}</button>
-                <select class="drink-select-native" .value=${this.selectedRemoveDrink} @change=${this._selectRemoveDrink}>
-                  ${repeat(drinks, d => d, d => html`<option value="${d}">${d.charAt(0).toUpperCase() + d.slice(1)}</option>`) }
+                <select id="${idRemoveSelect}" name="remove-drink" class="drink-select-native" aria-label="${this._t('drink')}" .value=${this.selectedRemoveDrink} @change=${this._selectRemoveDrink}>
+                  ${repeat(drinks, d => d, d => html`<option value="${d}">${d.charAt(0).toUpperCase() + d.slice(1)}</option>`)}
                 </select>
               </div>
             ` : ''}
@@ -1351,6 +1358,15 @@ class TallyListCardEditor extends LitElement {
     _config: {},
   };
 
+  constructor() {
+    super();
+    this._uid = crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
+  }
+
+  _fid(key) {
+    return `tally-${this._uid}-${key}`;
+  }
+
   setConfig(config) {
     const tabs = {
       mode: 'per-letter',
@@ -1384,38 +1400,38 @@ class TallyListCardEditor extends LitElement {
 
   render() {
     if (!this._config) return html``;
+    const idLock = this._fid('lock-ms');
+    const idWidth = this._fid('max-width');
+    const idShowRemove = this._fid('show-remove');
+    const idOnlySelf = this._fid('only-self');
+    const idUserSelector = this._fid('user-selector');
+    const idTabMode = this._fid('tab-mode');
+    const idGroupedBreaks = this._fid('grouped-breaks');
+    const idShowAllTab = this._fid('show-all-tab');
+    const idGridColumns = this._fid('grid-columns');
+    const idShowAllUsers = this._fid('show-all-users');
+    const idShowInactive = this._fid('show-inactive');
+    const idLanguage = this._fid('language');
     return html`
       <div class="form">
-        <label>${this._t('lock_ms')}</label>
-        <input
-          type="number"
-          .value=${this._config.lock_ms}
-          @input=${this._lockChanged}
-        />
+        <label for="${idLock}">${this._t('lock_ms')}</label>
+        <input id="${idLock}" name="lock_ms" type="number" .value=${this._config.lock_ms} @input=${this._lockChanged} />
       </div>
       <div class="form">
-        <label>${this._t('max_width')}</label>
-        <input
-          type="number"
-          .value=${(this._config.max_width ?? '').replace(/px$/, '')}
-          @input=${this._widthChanged}
-        />
+        <label for="${idWidth}">${this._t('max_width')}</label>
+        <input id="${idWidth}" name="max_width" type="number" .value=${(this._config.max_width ?? '').replace(/px$/, '')} @input=${this._widthChanged} />
       </div>
       <div class="form">
-        <label>
-          <input type="checkbox" .checked=${this._config.show_remove} @change=${this._removeChanged} />
-          ${this._t('show_remove_menu')}
-        </label>
+        <input id="${idShowRemove}" name="show_remove" type="checkbox" .checked=${this._config.show_remove} @change=${this._removeChanged} />
+        <label for="${idShowRemove}">${this._t('show_remove_menu')}</label>
       </div>
       <div class="form">
-        <label>
-          <input type="checkbox" .checked=${this._config.only_self} @change=${this._selfChanged} />
-          ${this._t('only_self')}
-        </label>
+        <input id="${idOnlySelf}" name="only_self" type="checkbox" .checked=${this._config.only_self} @change=${this._selfChanged} />
+        <label for="${idOnlySelf}">${this._t('only_self')}</label>
       </div>
       <div class="form">
-        <label>${this._t('user_selector')}</label>
-        <select @change=${this._userSelectorChanged}>
+        <label for="${idUserSelector}">${this._t('user_selector')}</label>
+        <select id="${idUserSelector}" name="user_selector" @change=${this._userSelectorChanged}>
           <option value="list" ?selected=${this._config.user_selector === 'list'}>${this._t('user_selector_list')}</option>
           <option value="tabs" ?selected=${this._config.user_selector === 'tabs'}>${this._t('user_selector_tabs')}</option>
           <option value="grid" ?selected=${this._config.user_selector === 'grid'}>${this._t('user_selector_grid')}</option>
@@ -1426,46 +1442,43 @@ class TallyListCardEditor extends LitElement {
             ${this._config.user_selector === 'tabs'
               ? html`
                   <div class="form">
-                    <label>${this._t('tab_mode')}</label>
-                    <select @change=${this._tabModeChanged}>
+                    <label for="${idTabMode}">${this._t('tab_mode')}</label>
+                    <select id="${idTabMode}" name="tab_mode" @change=${this._tabModeChanged}>
                       <option value="per-letter" ?selected=${this._config.tabs.mode === 'per-letter'}>${this._t('per_letter')}</option>
                       <option value="grouped" ?selected=${this._config.tabs.mode === 'grouped'}>${this._t('grouped')}</option>
                     </select>
                   </div>
                   ${this._config.tabs.mode === 'grouped'
                     ? html`<div class="form">
-                        <label>${this._t('grouped_breaks')}</label>
-                        <input type="text" .value=${this._config.tabs.grouped_breaks.join(',')} @input=${this._groupedBreaksChanged} />
+                        <label for="${idGroupedBreaks}">${this._t('grouped_breaks')}</label>
+                        <input id="${idGroupedBreaks}" name="grouped_breaks" type="text" .value=${this._config.tabs.grouped_breaks.join(',')} @input=${this._groupedBreaksChanged} />
                       </div>`
                     : ''}
                   <div class="form">
-                    <label><input type="checkbox" .checked=${this._config.tabs.show_all_tab} @change=${this._showAllTabChanged} /> ${this._t('show_all_tab')}</label>
+                    <input id="${idShowAllTab}" name="show_all_tab" type="checkbox" .checked=${this._config.tabs.show_all_tab} @change=${this._showAllTabChanged} />
+                    <label for="${idShowAllTab}">${this._t('show_all_tab')}</label>
                   </div>
                 `
               : ''}
             <div class="form">
-              <label>${this._t('grid_columns')}</label>
-              <input type="text" .value=${this._config.grid.columns} @input=${this._gridColumnsChanged} />
+              <label for="${idGridColumns}">${this._t('grid_columns')}</label>
+              <input id="${idGridColumns}" name="grid_columns" type="text" .value=${this._config.grid.columns} @input=${this._gridColumnsChanged} />
             </div>
           `
         : ''}
       <details class="debug">
         <summary>${this._t('debug')}</summary>
         <div class="form">
-          <label>
-            <input type="checkbox" .checked=${this._config.show_all_users} @change=${this._debugAllChanged} />
-            ${this._t('show_all_users')}
-          </label>
+          <input id="${idShowAllUsers}" name="show_all_users" type="checkbox" .checked=${this._config.show_all_users} @change=${this._debugAllChanged} />
+          <label for="${idShowAllUsers}">${this._t('show_all_users')}</label>
         </div>
         <div class="form">
-          <label>
-            <input type="checkbox" .checked=${this._config.show_inactive_drinks} @change=${this._debugInactiveChanged} />
-            ${this._t('show_inactive_drinks')}
-          </label>
+          <input id="${idShowInactive}" name="show_inactive_drinks" type="checkbox" .checked=${this._config.show_inactive_drinks} @change=${this._debugInactiveChanged} />
+          <label for="${idShowInactive}">${this._t('show_inactive_drinks')}</label>
         </div>
         <div class="form">
-          <label>${this._t('language')}</label>
-          <select @change=${this._languageChanged}>
+          <label for="${idLanguage}">${this._t('language')}</label>
+          <select id="${idLanguage}" name="language" @change=${this._languageChanged}>
             <option value="auto" ?selected=${this._config.language === 'auto'}>${this._t('auto')}</option>
             <option value="de" ?selected=${this._config.language === 'de'}>${this._t('german')}</option>
             <option value="en" ?selected=${this._config.language === 'en'}>${this._t('english')}</option>
@@ -1646,6 +1659,7 @@ class TallyDueRankingCard extends LitElement {
 
   constructor() {
     super();
+    this._uid = crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
     try {
       const stored = window.localStorage.getItem('tally-list-admins');
       this._tallyAdmins = stored ? JSON.parse(stored) : [];
@@ -1654,6 +1668,10 @@ class TallyDueRankingCard extends LitElement {
     }
     this._bootstrapped = true;
     this._loading = false;
+  }
+
+  _fid(key) {
+    return `tally-${this._uid}-${key}`;
   }
 
   set hass(h) {
@@ -1845,10 +1863,11 @@ class TallyDueRankingCard extends LitElement {
       : '';
     const width = this._normalizeWidth(this.config.max_width);
     const cardStyle = width ? `max-width:${width};margin:0 auto;` : '';
+    const idSortMenu = this._fid('sort');
     const sortMenu = this.config.sort_menu
       ? html`<div class="controls">
-          <label>${this._t('sort_label')}</label>
-          <select class="sort-select" @change=${this._sortMenuChanged}>
+          <label for="${idSortMenu}">${this._t('sort_label')}</label>
+          <select id="${idSortMenu}" name="sort" class="sort-select" @change=${this._sortMenuChanged}>
             <option value="due_desc" ?selected=${sortBy === 'due_desc'}>${this._t('sort_due_desc')}</option>
             <option value="due_asc" ?selected=${sortBy === 'due_asc'}>${this._t('sort_due_asc')}</option>
             <option value="name" ?selected=${sortBy === 'name'}>${this._t('sort_name')}</option>
@@ -2188,6 +2207,15 @@ class TallyDueRankingCardEditor extends LitElement {
     _config: {},
   };
 
+  constructor() {
+    super();
+    this._uid = crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
+  }
+
+  _fid(key) {
+    return `tally-${this._uid}-${key}`;
+  }
+
   setConfig(config) {
     this._config = {
       max_width: '500px',
@@ -2210,84 +2238,67 @@ class TallyDueRankingCardEditor extends LitElement {
 
   render() {
     if (!this._config) return html``;
+    const idWidth = this._fid('max-width');
+    const idMaxEntries = this._fid('max-entries');
+    const idSort = this._fid('sort');
+    const idSortMenu = this._fid('sort-menu');
+    const idShowReset = this._fid('show-reset');
+    const idShowCopy = this._fid('show-copy');
+    const idShowTotal = this._fid('show-total');
+    const idHideFree = this._fid('hide-free');
+    const idShowStepSelect = this._fid('show-step-select');
+    const idShowResetEveryone = this._fid('show-reset-everyone');
+    const idLanguage = this._fid('language');
     return html`
       <div class="form">
-        <label>${this._t('max_width')}</label>
-        <input
-          type="number"
-          .value=${(this._config.max_width ?? '').replace(/px$/, '')}
-          @input=${this._widthChanged}
-        />
+        <label for="${idWidth}">${this._t('max_width')}</label>
+        <input id="${idWidth}" name="max_width" type="number" .value=${(this._config.max_width ?? '').replace(/px$/, '')} @input=${this._widthChanged} />
       </div>
       <div class="form">
-        <label>${this._t('max_entries')}</label>
-        <input
-          type="number"
-          .value=${this._config.max_entries ?? 0}
-          @input=${this._maxChanged}
-        />
+        <label for="${idMaxEntries}">${this._t('max_entries')}</label>
+        <input id="${idMaxEntries}" name="max_entries" type="number" .value=${this._config.max_entries ?? 0} @input=${this._maxChanged} />
       </div>
       <div class="form">
-        <label>${this._t('sort')}</label>
-        <select @change=${this._sortChanged}>
-          <option value="due_desc" ?selected=${this._config.sort_by === 'due_desc'}>
-            ${this._t('sort_due_desc')}
-          </option>
-          <option value="due_asc" ?selected=${this._config.sort_by === 'due_asc'}>
-            ${this._t('sort_due_asc')}
-          </option>
-          <option value="name" ?selected=${this._config.sort_by === 'name'}>
-            ${this._t('sort_name')}
-          </option>
+        <label for="${idSort}">${this._t('sort')}</label>
+        <select id="${idSort}" name="sort_by" @change=${this._sortChanged}>
+          <option value="due_desc" ?selected=${this._config.sort_by === 'due_desc'}>${this._t('sort_due_desc')}</option>
+          <option value="due_asc" ?selected=${this._config.sort_by === 'due_asc'}>${this._t('sort_due_asc')}</option>
+          <option value="name" ?selected=${this._config.sort_by === 'name'}>${this._t('sort_name')}</option>
         </select>
       </div>
       <div class="form">
-        <label>
-          <input type="checkbox" .checked=${this._config.sort_menu} @change=${this._menuChanged} />
-          ${this._t('sort_menu_show')}
-        </label>
+        <input id="${idSortMenu}" name="sort_menu" type="checkbox" .checked=${this._config.sort_menu} @change=${this._menuChanged} />
+        <label for="${idSortMenu}">${this._t('sort_menu_show')}</label>
       </div>
       <div class="form">
-        <label>
-          <input type="checkbox" .checked=${this._config.show_reset} @change=${this._resetChanged} />
-          ${this._t('show_reset')}
-        </label>
+        <input id="${idShowReset}" name="show_reset" type="checkbox" .checked=${this._config.show_reset} @change=${this._resetChanged} />
+        <label for="${idShowReset}">${this._t('show_reset')}</label>
       </div>
       <div class="form">
-        <label>
-          <input type="checkbox" .checked=${this._config.show_copy} @change=${this._copyChanged} />
-          ${this._t('show_copy')}
-        </label>
+        <input id="${idShowCopy}" name="show_copy" type="checkbox" .checked=${this._config.show_copy} @change=${this._copyChanged} />
+        <label for="${idShowCopy}">${this._t('show_copy')}</label>
       </div>
       <div class="form">
-        <label>
-          <input type="checkbox" .checked=${this._config.show_total} @change=${this._totalChanged} />
-          ${this._t('show_total')}
-        </label>
+        <input id="${idShowTotal}" name="show_total" type="checkbox" .checked=${this._config.show_total} @change=${this._totalChanged} />
+        <label for="${idShowTotal}">${this._t('show_total')}</label>
       </div>
       <div class="form">
-        <label>
-          <input type="checkbox" .checked=${this._config.hide_free} @change=${this._hideChanged} />
-          ${this._t('hide_free')}
-        </label>
+        <input id="${idHideFree}" name="hide_free" type="checkbox" .checked=${this._config.hide_free} @change=${this._hideChanged} />
+        <label for="${idHideFree}">${this._t('hide_free')}</label>
       </div>
       <div class="form">
-        <label>
-          <input type="checkbox" .checked=${this._config.show_step_select !== false} @change=${this._stepSelectChanged} />
-          ${this._t('show_step_select')}
-        </label>
+        <input id="${idShowStepSelect}" name="show_step_select" type="checkbox" .checked=${this._config.show_step_select !== false} @change=${this._stepSelectChanged} />
+        <label for="${idShowStepSelect}">${this._t('show_step_select')}</label>
       </div>
       <details class="debug">
         <summary>${this._t('debug')}</summary>
         <div class="form">
-          <label>
-            <input type="checkbox" .checked=${this._config.show_reset_everyone} @change=${this._debugResetChanged} />
-            ${this._t('show_reset_everyone')}
-          </label>
+          <input id="${idShowResetEveryone}" name="show_reset_everyone" type="checkbox" .checked=${this._config.show_reset_everyone} @change=${this._debugResetChanged} />
+          <label for="${idShowResetEveryone}">${this._t('show_reset_everyone')}</label>
         </div>
         <div class="form">
-          <label>${this._t('language')}</label>
-          <select @change=${this._languageChanged}>
+          <label for="${idLanguage}">${this._t('language')}</label>
+          <select id="${idLanguage}" name="language" @change=${this._languageChanged}>
             <option value="auto" ?selected=${this._config.language === 'auto'}>${this._t('auto')}</option>
             <option value="de" ?selected=${this._config.language === 'de'}>${this._t('german')}</option>
             <option value="en" ?selected=${this._config.language === 'en'}>${this._t('english')}</option>
