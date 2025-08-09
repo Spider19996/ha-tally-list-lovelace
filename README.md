@@ -55,6 +55,7 @@ The card offers the following options in the UI:
 * **Lock time (ms)** – Duration the buttons stay disabled after pressing them. Default `400`.
 * **Maximum width (px)** – Limit card width. Default `500`.
 * **Show remove menu** – Enable/disable the remove-drink dropdown.
+* **Show step selection** – Show buttons to select the step size (1, 3, 5, 10).
 * **Only show self** – Limit selection to the logged‑in user even for admins.
 * **User selector** – Choose between **list**, **tabs**, or **grid** for selecting users.
 * **Language** – Force **Auto**, **Deutsch**, or **English**.
