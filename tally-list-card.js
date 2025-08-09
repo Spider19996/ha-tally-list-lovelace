@@ -1,6 +1,6 @@
 // Tally List Card
-import { LitElement, html, css } from 'lit';
-import { repeat } from 'lit/directives/repeat.js';
+import { LitElement, html, css } from 'https://unpkg.com/lit?module';
+import { repeat } from 'https://unpkg.com/lit/directives/repeat.js?module';
 const CARD_VERSION = '09.08.2025';
 
 const TL_STRINGS = {
