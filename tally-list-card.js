@@ -1326,6 +1326,7 @@ class TallyListCard extends LitElement {
     }
     .obere-zeile {
       grid-column: 1 / -1;
+      margin-top: 8px;
     }
     .plus-btn {
       grid-column: 1;
