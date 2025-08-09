@@ -1073,6 +1073,7 @@ class TallyListCard extends LitElement {
       lock_ms: 400,
       max_width: '500px',
       show_remove: true,
+      show_step_select: true,
       only_self: false,
       show_all_users: false,
       show_inactive_drinks: false,
@@ -1430,6 +1431,7 @@ class TallyListCardEditor extends LitElement {
     const idLock = this._fid('lock-ms');
     const idWidth = this._fid('max-width');
     const idShowRemove = this._fid('show-remove');
+    const idShowStepSelect = this._fid('show-step-select');
     const idOnlySelf = this._fid('only-self');
     const idUserSelector = this._fid('user-selector');
     const idTabMode = this._fid('tab-mode');
@@ -1451,6 +1453,10 @@ class TallyListCardEditor extends LitElement {
       <div class="form">
         <input id="${idShowRemove}" name="show_remove" type="checkbox" .checked=${this._config.show_remove} @change=${this._removeChanged} />
         <label for="${idShowRemove}">${this._t('show_remove_menu')}</label>
+      </div>
+      <div class="form">
+        <input id="${idShowStepSelect}" name="show_step_select" type="checkbox" .checked=${this._config.show_step_select !== false} @change=${this._stepSelectChanged} />
+        <label for="${idShowStepSelect}">${this._t('show_step_select')}</label>
       </div>
       <div class="form">
         <input id="${idOnlySelf}" name="only_self" type="checkbox" .checked=${this._config.only_self} @change=${this._selfChanged} />
@@ -1543,6 +1549,17 @@ class TallyListCardEditor extends LitElement {
 
   _removeChanged(ev) {
     this._config = { ...this._config, show_remove: ev.target.checked };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  _stepSelectChanged(ev) {
+    this._config = { ...this._config, show_step_select: ev.target.checked };
     this.dispatchEvent(
       new CustomEvent('config-changed', {
         detail: { config: this._config },
@@ -1972,6 +1989,7 @@ class TallyDueRankingCard extends LitElement {
       max_entries: 0,
       hide_free: false,
       show_copy: true,
+      show_step_select: true,
     };
   }
   _gatherUsers() {
@@ -2258,6 +2276,7 @@ class TallyDueRankingCardEditor extends LitElement {
       max_entries: 0,
       hide_free: false,
       show_copy: true,
+      show_step_select: true,
       language: 'auto',
       ...config,
     };

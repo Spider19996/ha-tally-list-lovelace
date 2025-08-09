@@ -55,6 +55,7 @@ Folgende Optionen stehen im UI zur Verfügung:
 * **Sperrzeit (ms)** – Wie lange die Buttons nach dem Drücken deaktiviert bleiben. Standard `400`.
 * **Maximale Breite (px)** – Begrenzung der Kartenbreite. Standard `500`.
 * **Entfernen-Menü anzeigen** – Ein-/Ausblenden des Menüs zum Entfernen.
+* **Schrittweiten-Auswahl anzeigen** – Schaltflächen zur Auswahl der Schrittweite (1, 3, 5, 10) anzeigen.
 * **Nur sich selbst zeigen** – Auswahl auch für Admins auf den eingeloggten Nutzer beschränken.
 * **Sprache** – **Auto**, **Deutsch** oder **English** erzwingen.
 * **Version** – Zeigt die installierte Version an.
