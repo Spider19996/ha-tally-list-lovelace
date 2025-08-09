@@ -51,6 +51,7 @@ const TL_STRINGS = {
     sort_label: 'Sort:',
     version: 'Version',
     copy_success: 'Text copied to clipboard!',
+    copy_failed: 'Copy failed',
     reset_confirm_prompt: 'Type "YES I WANT TO" to reset all tallies:',
     tab_all_label: 'All',
     tab_misc_label: '#',
@@ -113,6 +114,7 @@ const TL_STRINGS = {
     sort_label: 'Sortierung:',
     version: 'Version',
     copy_success: 'Text in die Zwischenablage kopiert!',
+    copy_failed: 'Kopieren fehlgeschlagen',
     reset_confirm_prompt: 'Zum Zurücksetzen aller Striche "JA ICH WILL" eingeben:',
     tab_all_label: 'Alle',
     tab_misc_label: '#',
@@ -495,7 +497,7 @@ class TallyListCard extends LitElement {
     const mode = this.config.user_selector || 'list';
     if (mode === 'grid') return this._renderGrid(users);
     const idUser = this._fid('user');
-    return html`<div class="user-select"><label for="${idUser}">${this._t('name')}: </label><select id="${idUser}" name="user" @change=${this._selectUser}>${repeat(users, u => u.user_id || u.slug, u => html`<option value="${u.name || u.slug}" ?selected=${(u.name || u.slug)===this.selectedUser}>${u.name}</option>`)} </select></div>`;
+    return html`<div class="menu user-select"><label for="${idUser}">${this._t('name')}:</label><select id="${idUser}" name="user" @change=${this._selectUser}>${repeat(users, u => u.user_id || u.slug, u => html`<option value="${u.name || u.slug}" ?selected=${(u.name || u.slug)===this.selectedUser}>${u.name}</option>`)} </select></div>`;
   }
 
   _computeTable(user, prices) {
@@ -645,12 +647,14 @@ class TallyListCard extends LitElement {
         ? null
         : html`<div class="count-selector">
             <div class="count-label">${this._t('step_label')}</div>
-            <div class="segments">
-              ${repeat(TallyListCard.COUNT_STEPS, c => c, c => html`<button
-                class="segment ${c === this.selectedCount ? 'active' : ''}"
-                data-count="${c}"
-                @pointerdown=${this._onSelectCount}
-              >${c}</button>`)}
+            <div class="menu">
+              <div class="tabs">
+                ${repeat(TallyListCard.COUNT_STEPS, c => c, c => html`<button
+                  class="tab ${c === this.selectedCount ? 'is-active' : ''}"
+                  data-count="${c}"
+                  @pointerdown=${this._onSelectCount}
+                >${c}</button>`)}
+              </div>
             </div>
           </div>`;
     const idRemoveSelect = this._fid('remove-drink');
@@ -1058,6 +1062,11 @@ class TallyListCard extends LitElement {
 
   static styles = css`
     :host {
+      --tl-surface: var(--secondary-background-color, var(--ha-card-background, #222));
+      --tl-accent: var(--primary-color);
+      --tl-danger: var(--error-color, #db4437);
+      --tl-on-surface: var(--primary-text-color);
+      --tl-radius: 12px;
       display: block;
     }
     ha-card {
@@ -1066,14 +1075,52 @@ class TallyListCard extends LitElement {
       margin: 0 auto;
       max-width: var(--dcc-max-width, none);
     }
-    .controls {
+    .menu {
+      background: var(--tl-surface);
+      border-radius: var(--tl-radius);
+      padding: .6rem .9rem;
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 8px;
+      gap: .6rem;
+      min-height: 48px;
     }
+    .menu select {
+      flex: 1;
+      background: transparent;
+      color: inherit;
+      border: none;
+      -webkit-appearance: none;
+      appearance: none;
+      padding: .2rem 2rem .2rem .2rem;
+    }
+    .menu .tabs {
+      display: flex;
+      gap: .4rem;
+      flex: 1;
+    }
+    .menu .tab {
+      flex: 1;
+      text-align: center;
+      padding: .5rem 0;
+      border-radius: 12px;
+    }
+    .menu .tab.is-active {
+      background: rgba(255,255,255,0.08);
+    }
+    .btn {
+      border: none;
+      border-radius: var(--tl-radius);
+      padding: 0.6rem 1rem;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      min-height: 48px;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--tl-accent); color: var(--text-primary-color,#fff); }
+    .btn-danger { background: var(--tl-danger); color: var(--text-primary-color,#fff); }
+    .btn-ghost  { background: transparent; outline: 1px solid rgba(255,255,255,0.08); color: var(--tl-on-surface); }
+    .btn[disabled] { opacity: 0.6; cursor: default; }
     .user-select {
       text-align: left;
       display: flex;
@@ -1091,33 +1138,11 @@ class TallyListCard extends LitElement {
       font-size: 14px;
       margin-bottom: 8px;
     }
-    .segments {
-      display: flex;
-      margin-top: 8px;
-      border: 1px solid var(--ha-card-border-color, var(--divider-color));
-      border-radius: 12px;
-      overflow: hidden;
-    }
-    .segment {
-      flex: 1;
-      height: 44px;
-      background: #2b2b2b;
-      color: #ddd;
-      border: none;
-      font-size: 14px;
-    }
-    .segment + .segment {
-      border-left: 1px solid var(--ha-card-border-color, var(--divider-color));
-    }
-    .segment.active {
-      background: var(--success-color, #2e7d32);
-      color: #fff;
-    }
-    .tabs {
+    .alpha-tabs .tabs {
       display: flex;
       overflow-x: auto;
     }
-    .tab {
+    .alpha-tabs .tab {
       flex: 0 0 auto;
       padding: 0 12px;
       height: 44px;
@@ -1128,10 +1153,10 @@ class TallyListCard extends LitElement {
       border-bottom: 1px solid var(--ha-card-border-color, var(--divider-color));
       font-size: 14px;
     }
-    .tab:first-child {
+    .alpha-tabs .tab:first-child {
       border-top-left-radius: 14px;
     }
-    .tab:last-child {
+    .alpha-tabs .tab:last-child {
       border-top-right-radius: 14px;
       border-right: none;
     }
@@ -1216,7 +1241,6 @@ class TallyListCard extends LitElement {
       color: #fff;
     }
     .tab:focus,
-    .segment:focus,
     .action-btn:focus,
     .user-grid button:focus,
     .user-chip:focus {
@@ -1224,8 +1248,6 @@ class TallyListCard extends LitElement {
     }
     .tab:hover,
     .tab:focus,
-    .segment:hover,
-    .segment:focus,
     .action-btn:hover,
     .action-btn:focus,
     .user-grid button:hover,
@@ -1233,14 +1255,6 @@ class TallyListCard extends LitElement {
     .user-chip:hover,
     .user-chip:focus {
       filter: brightness(1.1);
-    }
-    .user-select select {
-      padding: 4px 8px;
-      min-width: 120px;
-      font-size: 14px;
-      height: 44px;
-      box-sizing: border-box;
-      border-radius: 12px;
     }
     .action-btn {
       display: inline-flex;
@@ -1303,23 +1317,6 @@ class TallyListCard extends LitElement {
     }
     .minus-group {
       grid-column: 1 / -1;
-    }
-    .reset-container,
-    .copy-container {
-      text-align: right;
-      margin-top: 8px;
-    }
-    .copy-container button,
-    .reset-container button {
-      padding: 4px 8px;
-      height: 32px;
-      box-sizing: border-box;
-      border: none;
-      border-radius: 4px;
-    }
-    .reset-container button {
-      background-color: var(--error-color, #c62828);
-      color: white;
     }
     table {
       width: 100%;
@@ -1643,12 +1640,14 @@ class TallyDueRankingCard extends LitElement {
     _currency: { state: true },
     _sortBy: { state: true },
     _tallyAdmins: { state: true },
+    _copyBusy: { state: true },
   };
 
   _tallyAdmins = [];
   _hass = null;
   _deps = new Set();
   _fmtCache = new Map();
+  _copyBusy = false;
 
   constructor() {
     super();
@@ -1679,17 +1678,64 @@ class TallyDueRankingCard extends LitElement {
 
   static styles = css`
     :host {
+      --tl-surface: var(--secondary-background-color, var(--ha-card-background, #222));
+      --tl-accent: var(--primary-color);
+      --tl-danger: var(--error-color, #db4437);
+      --tl-on-surface: var(--primary-text-color);
+      --tl-radius: 12px;
       display: block;
     }
     .ranking-card {
-      --radius: var(--ha-card-border-radius, 12px);
       --row-h: 44px;
-      --btn-neutral: var(--secondary-background-color, #3b3b3b);
-      --btn-danger: var(--error-color, #d9534f);
       padding: 16px;
     }
+    .menu {
+      background: var(--tl-surface);
+      border-radius: var(--tl-radius);
+      padding: .6rem .9rem;
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      min-height: 48px;
+    }
+    .menu select {
+      flex: 1;
+      background: transparent;
+      color: inherit;
+      border: none;
+      -webkit-appearance: none;
+      appearance: none;
+      padding: .2rem 2rem .2rem .2rem;
+    }
+    .menu .tabs {
+      display: flex;
+      gap: .4rem;
+      flex: 1;
+    }
+    .menu .tab {
+      flex: 1;
+      text-align: center;
+      padding: .5rem 0;
+      border-radius: 12px;
+    }
+    .menu .tab.is-active {
+      background: rgba(255,255,255,0.08);
+    }
+    .btn {
+      border: none;
+      border-radius: var(--tl-radius);
+      padding: 0.6rem 1rem;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      min-height: 48px;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--tl-accent); color: var(--text-primary-color,#fff); }
+    .btn-danger { background: var(--tl-danger); color: var(--text-primary-color,#fff); }
+    .btn-ghost  { background: transparent; outline: 1px solid rgba(255,255,255,0.08); color: var(--tl-on-surface); }
+    .btn[disabled] { opacity: 0.6; cursor: default; }
     .ranking-card .header,
-    .ranking-card .controls,
     .ranking-card .ranking-table,
     .ranking-card .button-row,
     .ranking-card .section {
@@ -1710,43 +1756,11 @@ class TallyDueRankingCard extends LitElement {
     .ranking-card .ranking-table tbody td {
       padding: 10px 12px;
     }
-    .ranking-card .controls {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-      flex-wrap: wrap;
-    }
-    .ranking-card .sort-select {
-      height: var(--row-h);
-      border-radius: var(--radius);
-      background: var(--btn-neutral);
-      color: var(--primary-text-color, #fff);
-      padding: 0 12px;
-    }
     .ranking-card .button-row {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
       margin-top: 8px;
-    }
-    .ranking-card .btn {
-      height: var(--row-h);
-      border-radius: var(--radius);
-      padding: 0 16px;
-      font-weight: 600;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border: none;
-    }
-    .ranking-card .btn--neutral {
-      background: var(--btn-neutral);
-      color: var(--primary-text-color, #fff);
-    }
-    .ranking-card .btn--danger {
-      background: var(--btn-danger);
-      color: #fff;
     }
   `;
 
@@ -1853,9 +1867,9 @@ class TallyDueRankingCard extends LitElement {
     const cardStyle = width ? `max-width:${width};margin:0 auto;` : '';
     const idSortMenu = this._fid('sort');
     const sortMenu = this.config.sort_menu
-      ? html`<div class="controls">
+      ? html`<div class="menu">
           <label for="${idSortMenu}">${this._t('sort_label')}</label>
-          <select id="${idSortMenu}" name="sort" class="sort-select" @change=${this._sortMenuChanged}>
+          <select id="${idSortMenu}" name="sort" @change=${this._sortMenuChanged}>
             <option value="due_desc" ?selected=${sortBy === 'due_desc'}>${this._t('sort_due_desc')}</option>
             <option value="due_asc" ?selected=${sortBy === 'due_asc'}>${this._t('sort_due_asc')}</option>
             <option value="name" ?selected=${sortBy === 'name'}>${this._t('sort_name')}</option>
@@ -1864,10 +1878,10 @@ class TallyDueRankingCard extends LitElement {
       : '';
     const buttons = [];
     if (this.config.show_copy !== false) {
-      buttons.push(html`<button class="btn btn--neutral" @click=${this._copyRanking}>${this._t('copy_table')}</button>`);
+      buttons.push(html`<button class="btn btn-ghost" @click=${this._copyTable} ?disabled=${this._copyBusy}>${this._t('copy_table')}</button>`);
     }
     if ((isAdmin || this.config.show_reset_everyone) && this.config.show_reset !== false) {
-      buttons.push(html`<button class="btn btn--danger" @click=${this._resetAllTallies}>${this._t('reset_all')}</button>`);
+      buttons.push(html`<button class="btn btn-danger" @click=${this._resetAllTallies}>${this._t('reset_all')}</button>`);
     }
     const buttonRow = buttons.length ? html`<div class="button-row">${buttons}</div>` : '';
     return html`
@@ -2105,7 +2119,7 @@ class TallyDueRankingCard extends LitElement {
     this._sortBy = ev.target.value;
   }
 
-  _copyRanking() {
+  _buildTableText() {
     let users = this.config.users || this._autoUsers || [];
     const userNames = [this.hass.user?.name, ...this._currentPersonNames()];
     const isAdmin = userNames.some(n => (this._tallyAdmins || []).includes(n));
@@ -2114,7 +2128,7 @@ class TallyDueRankingCard extends LitElement {
       const uid = this.hass.user?.id;
       users = users.filter(u => u.user_id === uid || allowed.includes(u.slug));
     }
-    if (users.length === 0) return;
+    if (users.length === 0) return '';
     const prices = this.config.prices || this._autoPrices || {};
     const freeAmount = Number(this.config.free_amount ?? this._freeAmount ?? 0);
     let ranking = users.map(u => {
@@ -2157,15 +2171,19 @@ class TallyDueRankingCard extends LitElement {
       const total = ranking.reduce((sum, r) => sum + r.due, 0);
       lines.push(`${this._t('total')}: ${this._formatPrice(total)} ${this._currency}`);
     }
-    navigator.clipboard.writeText(lines.join('\n')).then(() => {
-      this.dispatchEvent(
-        new CustomEvent('hass-notification', {
-          detail: { message: this._t('copy_success') },
-          bubbles: true,
-          composed: true,
-        })
-      );
-    });
+    return lines.join('\n');
+  }
+
+  async _copyTable() {
+    try {
+      this._copyBusy = true; this.requestUpdate();
+      await navigator.clipboard.writeText(this._buildTableText());
+      fireEvent(this, 'hass-notification', { message: this._t('copy_success') });
+    } catch {
+      fireEvent(this, 'hass-notification', { message: this._t('copy_failed') });
+    } finally {
+      this._copyBusy = false; this.requestUpdate();
+    }
   }
 
   _resetAllTallies() {
