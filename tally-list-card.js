@@ -640,18 +640,19 @@ class TallyListCard extends LitElement {
         this.selectedCount = 1;
       }
     }
-    const countSelector =
+    const countSegments =
       this.config.show_step_select === false
         ? null
-        : html`<div class="count-selector">
-            <div class="count-label">${this._t('step_label')}</div>
-            <div class="segments">
-              ${repeat(TallyListCard.COUNT_STEPS, c => c, c => html`<button
+        : html`<div class="segments">
+            ${repeat(
+              TallyListCard.COUNT_STEPS,
+              c => c,
+              c => html`<button
                 class="segment ${c === this.selectedCount ? 'active' : ''}"
                 data-count="${c}"
                 @pointerdown=${this._onSelectCount}
-              >${c}</button>`)}
-            </div>
+              >${c}</button>`
+            )}
           </div>`;
     const idRemoveSelect = this._fid('remove-drink');
     return html`
@@ -659,7 +660,6 @@ class TallyListCard extends LitElement {
         ${userActions}
         <div class="content">
           ${selector ? html`${selector}` : ''}
-          ${countSelector ? html`<div class="spacer"></div>${countSelector}` : ''}
           <div class="container-grid">
             <table class="obere-zeile">
             <thead><tr><th></th><th>${this._t('drink')}</th><th>${this._t('count')}</th><th>${this._t('price')}</th><th>${this._t('sum')}</th></tr></thead>
@@ -681,14 +681,33 @@ class TallyListCard extends LitElement {
               ` : ''}
             </tfoot>
             </table>
-            ${this.config.show_remove !== false ? html`
-              <div class="input-group minus-group">
-                <button class="action-btn minus" data-drink="${this.selectedRemoveDrink}" @pointerdown=${this._onRemoveDrink} ?disabled=${removeDisabled}>&minus;${this.selectedCount}</button>
-                <select id="${idRemoveSelect}" name="remove-drink" class="drink-select-native" aria-label="${this._t('drink')}" .value=${this.selectedRemoveDrink} @change=${this._selectRemoveDrink}>
-                  ${repeat(drinks, d => d, d => html`<option value="${d}">${d.charAt(0).toUpperCase() + d.slice(1)}</option>`)}
-                </select>
-              </div>
-            ` : ''}
+            ${this.config.show_remove !== false
+              ? html`<div class="input-group minus-group">
+                  ${countSegments ? html`${countSegments}` : ''}
+                  <button
+                    class="action-btn minus"
+                    data-drink="${this.selectedRemoveDrink}"
+                    @pointerdown=${this._onRemoveDrink}
+                    ?disabled=${removeDisabled}
+                  >&minus;${this.selectedCount}</button>
+                  <select
+                    id="${idRemoveSelect}"
+                    name="remove-drink"
+                    class="drink-select-native"
+                    aria-label="${this._t('drink')}"
+                    .value=${this.selectedRemoveDrink}
+                    @change=${this._selectRemoveDrink}
+                  >
+                    ${repeat(
+                      drinks,
+                      d => d,
+                      d => html`<option value="${d}">
+                          ${d.charAt(0).toUpperCase() + d.slice(1)}
+                        </option>`
+                    )}
+                  </select>
+                </div>`
+              : ''}
           </div>
       </div>
       </ha-card>
@@ -1085,12 +1104,6 @@ class TallyListCard extends LitElement {
       font-weight: 600;
       margin-bottom: 8px;
     }
-    .count-selector {
-    }
-    .count-label {
-      font-size: 14px;
-      margin-bottom: 8px;
-    }
     .segments {
       display: flex;
       margin-top: 8px;
@@ -1141,9 +1154,6 @@ class TallyListCard extends LitElement {
       border-bottom: none;
       border-bottom-left-radius: 0;
       border-bottom-right-radius: 0;
-    }
-    .spacer {
-      height: 12px;
     }
     .user-actions {
       border: 1px solid var(--ha-card-border-color, var(--divider-color));
@@ -1268,6 +1278,12 @@ class TallyListCard extends LitElement {
       color: #fff;
       border-radius: 12px 0 0 12px;
     }
+    .minus-group .segments {
+      margin-top: 0;
+      margin-right: 8px;
+      border-radius: 12px;
+      flex: 0 0 auto;
+    }
     .input-group {
       display: flex;
       align-items: stretch;
@@ -1283,7 +1299,8 @@ class TallyListCard extends LitElement {
       padding: 0 12px;
       appearance: none;
       box-sizing: border-box;
-      flex: 1;
+      width: max-content;
+      flex: 0 0 auto;
     }
     .input-group * {
       box-sizing: border-box;
@@ -1305,6 +1322,8 @@ class TallyListCard extends LitElement {
     }
     .minus-group {
       grid-column: 1 / -1;
+      justify-self: start;
+      width: max-content;
     }
     .reset-container,
     .copy-container {
