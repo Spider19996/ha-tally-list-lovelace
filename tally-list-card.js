@@ -129,6 +129,28 @@ const TL_STRINGS = {
   },
 };
 
+const RANKING_TABLE_STYLES = css`
+  .ranking-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .ranking-table thead tr {
+    height: var(--row-h, 44px);
+    background: var(--table-header-background, #222);
+  }
+  .ranking-table thead th,
+  .ranking-table tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--divider-color);
+    text-align: center;
+  }
+  .ranking-table thead th {
+    font-weight: 700;
+  }
+  .ranking-table tfoot td {
+    font-weight: bold;
+  }
+`;
 function detectLang(hass, override = 'auto') {
   if (override && override !== 'auto') return override;
   const lang =
@@ -661,7 +683,7 @@ class TallyListCard extends LitElement {
           ${selector ? html`${selector}` : ''}
           ${countSelector ? html`<div class="spacer"></div>${countSelector}` : ''}
           <div class="container-grid">
-            <table class="obere-zeile">
+            <table class="obere-zeile ranking-table">
             <thead><tr><th></th><th>${this._t('drink')}</th><th>${this._t('count')}</th><th>${this._t('price')}</th><th>${this._t('sum')}</th></tr></thead>
             <tbody>${repeat(table.rows, r => r.entity, r => html`<tr>
               <td>
@@ -1056,16 +1078,17 @@ class TallyListCard extends LitElement {
     };
   }
 
-  static styles = css`
-    :host {
-      display: block;
-    }
-    ha-card {
-      padding: 16px;
-      text-align: center;
-      margin: 0 auto;
-      max-width: var(--dcc-max-width, none);
-    }
+    static styles = [
+      css`
+      :host {
+        display: block;
+      }
+      ha-card {
+        padding: 16px;
+        text-align: center;
+        margin: 0 auto;
+        max-width: var(--dcc-max-width, none);
+      }
     .controls {
       display: flex;
       justify-content: space-between;
@@ -1074,13 +1097,13 @@ class TallyListCard extends LitElement {
       gap: 8px;
       margin-bottom: 8px;
     }
-    .user-select {
-      text-align: left;
-      display: flex;
-      justify-content: flex-start;
-      align-items: center;
-      gap: 8px;
-    }
+      .user-select {
+        text-align: left;
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        gap: 8px;
+      }
     .user-label {
       font-weight: 600;
       margin-bottom: 8px;
@@ -1321,27 +1344,16 @@ class TallyListCard extends LitElement {
       background-color: var(--error-color, #c62828);
       color: white;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    th,
-    td {
-      padding: 4px;
-      border-bottom: 1px solid var(--divider-color);
-      text-align: center;
-    }
-    button {
-      padding: 4px;
-    }
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    tfoot td {
-      font-weight: bold;
-    }
-  `;
+      button {
+        padding: 4px;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    `,
+      RANKING_TABLE_STYLES,
+    ];
 }
 
 customElements.define('tally-list-card', TallyListCard);
@@ -1677,46 +1689,33 @@ class TallyDueRankingCard extends LitElement {
     return this._hass;
   }
 
-  static styles = css`
-    :host {
-      display: block;
-    }
-    .ranking-card {
-      --radius: var(--ha-card-border-radius, 12px);
-      --row-h: 44px;
-      --btn-neutral: var(--secondary-background-color, #3b3b3b);
-      --btn-danger: var(--error-color, #d9534f);
-      padding: 16px;
-    }
-    .ranking-card .header,
-    .ranking-card .controls,
-    .ranking-card .ranking-table,
-    .ranking-card .button-row,
-    .ranking-card .section {
-      background: transparent;
-    }
-    .ranking-card .ranking-table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    .ranking-card .ranking-table thead tr {
-      height: var(--row-h);
-      background: var(--table-header-background, #222);
-    }
-    .ranking-card .ranking-table thead th {
-      padding: 10px 12px;
-      font-weight: 700;
-    }
-    .ranking-card .ranking-table tbody td {
-      padding: 10px 12px;
-    }
-    .ranking-card .controls {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-      flex-wrap: wrap;
-    }
+    static styles = [
+      RANKING_TABLE_STYLES,
+      css`
+      :host {
+        display: block;
+      }
+      .ranking-card {
+        --radius: var(--ha-card-border-radius, 12px);
+        --row-h: 44px;
+        --btn-neutral: var(--secondary-background-color, #3b3b3b);
+        --btn-danger: var(--error-color, #d9534f);
+        padding: 16px;
+      }
+      .ranking-card .header,
+      .ranking-card .controls,
+      .ranking-table,
+      .ranking-card .button-row,
+      .ranking-card .section {
+        background: transparent;
+      }
+      .ranking-card .controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+        flex-wrap: wrap;
+      }
     .ranking-card .sort-select {
       height: var(--row-h);
       border-radius: var(--radius);
@@ -1744,11 +1743,12 @@ class TallyDueRankingCard extends LitElement {
       background: var(--btn-neutral);
       color: var(--primary-text-color, #fff);
     }
-    .ranking-card .btn--danger {
-      background: var(--btn-danger);
-      color: #fff;
-    }
-  `;
+      .ranking-card .btn--danger {
+        background: var(--btn-danger);
+        color: #fff;
+      }
+    `,
+    ];
 
   async firstUpdated() {}
 
