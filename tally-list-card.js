@@ -1106,15 +1106,7 @@ class TallyListCard extends LitElement {
       color: #ddd;
     }
     .user-chip::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      box-shadow: inset 4px 0 0 0 var(--chip-indicator, #E74C3C);
-      pointer-events: none;
-    }
-    .user-chip.active::before {
-      --chip-indicator: var(--success-color, #2e7d32);
+      display: none;
     }
     .user-grid {
       display: grid;
@@ -1140,19 +1132,11 @@ class TallyListCard extends LitElement {
       transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
     }
     .user-grid button::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      box-shadow: inset 4px 0 0 0 var(--chip-indicator, var(--error-color, #c62828));
-      pointer-events: none;
+      display: none;
     }
     .user-grid button[aria-pressed='true'] {
       background: var(--success-color, #2e7d32);
       color: #fff;
-    }
-    .user-grid button[aria-pressed='true']::before {
-      --chip-indicator: var(--success-color, #2e7d32);
     }
     .tab:focus,
     .segment:focus,
