@@ -1305,7 +1305,6 @@ class TallyListCard extends LitElement {
     }
     .minus-group {
       grid-column: 1 / -1;
-      margin-top: 8px;
     }
     .reset-container,
     .copy-container {
