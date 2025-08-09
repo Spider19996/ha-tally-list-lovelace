@@ -1572,28 +1572,42 @@ class TallyDueRankingCard extends LitElement {
     css`
       .controls {
         display: flex;
-        justify-content: space-between;
+        justify-content: flex-start;
         align-items: center;
-        flex-wrap: wrap;
         gap: 8px;
         margin-bottom: 8px;
+        flex-wrap: wrap;
       }
       .controls select {
         padding: 4px 8px;
-        min-width: 120px;
-        font-size: 14px;
-        height: 44px;
+        min-width: 160px;
+        font-size: 1rem;
+        height: 32px;
         box-sizing: border-box;
-        border: 1px solid var(--ha-card-border-color, var(--divider-color));
-        border-radius: 12px;
-        background: #2b2b2b;
-        color: #ddd;
       }
-      table thead tr {
-        background: var(--ha-card-background, #1e1e1e);
+      .reset-container {
+        text-align: right;
+        margin-top: 8px;
       }
-      table th {
-        font-weight: 600;
+      .reset-container button {
+        padding: 4px 8px;
+        height: 32px;
+        box-sizing: border-box;
+        background-color: var(--error-color, #c62828);
+        color: white;
+        border: none;
+        border-radius: 4px;
+      }
+      .copy-container {
+        text-align: right;
+        margin-top: 8px;
+      }
+      .copy-container button {
+        padding: 4px 8px;
+        height: 32px;
+        box-sizing: border-box;
+        border: none;
+        border-radius: 4px;
       }
     `,
   ];
