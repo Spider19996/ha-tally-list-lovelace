@@ -1768,63 +1768,59 @@ class TallyDueRankingCard extends LitElement {
     :host {
       display: block;
     }
-    .ranking-scope {
-      --card-bg: var(--ha-card-background, #151515);
-      --card-border: var(--ha-card-border-color, #2a2a2a);
-      --radius: 12px;
+    .ranking-card {
+      --radius: var(--ha-card-border-radius, 12px);
       --row-h: 44px;
-      --text: #fff;
-      --muted: #cfcfcf;
-      --header-bg: #222;
-      --btn-neutral: #3b3b3b;
-      --btn-danger: #d9534f;
-    }
-    .ranking-scope.ranking-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: var(--radius);
+      --btn-neutral: var(--secondary-background-color, #3b3b3b);
+      --btn-danger: var(--error-color, #d9534f);
       padding: 16px;
       color: var(--text);
       content-visibility: auto;
       contain-intrinsic-size: 1px 44px;
     }
-    .ranking-scope .ranking-table {
+    .ranking-card .header,
+    .ranking-card .controls,
+    .ranking-card .ranking-table,
+    .ranking-card .button-row,
+    .ranking-card .section {
+      background: transparent;
+    }
+    .ranking-card .ranking-table {
       width: 100%;
       border-collapse: collapse;
     }
-    .ranking-scope .ranking-table thead tr {
-      background: var(--header-bg);
-      color: var(--text);
+    .ranking-card .ranking-table thead tr {
       height: var(--row-h);
+      background: var(--table-header-background, #222);
     }
-    .ranking-scope .ranking-table thead th {
-      padding: 0 12px;
+    .ranking-card .ranking-table thead th {
+      padding: 10px 12px;
       font-weight: 700;
     }
-    .ranking-scope .ranking-table tbody td {
+    .ranking-card .ranking-table tbody td {
       padding: 10px 12px;
     }
-    .ranking-scope .controls {
+    .ranking-card .controls {
       display: flex;
       align-items: center;
       gap: 8px;
       margin-bottom: 8px;
       flex-wrap: wrap;
     }
-    .ranking-scope .sort-select {
+    .ranking-card .sort-select {
       height: var(--row-h);
       border-radius: var(--radius);
       background: var(--btn-neutral);
-      color: var(--text);
+      color: var(--primary-text-color, #fff);
       padding: 0 12px;
     }
-    .ranking-scope .button-row {
+    .ranking-card .button-row {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
       margin-top: 8px;
     }
-    .ranking-scope .btn {
+    .ranking-card .btn {
       height: var(--row-h);
       border-radius: var(--radius);
       padding: 0 16px;
@@ -1834,11 +1830,11 @@ class TallyDueRankingCard extends LitElement {
       justify-content: center;
       border: none;
     }
-    .ranking-scope .btn--neutral {
+    .ranking-card .btn--neutral {
       background: var(--btn-neutral);
-      color: var(--text);
+      color: var(--primary-text-color, #fff);
     }
-    .ranking-scope .btn--danger {
+    .ranking-card .btn--danger {
       background: var(--btn-danger);
       color: #fff;
     }
@@ -1952,7 +1948,7 @@ class TallyDueRankingCard extends LitElement {
     }
     const buttonRow = buttons.length ? html`<div class="button-row">${buttons}</div>` : '';
     return html`
-      <div class="ranking-scope ranking-card" style="${cardStyle}">
+      <ha-card class="ranking-card" style="${cardStyle}">
         ${sortMenu}
         <table class="ranking-table">
           <thead><tr><th>#</th><th>${this._t('name')}</th><th>${this._t('amount_due')}</th></tr></thead>
@@ -1960,7 +1956,7 @@ class TallyDueRankingCard extends LitElement {
           ${totalRow}
         </table>
         ${buttonRow}
-      </div>
+      </ha-card>
     `;
   }
 
