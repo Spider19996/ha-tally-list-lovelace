@@ -185,8 +185,6 @@ class TallyListCard extends LitElement {
     _tabs: { state: true },
     _visibleUsers: { state: true },
     _currentTab: { state: true },
-    loading: { state: true },
-    showLoader: { state: true },
   };
 
   selectedRemoveDrink = '';
@@ -200,8 +198,6 @@ class TallyListCard extends LitElement {
   _sortedUsers = [];
   _usersKey = '';
   _ownUser = null;
-  loading = true;
-  showLoader = false;
 
   constructor() {
     super();
@@ -211,11 +207,6 @@ class TallyListCard extends LitElement {
     } catch (err) {
       this._tallyAdmins = [];
     }
-    this.loading = true;
-    this.showLoader = false;
-    setTimeout(() => {
-      if (this.loading) this.showLoader = true;
-    }, 150);
   }
 
   connectedCallback() {
@@ -475,24 +466,12 @@ class TallyListCard extends LitElement {
       changedProps.has('_visibleUsers') ||
       changedProps.has('_optimisticCounts') ||
       changedProps.has('_disabled') ||
-      changedProps.has('_currentTab') ||
-      changedProps.has('loading') ||
-      changedProps.has('showLoader')
+      changedProps.has('_currentTab')
     );
   }
 
   render() {
     if (!this.hass || !this.config) return html``;
-    const width = this._normalizeWidth(this.config.max_width);
-    const cardStyle = width ? `max-width:${width};margin:0 auto;` : '';
-    if (this.loading) {
-      return html`<div class="card-root">
-        ${this.loading && this.showLoader
-          ? html`<div class="loading-overlay" role="status" aria-live="polite"><div class="spinner"></div><div>Lade Daten…</div></div>`
-          : ''}
-        <ha-card style="${cardStyle}"></ha-card>
-      </div>`;
-    }
     let users = this.config.users || this._autoUsers || [];
     if (users.length === 0) {
       return html`<ha-card>${this._t('integration_missing')}</ha-card>`;
@@ -588,6 +567,8 @@ class TallyListCard extends LitElement {
       due = Math.max(total - freeAmount, 0);
     }
     const dueStr = this._formatPrice(due) + ` ${this._currency}`;
+    const width = this._normalizeWidth(this.config.max_width);
+    const cardStyle = width ? `max-width:${width};margin:0 auto;` : '';
     const mode = this.config.user_selector || 'list';
     let selector;
     let userActions = null;
@@ -620,10 +601,9 @@ class TallyListCard extends LitElement {
             </div>
           </div>`;
     return html`
-      <div class="card-root">
-        <ha-card style="${cardStyle}">
-          ${userActions}
-          <div class="content">
+      <ha-card style="${cardStyle}">
+        ${userActions}
+        <div class="content">
           ${selector ? html`${selector}` : ''}
           ${countSelector ? html`<div class="spacer"></div>${countSelector}` : ''}
           <div class="container-grid">
@@ -647,9 +627,8 @@ class TallyListCard extends LitElement {
               </div>
             ` : ''}
           </div>
-        </div>
-        </ha-card>
       </div>
+      </ha-card>
     `;
   }
 
@@ -793,19 +772,6 @@ class TallyListCard extends LitElement {
       }
       if (changed) {
         this._optimisticCounts = updated;
-      }
-    }
-    if (this.loading) {
-      const users = this.config.users || this._autoUsers;
-      const prices = this.config.prices || this._autoPrices;
-      const loaded =
-        users &&
-        users.length > 0 &&
-        users.some(u => u.drinks && Object.keys(u.drinks).length > 0) &&
-        prices && Object.keys(prices).length > 0;
-      if (loaded) {
-        this.loading = false;
-        this.showLoader = false;
       }
     }
     if (changedProps.has('_visibleUsers')) {
@@ -999,34 +965,6 @@ class TallyListCard extends LitElement {
       text-align: center;
       margin: 0 auto;
       max-width: var(--dcc-max-width, none);
-    }
-    .card-root {
-      position: relative;
-    }
-    .loading-overlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(0,0,0,0.4);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      z-index: 10;
-      font-size: 16px;
-      color: #fff;
-      pointer-events: all;
-    }
-    .spinner {
-      border: 4px solid rgba(255,255,255,0.2);
-      border-top: 4px solid var(--primary-color);
-      border-radius: 50%;
-      width: 32px;
-      height: 32px;
-      animation: spin 1s linear infinite;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
     }
     .controls {
       display: flex;
