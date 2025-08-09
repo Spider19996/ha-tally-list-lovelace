@@ -1315,7 +1315,7 @@ class TallyListCard extends LitElement {
       height: 32px;
       box-sizing: border-box;
       border: none;
-      border-radius: 4px;
+      border-radius: 12px;
     }
     .reset-container button {
       background-color: var(--error-color, #c62828);
@@ -1732,7 +1732,7 @@ class TallyDueRankingCard extends LitElement {
     }
     .ranking-card .btn {
       height: var(--row-h);
-      border-radius: var(--radius);
+      border-radius: 12px;
       padding: 0 16px;
       font-weight: 600;
       display: inline-flex;
