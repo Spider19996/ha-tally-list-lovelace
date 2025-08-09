@@ -1,5 +1,5 @@
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
-const CARD_VERSION = '10.08.2025';
+const CARD_VERSION = '09.08.2025';
 
 const TL_STRINGS = {
   en: {
@@ -7,7 +7,6 @@ const TL_STRINGS = {
     max_width: 'Maximum width (px)',
     show_remove_menu: 'Show remove menu',
     only_self: 'Only show own user even for admins',
-    show_step_select: 'Show step selection',
     show_all_users: 'Show all users',
     show_inactive_drinks: 'Show inactive drinks',
     debug: 'Debug',
@@ -32,7 +31,6 @@ const TL_STRINGS = {
     max_width: 'Maximale Breite (px)',
     show_remove_menu: 'Entfernen-Menü anzeigen',
     only_self: 'Trotz Admin nur eigenen Nutzer anzeigen',
-    show_step_select: 'Schrittweiten-Auswahl anzeigen',
     show_all_users: 'Alle Nutzer anzeigen',
     show_inactive_drinks: 'Inaktive Getränke anzeigen',
     debug: 'Debug',
@@ -97,7 +95,6 @@ class TallyListCardEditor extends LitElement {
       max_width: '500px',
       show_remove: true,
       only_self: false,
-      show_step_select: true,
       show_all_users: false,
       show_inactive_drinks: false,
       language: 'auto',
@@ -135,12 +132,6 @@ class TallyListCardEditor extends LitElement {
         <label>
           <input type="checkbox" .checked=${this._config.show_remove} @change=${this._removeChanged} />
           ${this._t('show_remove_menu')}
-        </label>
-      </div>
-      <div class="form">
-        <label>
-          <input type="checkbox" .checked=${this._config.show_step_select !== false} @change=${this._stepSelectChanged} />
-          ${this._t('show_step_select')}
         </label>
       </div>
       <div class="form">
@@ -227,11 +218,6 @@ class TallyListCardEditor extends LitElement {
 
   _removeChanged(ev) {
     this._config = { ...this._config, show_remove: ev.target.checked };
-    fireEvent(this, 'config-changed', { config: this._config });
-  }
-
-  _stepSelectChanged(ev) {
-    this._config = { ...this._config, show_step_select: ev.target.checked };
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
