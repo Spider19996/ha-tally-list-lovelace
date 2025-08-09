@@ -1688,7 +1688,7 @@ class TallyDueRankingCard extends LitElement {
     .ranking-card {
       --radius: var(--ha-card-border-radius, 12px);
       --row-h: 44px;
-      --btn-neutral: var(--secondary-background-color, #3b3b3b);
+      --btn-neutral: #2b2b2b;
       --btn-danger: var(--error-color, #d9534f);
       padding: 16px;
     }
@@ -1747,6 +1747,7 @@ class TallyDueRankingCard extends LitElement {
     .ranking-card .btn--neutral {
       background: var(--btn-neutral);
       color: var(--primary-text-color, #fff);
+      border: 1px solid var(--ha-card-border-color);
     }
     .ranking-card .btn--danger {
       background: var(--btn-danger);
