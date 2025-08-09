@@ -565,7 +565,7 @@ class TallyListCard extends LitElement {
     const hasTally =
       (this.hass.services && 'tally_list' in this.hass.services) ||
       Object.keys(states).some(id => id.startsWith('sensor.price_list_'));
-    if (!hasTally) return html`<ha-card>Keine Tally-Entities gefunden.</ha-card>`;
+    if (!hasTally) return html`<ha-card>${this._t('integration_missing')}</ha-card>`;
     if (!this.config) return html`<ha-card>...</ha-card>`;
     let users = this.config.users || this._autoUsers || [];
     if (users.length === 0) {
@@ -1834,7 +1834,7 @@ class TallyDueRankingCard extends LitElement {
     const hasTally =
       (this.hass.services && 'tally_list' in this.hass.services) ||
       Object.keys(states).some(id => id.startsWith('sensor.price_list_'));
-    if (!hasTally) return html`<ha-card>Keine Tally-Entities gefunden.</ha-card>`;
+    if (!hasTally) return html`<ha-card>${this._t('integration_missing')}</ha-card>`;
     if (!this.config) return html`<ha-card>...</ha-card>`;
     let users = this.config.users || this._autoUsers || [];
     if (users.length === 0) {
