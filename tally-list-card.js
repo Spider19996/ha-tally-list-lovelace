@@ -64,7 +64,6 @@ const TL_STRINGS = {
     grouped_breaks: 'Grouped breaks',
     show_all_tab: 'Show "All" tab',
     grid_columns: 'Grid columns (0 = auto)',
-    loading_data: 'Loading data…',
   },
   de: {
     card_name: 'Strichliste Karte',
@@ -127,7 +126,6 @@ const TL_STRINGS = {
     grouped_breaks: 'Gruppierte Bereiche',
     show_all_tab: 'Tab "Alle" anzeigen',
     grid_columns: 'Spalten (0 = automatisch)',
-    loading_data: 'Lade Daten…',
   },
 };
 
@@ -187,8 +185,6 @@ class TallyListCard extends LitElement {
     _tabs: { state: true },
     _visibleUsers: { state: true },
     _currentTab: { state: true },
-    loading: { state: true },
-    _showLoading: { state: true },
   };
 
   selectedRemoveDrink = '';
@@ -205,11 +201,6 @@ class TallyListCard extends LitElement {
 
   constructor() {
     super();
-    this.loading = true;
-    this._showLoading = false;
-    this._loadingTimer = setTimeout(() => {
-      if (this.loading) this._showLoading = true;
-    }, 150);
     try {
       const stored = window.localStorage.getItem('tally-list-admins');
       this._tallyAdmins = stored ? JSON.parse(stored) : [];
@@ -226,7 +217,6 @@ class TallyListCard extends LitElement {
 
   disconnectedCallback() {
     window.removeEventListener('resize', this._resizeHandler);
-    if (this._loadingTimer) clearTimeout(this._loadingTimer);
     super.disconnectedCallback();
   }
 
@@ -481,13 +471,6 @@ class TallyListCard extends LitElement {
   }
 
   render() {
-    if (this.loading) {
-      return html`<ha-card class="loading">
-        ${this._showLoading
-          ? html`<div class="loading-overlay"><div class="spinner"></div><div>${this._t('loading_data')}</div></div>`
-          : ''}
-      </ha-card>`;
-    }
     if (!this.hass || !this.config) return html``;
     let users = this.config.users || this._autoUsers || [];
     if (users.length === 0) {
@@ -772,7 +755,6 @@ class TallyListCard extends LitElement {
         this._freeAmount = this._gatherFreeAmount();
       }
       this._fetchTallyAdmins();
-      this._checkLoadingDone();
 
       // Sync optimistic counts with real states when updates arrive
       const updated = { ...this._optimisticCounts };
@@ -871,21 +853,6 @@ class TallyListCard extends LitElement {
     if (!state) return 0;
     const val = parseFloat(state.state);
     return isNaN(val) ? 0 : val;
-  }
-
-  _checkLoadingDone() {
-    if (!this.loading) return;
-    const users = this.config.users ?? this._autoUsers;
-    const prices = this.config.prices ?? this._autoPrices;
-    const free = this.config.free_amount ?? this._freeAmount;
-    if (users !== undefined && prices !== undefined && free !== undefined) {
-      this.loading = false;
-      this._showLoading = false;
-      if (this._loadingTimer) {
-        clearTimeout(this._loadingTimer);
-        this._loadingTimer = null;
-      }
-    }
   }
 
   async _fetchTallyAdmins() {
@@ -998,34 +965,6 @@ class TallyListCard extends LitElement {
       text-align: center;
       margin: 0 auto;
       max-width: var(--dcc-max-width, none);
-      position: relative;
-    }
-    ha-card.loading {
-      min-height: 120px;
-    }
-    .loading-overlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(0,0,0,0.4);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      z-index: 10;
-      font-size: 16px;
-      color: #fff;
-    }
-    .spinner {
-      border: 4px solid rgba(255,255,255,0.2);
-      border-top: 4px solid var(--primary-color);
-      border-radius: 50%;
-      width: 32px;
-      height: 32px;
-      animation: spin 1s linear infinite;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
     }
     .controls {
       display: flex;
