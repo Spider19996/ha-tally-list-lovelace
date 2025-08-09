@@ -50,8 +50,7 @@ const TL_STRINGS = {
     max_entries: 'Maximum entries (0 = all)',
     sort_label: 'Sort:',
     version: 'Version',
-    copy_done: 'Copied!',
-    reset_done: 'Reset!',
+    copy_success: 'Text copied to clipboard!',
     reset_confirm_prompt: 'Type "YES I WANT TO" to reset all tallies:',
     tab_all_label: 'All',
     tab_misc_label: '#',
@@ -113,8 +112,7 @@ const TL_STRINGS = {
     max_entries: 'Maximale Einträge (0 = alle)',
     sort_label: 'Sortierung:',
     version: 'Version',
-    copy_done: 'Kopiert!',
-    reset_done: 'Zurückgesetzt!',
+    copy_success: 'Text in die Zwischenablage kopiert!',
     reset_confirm_prompt: 'Zum Zurücksetzen aller Striche "JA ICH WILL" eingeben:',
     tab_all_label: 'Alle',
     tab_misc_label: '#',
@@ -1684,7 +1682,7 @@ class TallyDueRankingCard extends LitElement {
       display: block;
     }
     .ranking-card {
-      --radius: var(--ha-button-border-radius, 4px);
+      --radius: var(--ha-card-border-radius, 12px);
       --row-h: 44px;
       --btn-neutral: var(--secondary-background-color, #3b3b3b);
       --btn-danger: var(--error-color, #d9534f);
@@ -1741,13 +1739,6 @@ class TallyDueRankingCard extends LitElement {
       align-items: center;
       justify-content: center;
       border: none;
-      cursor: pointer;
-      overflow: hidden;
-      transition: background 0.2s, filter 0.2s, transform 0.05s;
-    }
-    .ranking-card .btn:active {
-      filter: brightness(1.2);
-      transform: scale(0.96);
     }
     .ranking-card .btn--neutral {
       background: var(--btn-neutral);
@@ -2114,7 +2105,7 @@ class TallyDueRankingCard extends LitElement {
     this._sortBy = ev.target.value;
   }
 
-  _copyRanking(ev) {
+  _copyRanking() {
     let users = this.config.users || this._autoUsers || [];
     const userNames = [this.hass.user?.name, ...this._currentPersonNames()];
     const isAdmin = userNames.some(n => (this._tallyAdmins || []).includes(n));
@@ -2167,30 +2158,22 @@ class TallyDueRankingCard extends LitElement {
       lines.push(`${this._t('total')}: ${this._formatPrice(total)} ${this._currency}`);
     }
     navigator.clipboard.writeText(lines.join('\n')).then(() => {
-      const btn = ev?.currentTarget;
-      if (btn) {
-        const orig = btn.textContent;
-        const width = btn.offsetWidth;
-        btn.style.width = width + 'px';
-        btn.textContent = this._t('copy_done');
-        setTimeout(() => {
-          btn.textContent = orig;
-          btn.style.width = '';
-        }, 2000);
-      }
+      this.dispatchEvent(
+        new CustomEvent('hass-notification', {
+          detail: { message: this._t('copy_success') },
+          bubbles: true,
+          composed: true,
+        })
+      );
     });
   }
 
-  _resetAllTallies(ev) {
+  _resetAllTallies() {
     const input = prompt(this._t('reset_confirm_prompt'));
     const normalized = (input || '').trim().toUpperCase();
     if (normalized !== 'JA ICH WILL' && normalized !== 'YES I WANT TO') {
       return;
     }
-    const btn = ev?.currentTarget;
-    const orig = btn?.textContent;
-    const width = btn?.offsetWidth;
-    if (btn) btn.style.width = width + 'px';
     const users = this.config.users || this._autoUsers || [];
     for (const u of users) {
       const buttonId = `button.${u.slug}_reset_tally`;
@@ -2201,13 +2184,6 @@ class TallyDueRankingCard extends LitElement {
       if (u.amount_due_entity) {
         this.hass.callService('homeassistant', 'update_entity', { entity_id: u.amount_due_entity });
       }
-    }
-    if (btn) {
-      btn.textContent = this._t('reset_done');
-      setTimeout(() => {
-        btn.textContent = orig;
-        btn.style.width = '';
-      }, 2000);
     }
   }
 }
