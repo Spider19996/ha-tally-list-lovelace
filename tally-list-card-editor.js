@@ -1,4 +1,4 @@
-import { LitElement, html, css } from 'https://unpkg.com/lit?module';
+const { LitElement, html, css } = window.Lit;
 const CARD_VERSION = '09.08.2025';
 
 const TL_STRINGS = {
