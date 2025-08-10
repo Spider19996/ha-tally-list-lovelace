@@ -2748,7 +2748,7 @@ class TallyListFreeDrinksCard extends LitElement {
   static properties = {
     hass: {},
     config: {},
-    selectedUserId: { type: String },
+    selectedUser: { state: true },
     _autoUsers: { state: true },
     _autoPrices: { state: true },
     _currency: { state: true },
@@ -2765,7 +2765,7 @@ class TallyListFreeDrinksCard extends LitElement {
 
   constructor() {
     super();
-    this.selectedUserId = '';
+    this.selectedUser = '';
     this._autoUsers = [];
     this._autoPrices = {};
     this._currency = '';
@@ -2813,10 +2813,6 @@ class TallyListFreeDrinksCard extends LitElement {
 
   getCardSize() {
     return 3;
-  }
-
-  firstUpdated() {
-    if (!this.selectedUserId) this.selectedUserId = this.hass?.user?.id || '';
   }
 
   _gatherUsers() {
@@ -2929,18 +2925,15 @@ class TallyListFreeDrinksCard extends LitElement {
       if (!this.config.prices && Object.keys(this._autoPrices).length === 0) {
         this._autoPrices = this._gatherPrices();
       }
+      const users = this.config.users || this._autoUsers || [];
+      if (!this.selectedUser && this.hass.user) {
+        const slug = fdSlugify(this.hass.user.name);
+        const u = users.find((u) => u.slug === slug);
+        this.selectedUser = u ? u.slug : slug;
+      }
     }
     if (changedProps.has('_visibleUsers')) {
       _umUpdateButtonHeight(this);
-    }
-  }
-
-  _onUserSelect(id) {
-    const users = this.config.users || this._autoUsers || [];
-    const u = users.find((u) => (u.slug || u.name) === id);
-    const uid = u?.user_id || id;
-    if (this.selectedUserId !== uid) {
-      this.selectedUserId = uid;
     }
   }
 
@@ -3017,12 +3010,10 @@ class TallyListFreeDrinksCard extends LitElement {
         ? `${this._commentType}: ${extra}`
         : this._commentType
       : extra;
-    const uid = this.selectedUserId;
+    const slug = this.selectedUser;
     const users = this.config.users || this._autoUsers || [];
-    const uObj = users.find(
-      (u) => u.user_id === uid || u.slug === uid || u.name === uid
-    );
-    const user = uObj?.name || uid;
+    const uObj = users.find((u) => u.slug === slug || u.name === slug);
+    const user = uObj?.name || slug;
     const drinks = Object.entries(this._pending).filter(([d, c]) => c > 0);
     try {
       for (const [drink, count] of drinks) {
@@ -3080,23 +3071,22 @@ class TallyListFreeDrinksCard extends LitElement {
     _umEnsureBuckets(this, usersList);
     usersList = this._sortedUsers;
     const own = this._ownUser;
-    let user = usersList.find((u) => u.user_id === this.selectedUserId);
-    if (!user) {
-      user = own || usersList[0];
-      if (user) {
-        this.selectedUserId = user.user_id || user.slug || '';
-      }
+    if (!this.selectedUser || !usersList.some((u) => (u.slug || u.name) === this.selectedUser)) {
+      this.selectedUser = own ? (own.slug || own.name) : (usersList[0]?.slug || usersList[0]?.name);
     }
-    const selectedSlug = user ? (user.slug || user.name) : '';
     const userMenu = _renderUserMenu(
       this,
       usersList,
-      selectedSlug,
+      this.selectedUser,
       mode,
       isAdmin,
-      this._onUserSelect.bind(this)
+      (id) => {
+        this.selectedUser = id;
+        this.requestUpdate('selectedUser');
+      }
     );
     const drinks = [];
+    const user = usersList.find((u) => (u.slug || u.name) === this.selectedUser);
     if (user) {
       for (const drink of Object.keys(user.drinks)) {
         const name = this._drinkNames[drink] || drink;
