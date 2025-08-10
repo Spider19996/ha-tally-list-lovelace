@@ -888,7 +888,10 @@ class TallyListCard extends LitElement {
       const match = entity.match(/^sensor\.([a-z0-9_]+)_amount_due$/);
       if (match) {
         const slug = match[1];
-        const sensorName = (state.attributes.friendly_name || '').replace(' Amount Due', '');
+        if (slug === 'free_drinks') continue;
+        const sensorName = (state.attributes.friendly_name || '')
+          .replace(' Amount Due', '')
+          .replace(' Offener Betrag', '');
         const drinks = {};
         const prefix = `sensor.${slug}_`;
         for (const [e2] of Object.entries(states)) {
@@ -2001,7 +2004,9 @@ class TallyDueRankingCard extends LitElement {
       const match = entity.match(/^sensor\.([a-z0-9_]+)_amount_due$/);
       if (match) {
         const slug = match[1];
-        const sensorName = (state.attributes.friendly_name || '').replace(' Amount Due', '');
+        const sensorName = (state.attributes.friendly_name || '')
+          .replace(' Amount Due', '')
+          .replace(' Offener Betrag', '');
         const drinks = {};
         const prefix = `sensor.${slug}_`;
         for (const [e2] of Object.entries(states)) {
