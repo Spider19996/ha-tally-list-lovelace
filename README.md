@@ -85,7 +85,7 @@ Options:
 
 ## Free Drinks Card
 
-Book free drinks with a mandatory comment. Counts are kept locally until submitted.
+Book free drinks with a mandatory comment. Counts are kept locally until submitted. Use the reset button to clear all counts.
 
 ```yaml
 type: custom:tally-list-free-drinks-card
