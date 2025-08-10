@@ -2756,6 +2756,8 @@ class TallyListFreeDrinksCard extends LitElement {
     _tabs: { state: true },
     _visibleUsers: { state: true },
     _currentTab: { state: true },
+    _fdCountdownLeft: { type: Number },
+    _fdTimerId: { type: Number },
   };
 
   _fmtCache = new Map();
@@ -2773,6 +2775,8 @@ class TallyListFreeDrinksCard extends LitElement {
     this._tabs = [];
     this._visibleUsers = [];
     this._currentTab = 'all';
+    this._fdCountdownLeft = 0;
+    this._fdTimerId = 0;
     this._buckets = new Map();
     this._sortedUsers = [];
     this._usersKey = '';
@@ -2803,6 +2807,9 @@ class TallyListFreeDrinksCard extends LitElement {
       tabs,
       grid,
     };
+    this.config.free_drinks_timer_seconds = Number(
+      config?.free_drinks_timer_seconds ?? 0
+    );
     if (!this._commentType && this.config.comment_presets?.length) {
       this._commentType = this.config.comment_presets[0].label;
     }
@@ -2814,6 +2821,11 @@ class TallyListFreeDrinksCard extends LitElement {
 
   firstUpdated() {
     if (!this.selectedUserId) this.selectedUserId = this.hass?.user?.id || '';
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback?.();
+    this._fdStopCountdown();
   }
 
   get _isAdmin() {
@@ -2965,6 +2977,7 @@ class TallyListFreeDrinksCard extends LitElement {
     const drink = ev.currentTarget.dataset.drink;
     const cur = this._pending[drink] || 0;
     this._pending = { ...this._pending, [drink]: cur + 1 };
+    this._fdStartOrResetCountdown();
   }
 
   _dec(ev) {
@@ -2972,6 +2985,59 @@ class TallyListFreeDrinksCard extends LitElement {
     const cur = this._pending[drink] || 0;
     const next = Math.max(0, cur - 1);
     this._pending = { ...this._pending, [drink]: next };
+    this._fdStartOrResetCountdown();
+  }
+
+  _fdStartOrResetCountdown() {
+    const total = Number(this.config?.free_drinks_timer_seconds || 0);
+    if (!total) return;
+    this._fdCountdownLeft = total;
+    if (this._fdTimerId) clearInterval(this._fdTimerId);
+    this._fdTimerId = setInterval(() => {
+      this._fdCountdownLeft = Math.max(0, (this._fdCountdownLeft || 0) - 1);
+      this.requestUpdate('_fdCountdownLeft');
+      if (this._fdCountdownLeft === 0) {
+        this._fdStopCountdown();
+        this._fdResetAllCountersToZero();
+      }
+    }, 1000);
+  }
+
+  _fdStopCountdown() {
+    if (this._fdTimerId) {
+      clearInterval(this._fdTimerId);
+      this._fdTimerId = 0;
+    }
+  }
+
+  _fdFormatTime(sec) {
+    const s = Math.max(0, Number(sec || 0));
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
+  }
+
+  _fdResetAllCountersToZero() {
+    this._pending = {};
+    this.requestUpdate('_pending');
+  }
+
+  _renderFdHeader() {
+    const enabled = Number(this.config?.free_drinks_timer_seconds || 0) > 0;
+    const running = !!this._fdTimerId;
+    return html`
+      <div class="fd-header">
+        <span>${fdT(this.hass, this.config.language, 'count')}</span>
+        ${enabled && running
+          ? html`<span
+              class="fd-countdown"
+              aria-label="Auto-Reset in ${this._fdFormatTime(this._fdCountdownLeft)}"
+            >
+              ${this._fdFormatTime(this._fdCountdownLeft)}
+            </span>`
+          : ''}
+      </div>
+    `;
   }
 
   _onComment(ev) {
@@ -3056,6 +3122,9 @@ class TallyListFreeDrinksCard extends LitElement {
         });
       }
       this._pending = {};
+      this._fdStopCountdown();
+      this._fdCountdownLeft = 0;
+      this.requestUpdate('_fdCountdownLeft');
       this._comment = '';
       if (this.config.comment_presets?.length) {
         this._commentType = this.config.comment_presets[0].label;
@@ -3081,6 +3150,9 @@ class TallyListFreeDrinksCard extends LitElement {
 
   _reset() {
     this._pending = {};
+    this._fdStopCountdown();
+    this._fdCountdownLeft = 0;
+    this.requestUpdate('_fdCountdownLeft');
   }
 
   render() {
@@ -3131,7 +3203,7 @@ class TallyListFreeDrinksCard extends LitElement {
             <tr>
               <th>${fdT(this.hass, this.config.language, 'drink')}</th>
               ${showPrices ? html`<th>${fdT(this.hass, this.config.language, 'price')}</th>` : ''}
-              <th>${fdT(this.hass, this.config.language, 'count')}</th>
+              <th>${this._renderFdHeader()}</th>
             </tr>
           </thead>
           <tbody>
@@ -3263,6 +3335,20 @@ class TallyListFreeDrinksCard extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
+    }
+    .fd-header {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .fd-countdown {
+      font-variant-numeric: tabular-nums;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--chip-background-color, rgba(255,255,255,0.08));
+      color: var(--primary-text-color);
+      line-height: 1.6;
+      font-size: 0.9em;
     }
     .action-btn {
       display: inline-flex;
