@@ -96,6 +96,4 @@ Options:
 * **user_mode** – `auto` (default) shows a user selector, `fixed` uses the logged-in user.
 * **show_prices** – Display drink prices (`true` by default).
 * **sensor_refresh_after_submit** – Refresh drink sensors after submission.
-* **user_selector** – `list` (default) or `tabs` to group users by first letter.
-* **tabs** – Options for `user_selector: tabs` (e.g. `mode`, `grouped_breaks`, `show_all_tab`).
 
