@@ -3044,7 +3044,9 @@ class TallyListFreeDrinksCard extends LitElement {
     try {
       for (const [drink, count] of drinks) {
         const drinkName =
-          this._drinkNames[drink] || drink.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+          (this._drinkNames[drink] || drink)
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, (c) => c.toUpperCase());
         await this.hass.callService('tally_list', 'add_drink', {
           user,
           drink: drinkName,
@@ -3106,7 +3108,10 @@ class TallyListFreeDrinksCard extends LitElement {
     const drinks = [];
     if (user) {
       for (const drink of Object.keys(user.drinks)) {
-        const name = this._drinkNames[drink] || drink;
+        const name =
+          (this._drinkNames[drink] || drink)
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, (c) => c.toUpperCase());
         drinks.push({ drink, name });
       }
     }
