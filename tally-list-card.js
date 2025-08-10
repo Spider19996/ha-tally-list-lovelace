@@ -3246,6 +3246,7 @@ class TallyListFreeDrinksCard extends LitElement {
     table {
       width: 100%;
       border-collapse: collapse;
+      margin-top: 8px;
     }
     th,
     td {
