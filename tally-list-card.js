@@ -2447,6 +2447,7 @@ const FD_STRINGS = {
     comment: 'Comment',
     comment_error: 'Please enter at least 3 characters',
     submit: 'Submit',
+    reset: 'Reset',
     drink: 'Drink',
     price: 'Price',
     count: 'Count',
@@ -2468,6 +2469,7 @@ const FD_STRINGS = {
     comment: 'Kommentar',
     comment_error: 'Bitte mindestens 3 Zeichen eingeben',
     submit: 'Abschicken',
+    reset: 'Zurücksetzen',
     drink: 'Getränk',
     price: 'Preis',
     count: 'Zähler',
@@ -3075,6 +3077,10 @@ class TallyListFreeDrinksCard extends LitElement {
     }
   }
 
+  _reset() {
+    this._pending = {};
+  }
+
   render() {
     const allUsers = this.config.users || this._autoUsers || [];
     const prices = this.config.prices || this._autoPrices;
@@ -3166,13 +3172,22 @@ class TallyListFreeDrinksCard extends LitElement {
                 this.config.language,
                 'comment_error'
               )}</div>`}
-          <button
-            class="action-btn submit"
-            ?disabled=${!this._validComment() || this._pendingSum() === 0}
-            @pointerdown=${this._submit}
-          >
-            ${fdT(this.hass, this.config.language, 'submit')}
-          </button>
+          <div class="buttons">
+            <button
+              class="action-btn reset"
+              ?disabled=${this._pendingSum() === 0}
+              @pointerdown=${this._reset}
+            >
+              ${fdT(this.hass, this.config.language, 'reset')}
+            </button>
+            <button
+              class="action-btn submit"
+              ?disabled=${!this._validComment() || this._pendingSum() === 0}
+              @pointerdown=${this._submit}
+            >
+              ${fdT(this.hass, this.config.language, 'submit')}
+            </button>
+          </div>
         </div>
       </ha-card>
     `;
@@ -3323,6 +3338,17 @@ class TallyListFreeDrinksCard extends LitElement {
       flex-direction: column;
       gap: 4px;
     }
+    .footer .buttons {
+      display: flex;
+      gap: 4px;
+    }
+    .footer .buttons .action-btn {
+      flex: 1;
+      width: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
     .footer .preset-select {
       display: flex;
       align-items: center;
@@ -3352,8 +3378,12 @@ class TallyListFreeDrinksCard extends LitElement {
       color: var(--error-color);
       font-size: 0.9em;
     }
+    .footer .reset {
+      background: var(--error-color, #c62828);
+      color: var(--text-primary-color, #fff);
+    }
     .footer .submit {
-      width: 100%;
+      flex: 1;
       background: var(--primary-color);
       color: var(--text-primary-color, #fff);
     }
