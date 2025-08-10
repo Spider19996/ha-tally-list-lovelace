@@ -3363,6 +3363,7 @@ class TallyListFreeDrinksCard extends LitElement {
       padding: 6px 10px;
       width: 100%;
       box-sizing: border-box;
+      height: 44px;
     }
     .free-drinks .footer input::placeholder,
     .free-drinks .footer textarea::placeholder {
