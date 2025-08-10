@@ -13,15 +13,17 @@ Eine Lovelace-Karte für Home Assistant, die Getränkezähler pro Nutzer anzeigt
 ### Über HACS
 1. Dieses Repository in HACS als **Custom Repository** (Kategorie **Lovelace**) hinzufügen.
 2. **Tally List Card** aus dem HACS‑Store installieren.
-3. HACS hält die Karte aktuell.
+3. HACS hält die Dateien aktuell. Die Freigetränke-Karte ist automatisch enthalten und benötigt keine zusätzliche Ressource.
 
 ### Manuell
-1. `tally-list-card.js` in das `www`‑Verzeichnis von Home Assistant kopieren.
-2. Folgende Ressource in Lovelace eintragen:
+1. `tally-list-card.js` **und** `tally-list-free-drinks-card.js` in das `www`‑Verzeichnis von Home Assistant kopieren.
+2. Folgende Ressourcen in Lovelace eintragen:
 ```yaml
 - url: /local/tally-list-card.js
   type: module
 ```
+
+Die Freigetränke-Karte wird automatisch geladen und benötigt keine separate Ressource.
 
 ### In Lovelace einbinden
 Nach dem Hinzufügen der Ressource das Dashboard öffnen, **Karte hinzufügen** wählen und **Tally List Card** auswählen. Der Editor erlaubt die Konfiguration ohne YAML.
@@ -79,4 +81,18 @@ Optionen:
 * **hide_free** – Nutzer ohne offenen Betrag ausblenden.
 * **show_copy** – Schaltfläche **Tabelle kopieren** anzeigen.
 * **show_step_select** – Auswahl der Schrittweiten anzeigen.
+
+## Freigetränke-Karte
+
+Bucht Freigetränke mit Pflichtkommentar. Zähler werden lokal gepuffert, bis sie abgeschickt werden.
+
+```yaml
+type: custom:tally-list-free-drinks-card
+```
+
+Optionen:
+
+* **user_mode** – `auto` (Standard) zeigt eine Nutzerauswahl, `fixed` nutzt den angemeldeten Nutzer.
+* **show_prices** – Preise anzeigen (`true` standardmäßig).
+* **sensor_refresh_after_submit** – Sensoren nach dem Abschicken aktualisieren.
 
