@@ -895,8 +895,12 @@ class TallyListCard extends LitElement {
         const drinks = {};
         const prefix = `sensor.${slug}_`;
         for (const [e2] of Object.entries(states)) {
-          if (e2.startsWith(prefix) && e2.endsWith('_count')) {
-            const drink = e2.slice(prefix.length, -6);
+          const m2 =
+            e2.startsWith(prefix) &&
+            e2.endsWith('_count') &&
+            e2.match(/^sensor\.[a-z0-9_]+_(.+)_count$/);
+          if (m2) {
+            const drink = m2[1];
             drinks[drink] = e2;
           }
         }
@@ -2009,8 +2013,9 @@ class TallyDueRankingCard extends LitElement {
         const drinks = {};
         const prefix = `sensor.${slug}_`;
         for (const [e2] of Object.entries(states)) {
-          if (e2.startsWith(prefix) && e2.endsWith('_count')) {
-            const drink = e2.slice(prefix.length, -6);
+          const m2 = e2.startsWith(prefix) && e2.endsWith('_count') && e2.match(/^sensor\.[a-z0-9_]+_([^_]+)_count$/);
+          if (m2) {
+            const drink = m2[1];
             drinks[drink] = e2;
           }
         }
@@ -2638,8 +2643,12 @@ class TallyListFreeDrinksCard extends LitElement {
         const drinks = {};
         const prefix = `sensor.${slug}_`;
         for (const [e2] of Object.entries(states)) {
-          if (e2.startsWith(prefix) && e2.endsWith('_count')) {
-            const drink = e2.slice(prefix.length, -6);
+          const m2 =
+            e2.startsWith(prefix) &&
+            e2.endsWith('_count') &&
+            e2.match(/^sensor\.[a-z0-9_]+_(.+)_count$/);
+          if (m2) {
+            const drink = m2[1];
             drinks[drink] = e2;
           }
         }
