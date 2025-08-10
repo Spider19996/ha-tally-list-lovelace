@@ -161,6 +161,197 @@ function relevantStatesChanged(newHass, oldHass, entities) {
   return false;
 }
 
+// ----- Shared User Menu Helpers -----
+function _umBucketizeUsers(users, cfg) {
+  const misc = [];
+  if (cfg.mode === 'grouped') {
+    const ranges = (cfg.grouped_breaks || []).map((r) => {
+      const m = r.split(/[-–]/);
+      return {
+        key: r,
+        start: (m[0] || 'A').trim().toUpperCase(),
+        end: (m[1] || 'Z').trim().toUpperCase(),
+        users: [],
+      };
+    });
+    users.forEach((u) => {
+      const ch = (u.name || u.slug || '').charAt(0).toUpperCase();
+      let placed = false;
+      for (const r of ranges) {
+        if (ch >= r.start && ch <= r.end) {
+          r.users.push(u);
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) misc.push(u);
+    });
+    return { ranges, misc };
+  }
+  const letters = new Map();
+  users.forEach((u) => {
+    const ch = (u.name || u.slug || '').charAt(0).toUpperCase();
+    if (ch >= 'A' && ch <= 'Z') {
+      if (!letters.has(ch)) letters.set(ch, []);
+      letters.get(ch).push(u);
+    } else {
+      misc.push(u);
+    }
+  });
+  return { letters, misc };
+}
+
+function _umUpdateBuckets(card, users, locale) {
+  const cfg = card.config.tabs || {};
+  const data = _umBucketizeUsers(users, cfg);
+  let tabs = [];
+  if (cfg.mode === 'grouped') {
+    tabs = data.ranges
+      .filter((r) => r.users.length > 0)
+      .map((r) => ({ key: r.key, label: r.key, users: r.users }));
+  } else {
+    const letters = Array.from(data.letters.keys()).sort((a, b) => a.localeCompare(b, locale));
+    tabs = letters.map((l) => ({ key: l, label: l, users: data.letters.get(l) }));
+  }
+  if (data.misc.length > 0) {
+    tabs.push({ key: '#', label: t(card.hass, card.config.language, 'tab_misc_label'), users: data.misc });
+  }
+  if (cfg.show_all_tab !== false) {
+    tabs.unshift({ key: 'all', label: t(card.hass, card.config.language, 'tab_all_label'), users });
+  }
+  card._tabs = tabs;
+  card._buckets = new Map([
+    ['*ALL*', users],
+    ...tabs.map((tb) => [tb.key, tb.key === 'all' ? users : tb.users]),
+  ]);
+  if (!card._buckets.has(card._currentTab)) {
+    card._currentTab = tabs[0]?.key || 'all';
+  }
+  card._visibleUsers = card._buckets.get(card._currentTab) || [];
+}
+
+function _umEnsureBuckets(card, users) {
+  const locale = detectLang(card.hass, card.config?.language);
+  const uid = card.hass.user?.id;
+  const slugs = card._currentPersonSlugs ? card._currentPersonSlugs() : [];
+  const own = users.find((u) => u.user_id === uid || slugs.includes(u.slug));
+  const key = users.map((u) => u.name || u.slug).join('|') + '|' + (own ? own.name || own.slug : '');
+  if (key === card._usersKey) return;
+  const collator = new Intl.Collator(locale, { sensitivity: 'base', numeric: true });
+  let sorted = [...users].sort((a, b) => collator.compare(a.name || a.slug, b.name || b.slug));
+  if (own) {
+    sorted = [own, ...sorted.filter((u) => u !== own)];
+  }
+  card._usersKey = key;
+  card._sortedUsers = sorted;
+  card._ownUser = own;
+  _umUpdateBuckets(card, sorted, locale);
+}
+
+function _umSetTab(card, tab) {
+  card._currentTab = tab;
+  card._visibleUsers = card._buckets.get(tab) || card._buckets.get('*ALL*') || [];
+}
+
+function _umRenderTabHeader(card) {
+  const tabs = card._tabs || [];
+  return html`<div class="tabs" role="tablist" @pointerdown=${(e) => {
+    const btn = e.target.closest('.tab');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    _umSetTab(card, btn.dataset.tab);
+    card.requestUpdate('_visibleUsers');
+    card.requestUpdate('_currentTab');
+  }}>
+    ${repeat(
+      tabs,
+      (t0) => t0.key,
+      (t0) => html`<button class="tab ${t0.key === card._currentTab ? 'active' : ''}" role="tab" data-tab="${t0.key}" aria-selected="${t0.key === card._currentTab}">${t0.label}</button>`
+    )}
+  </div>`;
+}
+
+function _umRenderButtons(card, list, selected, onSelect) {
+  const cfg = card.config.grid || {};
+  const cols = Number(cfg.columns);
+  const columnStyle = cols > 0
+    ? `grid-template-columns:repeat(${cols},1fr);`
+    : `grid-template-columns:repeat(auto-fit,minmax(0,1fr));`;
+  const style = `${columnStyle}--tl-btn-h:40px;`;
+  return html`<div class="user-grid" aria-label="${t(card.hass, card.config.language, 'name')}" style="${style}">
+    ${repeat(
+      list,
+      (u) => u.user_id || u.slug,
+      (u) => {
+        const name = u.name || u.slug;
+        return html`<button class="user-btn" data-id="${name}" aria-pressed="${name === selected}" @pointerdown=${(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onSelect(name);
+        }}>${name}</button>`;
+      }
+    )}
+  </div>`;
+}
+
+function _umRenderChips(card, list, selected, onSelect) {
+  return repeat(
+    list,
+    (u) => u.user_id || u.slug,
+    (u) => {
+      const name = u.name || u.slug;
+      const cls = `user-chip ${name === selected ? 'active' : 'inactive'}`;
+      return html`<button class="${cls}" data-id="${name}" aria-pressed="${name === selected}" @pointerdown=${(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onSelect(name);
+      }}>${name}</button>`;
+    }
+  );
+}
+
+function _umUpdateButtonHeight(card) {
+  const grid = card.renderRoot?.querySelector('.user-grid');
+  if (!grid) return;
+  const buttons = grid.querySelectorAll('button');
+  if (!buttons.length) return;
+  buttons.forEach((btn) => (btn.style.height = 'auto'));
+  let max = 32;
+  buttons.forEach((btn) => {
+    const h = btn.offsetHeight;
+    if (h > max) max = h;
+  });
+  buttons.forEach((btn) => btn.style.removeProperty('height'));
+  grid.style.setProperty('--tl-btn-h', `${max}px`);
+}
+
+function _renderUserMenu(card, users, selectedId, layout, isAdmin, onSelect) {
+  _umEnsureBuckets(card, users);
+  if (!isAdmin) {
+    const own = users.find((u) => (u.name || u.slug) === selectedId) || users[0];
+    const name = own?.name || own?.slug || '';
+    return html`<div class="user-label">${name}</div>`;
+  }
+  if (layout === 'grid') {
+    const el = _umRenderButtons(card, card._sortedUsers, selectedId, onSelect);
+    setTimeout(() => _umUpdateButtonHeight(card));
+    return el;
+  }
+  if (layout === 'tabs') {
+    const header = _umRenderTabHeader(card);
+    const chips = _umRenderChips(card, card._visibleUsers, selectedId, onSelect);
+    return html`<div class="user-actions"><div class="alpha-tabs">${header}</div><div class="user-list">${chips}</div></div>`;
+  }
+  const idUser = card._fid ? card._fid('user') : 'user';
+  return html`<div class="user-select"><label for="${idUser}">${t(card.hass, card.config.language, 'name')}: </label><select id="${idUser}" @change=${(e) => onSelect(e.target.value)}>${repeat(
+    card._sortedUsers,
+    (u) => u.user_id || u.slug,
+    (u) => html`<option value="${u.name || u.slug}" ?selected=${(u.name || u.slug) === selectedId}>${u.name}</option>`
+  )}</select></div>`;
+}
+
+
 const navLang = detectLang();
 window.customCards = window.customCards || [];
 window.customCards.push({
@@ -222,8 +413,6 @@ class TallyListCard extends LitElement {
     } catch (err) {
       this._tallyAdmins = [];
     }
-    this._onTabbarPointerDown = this._onTabbarPointerDown.bind(this);
-    this._onUserPick = this._onUserPick.bind(this);
     this._onSelectCount = this._onSelectCount.bind(this);
     this._onAddDrink = this._onAddDrink.bind(this);
     this._onRemoveDrink = this._onRemoveDrink.bind(this);
@@ -249,7 +438,7 @@ class TallyListCard extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this._resizeHandler = () => this._updateButtonHeight();
+    this._resizeHandler = () => _umUpdateButtonHeight(this);
     window.addEventListener('resize', this._resizeHandler);
   }
 
@@ -316,186 +505,6 @@ class TallyListCard extends LitElement {
       .toUpperCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '');
-  }
-
-  _bucketizeUsers(users, cfg) {
-    const misc = [];
-    if ((cfg.mode || 'per-letter') === 'grouped') {
-      const ranges = (cfg.grouped_breaks || []).map(b => {
-        const [s, e] = b.split('–');
-        return {
-          key: b,
-          start: this._firstLetter(s || ''),
-          end: this._firstLetter(e || ''),
-          users: [],
-        };
-      });
-      users.forEach(u => {
-        const ch = this._firstLetter(u.name || u.slug);
-        let placed = false;
-        for (const r of ranges) {
-          if (ch >= r.start && ch <= r.end) {
-            r.users.push(u);
-            placed = true;
-            break;
-          }
-        }
-        if (!placed) misc.push(u);
-      });
-      return { ranges, misc };
-    }
-    const letters = new Map();
-    users.forEach(u => {
-      const ch = this._firstLetter(u.name || u.slug);
-      if (ch >= 'A' && ch <= 'Z') {
-        if (!letters.has(ch)) letters.set(ch, []);
-        letters.get(ch).push(u);
-      } else {
-        misc.push(u);
-      }
-    });
-    return { letters, misc };
-  }
-
-  _renderUserButtons(list, source) {
-    const cfg = this.config.grid || {};
-    const cols = Number(cfg.columns);
-    const columnStyle =
-      cols > 0
-        ? `grid-template-columns:repeat(${cols},1fr);`
-        : `grid-template-columns:repeat(auto-fit,minmax(0,1fr));`;
-    const style = `${columnStyle}--tl-btn-h:40px;`;
-    const pressed = this.selectedUser;
-    return html`<div class="user-grid" aria-label="${this._t('name')}" style="${style}">
-      ${repeat(list, u => u.user_id || u.slug, u => {
-        const name = u.name || u.slug;
-        return html`<button class="user-btn" data-id="${name}" data-source="${source}" aria-pressed="${name === pressed}" @pointerdown=${this._onUserPick}>${name}</button>`;
-      })}
-    </div>`;
-  }
-
-  _renderUserChips(list) {
-    const pressed = this.selectedUser;
-    return repeat(list, u => u.user_id || u.slug, u => {
-      const name = u.name || u.slug;
-      const cls = `user-chip ${name === pressed ? 'active' : 'inactive'}`;
-      return html`<button class="${cls}" data-id="${name}" data-source="tabs" aria-pressed="${name === pressed}" @pointerdown=${this._onUserPick}>${name}</button>`;
-    });
-  }
-
-  _updateButtonHeight() {
-    const grid = this.renderRoot?.querySelector('.user-grid');
-    if (!grid) return;
-    const buttons = grid.querySelectorAll('button');
-    if (!buttons.length) return;
-    // Temporarily allow buttons to size to their content
-    buttons.forEach(btn => btn.style.height = 'auto');
-    let max = 32;
-    buttons.forEach(btn => {
-      const h = btn.offsetHeight;
-      if (h > max) max = h;
-    });
-    // Remove inline height so CSS variable can take effect
-    buttons.forEach(btn => btn.style.removeProperty('height'));
-    grid.style.setProperty('--tl-btn-h', `${max}px`);
-  }
-
-  _onUserPick(e) {
-    const btn = e.currentTarget;
-    const name = btn.dataset.id;
-    const source = btn.dataset.source;
-    e.preventDefault();
-    e.stopPropagation();
-    this._setSelectedUser(name, source);
-    this.requestUpdate('selectedUser');
-    this.requestUpdate();
-  }
-
-  _ensureBuckets(users) {
-    const locale = detectLang(this.hass, this.config?.language);
-    const uid = this.hass.user?.id;
-    const slugs = this._currentPersonSlugs();
-    const own = users.find(u => u.user_id === uid || slugs.includes(u.slug));
-    const key = users.map(u => u.name || u.slug).join('|') + '|' + (own ? own.name || own.slug : '');
-    if (key === this._usersKey) return;
-    const collator = new Intl.Collator(locale, { sensitivity: 'base', numeric: true });
-    let sorted = [...users].sort((a, b) => collator.compare(a.name || a.slug, b.name || b.slug));
-    if (own) {
-      sorted = [own, ...sorted.filter(u => u !== own)];
-    }
-    this._usersKey = key;
-    this._sortedUsers = sorted;
-    this._ownUser = own;
-    this._updateBuckets(sorted, locale);
-  }
-
-  _updateBuckets(users, locale) {
-    const cfg = this.config.tabs || {};
-    const data = this._bucketizeUsers(users, cfg);
-    let tabs = [];
-    if (cfg.mode === 'grouped') {
-      tabs = data.ranges
-        .filter(r => r.users.length > 0)
-        .map(r => ({ key: r.key, label: r.key, users: r.users }));
-    } else {
-      const letters = Array.from(data.letters.keys()).sort((a, b) => a.localeCompare(b, locale));
-      tabs = letters.map(l => ({ key: l, label: l, users: data.letters.get(l) }));
-    }
-    if (data.misc.length > 0) {
-      tabs.push({ key: '#', label: this._t('tab_misc_label'), users: data.misc });
-    }
-    if (cfg.show_all_tab !== false) {
-      tabs.unshift({ key: 'all', label: this._t('tab_all_label'), users });
-    }
-    this._tabs = tabs;
-    this._buckets = new Map([
-      ['*ALL*', users],
-      ...tabs.map(t => [t.key, t.key === 'all' ? users : t.users]),
-    ]);
-    if (!this._buckets.has(this._currentTab)) {
-      this._currentTab = tabs[0]?.key || 'all';
-    }
-    this._visibleUsers = this._buckets.get(this._currentTab) || [];
-  }
-
-  _setTab(tab) {
-    this._currentTab = tab;
-    this._visibleUsers = this._buckets.get(tab) || this._buckets.get('*ALL*') || [];
-    this.requestUpdate('_visibleUsers');
-    this.requestUpdate('_currentTab');
-  }
-
-  _onTabbarPointerDown(e) {
-    const btn = e.target.closest('.tab');
-    if (!btn) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const tab = btn.dataset.tab;
-    this._setTab(tab);
-    this.requestUpdate();
-  }
-
-  _renderTabHeader() {
-    const tabs = this._tabs || [];
-    return html`<div class="tabs" role="tablist" @pointerdown=${this._onTabbarPointerDown}>
-      ${repeat(tabs, t => t.key, t => html`<button class="tab ${t.key === this._currentTab ? 'active' : ''}" role="tab" data-tab="${t.key}" aria-selected="${t.key === this._currentTab}">${t.label}</button>`)}
-    </div>`;
-  }
-
-  _renderGrid(users) {
-    return this._renderUserButtons(users, 'grid');
-  }
-
-  _renderUserSelector(users, isAdmin) {
-    if (!isAdmin) {
-      const own = users.find(u => (u.name || u.slug) === this.selectedUser) || users[0];
-      const name = own?.name || own?.slug || '';
-      return html`<div class="user-label">${name}</div>`;
-    }
-    const mode = this.config.user_selector || 'list';
-    if (mode === 'grid') return this._renderGrid(users);
-    const idUser = this._fid('user');
-    return html`<div class="user-select"><label for="${idUser}">${this._t('name')}: </label><select id="${idUser}" name="user" @change=${this._selectUser}>${repeat(users, u => u.user_id || u.slug, u => html`<option value="${u.name || u.slug}" ?selected=${(u.name || u.slug)===this.selectedUser}>${u.name}</option>`)} </select></div>`;
   }
 
   _computeTable(user, prices) {
@@ -584,7 +593,7 @@ class TallyListCard extends LitElement {
     if (users.length === 0) {
       return html`<ha-card>${this._t('no_user_access')}</ha-card>`;
     }
-    this._ensureBuckets(users);
+    _umEnsureBuckets(this, users);
     users = this._sortedUsers;
     const own = this._ownUser;
     if (!this.selectedUser || !users.some(u => (u.name || u.slug) === this.selectedUser)) {
@@ -624,17 +633,17 @@ class TallyListCard extends LitElement {
     const width = this._normalizeWidth(this.config.max_width);
     const cardStyle = width ? `max-width:${width};margin:0 auto;` : '';
     const mode = this.config.user_selector || 'list';
-    let selector;
-    let userActions = null;
-    if (isAdmin && mode === 'tabs') {
-      userActions = html`
-        <div class="user-actions">
-          <div class="alpha-tabs">${this._renderTabHeader()}</div>
-          <div class="user-list">${this._renderUserChips(this._visibleUsers)}</div>
-        </div>`;
-    } else {
-      selector = this._renderUserSelector(users, isAdmin);
-    }
+    const userMenu = _renderUserMenu(
+      this,
+      users,
+      this.selectedUser,
+      mode,
+      isAdmin,
+      (id) => {
+        this._setSelectedUser(id, mode);
+        this.requestUpdate('selectedUser');
+      }
+    );
     if (this.config.show_step_select === false) {
       if (this.selectedCount !== 1) {
         this.selectedCount = 1;
@@ -657,9 +666,9 @@ class TallyListCard extends LitElement {
     const idRemoveSelect = this._fid('remove-drink');
     return html`
       <ha-card style="${cardStyle}">
-        ${userActions}
+        ${mode === 'tabs' && isAdmin ? userMenu : ''}
         <div class="content">
-          ${selector ? html`${selector}` : ''}
+          ${mode === 'tabs' && isAdmin ? '' : userMenu}
           <div class="container-grid">
             <table class="obere-zeile">
             <thead><tr><th></th><th>${this._t('drink')}</th><th>${this._t('count')}</th><th>${this._t('price')}</th><th>${this._t('sum')}</th></tr></thead>
@@ -877,7 +886,7 @@ class TallyListCard extends LitElement {
       }
     }
     if (changedProps.has('_visibleUsers')) {
-      this._updateButtonHeight();
+      _umUpdateButtonHeight(this);
     }
   }
 
@@ -2511,11 +2520,21 @@ class TallyListFreeDrinksCardEditor extends LitElement {
 
   setConfig(config) {
     const presets = parseCommentPresets(config?.comment_presets);
+    const tabs = {
+      mode: 'per-letter',
+      grouped_breaks: ['A–E', 'F–J', 'K–O', 'P–T', 'U–Z'],
+      show_all_tab: true,
+      ...(config?.tabs || {}),
+    };
+    const grid = { columns: 0, ...(config?.grid || {}) };
     this._config = {
       show_prices: true,
       language: 'auto',
+      user_selector: 'list',
       ...(config || {}),
       comment_presets: presets,
+      tabs,
+      grid,
     };
   }
 
@@ -2524,6 +2543,11 @@ class TallyListFreeDrinksCardEditor extends LitElement {
     const idPrices = this._fid('prices');
     const idPresets = this._fid('presets');
     const idLanguage = this._fid('language');
+    const idUserSelector = this._fid('user-selector');
+    const idTabMode = this._fid('tab-mode');
+    const idGroupedBreaks = this._fid('grouped-breaks');
+    const idShowAllTab = this._fid('show-all-tab');
+    const idGridColumns = this._fid('grid-columns');
     return html`
       <div class="form">
         <input
@@ -2548,6 +2572,43 @@ class TallyListFreeDrinksCardEditor extends LitElement {
             .join('\n')}
         ></textarea>
       </div>
+      <div class="form">
+        <label for="${idUserSelector}">${t(this.hass, this._config.language, 'user_selector')}</label>
+        <select id="${idUserSelector}" @change=${this._userSelectorChanged}>
+          <option value="list" ?selected=${this._config.user_selector === 'list'}>${t(this.hass, this._config.language, 'user_selector_list')}</option>
+          <option value="tabs" ?selected=${this._config.user_selector === 'tabs'}>${t(this.hass, this._config.language, 'user_selector_tabs')}</option>
+          <option value="grid" ?selected=${this._config.user_selector === 'grid'}>${t(this.hass, this._config.language, 'user_selector_grid')}</option>
+        </select>
+      </div>
+      ${['tabs', 'grid'].includes(this._config.user_selector)
+        ? html`
+            ${this._config.user_selector === 'tabs'
+              ? html`
+                  <div class="form">
+                    <label for="${idTabMode}">${t(this.hass, this._config.language, 'tab_mode')}</label>
+                    <select id="${idTabMode}" @change=${this._tabModeChanged}>
+                      <option value="per-letter" ?selected=${this._config.tabs.mode === 'per-letter'}>${t(this.hass, this._config.language, 'per_letter')}</option>
+                      <option value="grouped" ?selected=${this._config.tabs.mode === 'grouped'}>${t(this.hass, this._config.language, 'grouped')}</option>
+                    </select>
+                  </div>
+                  ${this._config.tabs.mode === 'grouped'
+                    ? html`<div class="form">
+                        <label for="${idGroupedBreaks}">${t(this.hass, this._config.language, 'grouped_breaks')}</label>
+                        <input id="${idGroupedBreaks}" type="text" .value=${this._config.tabs.grouped_breaks.join(',')} @input=${this._groupedBreaksChanged} />
+                      </div>`
+                    : ''}
+                  <div class="form">
+                    <input id="${idShowAllTab}" type="checkbox" .checked=${this._config.tabs.show_all_tab} @change=${this._showAllTabChanged} />
+                    <label for="${idShowAllTab}">${t(this.hass, this._config.language, 'show_all_tab')}</label>
+                  </div>
+                `
+              : ''}
+            <div class="form">
+              <label for="${idGridColumns}">${t(this.hass, this._config.language, 'grid_columns')}</label>
+              <input id="${idGridColumns}" type="text" .value=${this._config.grid.columns} @input=${this._gridColumnsChanged} />
+            </div>
+          `
+        : ''}
       <details class="debug">
         <summary>${fdT(this.hass, this._config.language, 'debug')}</summary>
         <div class="form">
@@ -2590,6 +2651,40 @@ class TallyListFreeDrinksCardEditor extends LitElement {
       require_comment: l.endsWith('*'),
     }));
     this._config = { ...this._config, comment_presets: presets };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _userSelectorChanged(ev) {
+    this._config = { ...this._config, user_selector: ev.target.value };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _tabModeChanged(ev) {
+    const tabs = { ...this._config.tabs, mode: ev.target.value };
+    this._config = { ...this._config, tabs };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _groupedBreaksChanged(ev) {
+    const breaks = ev.target.value
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s);
+    const tabs = { ...this._config.tabs, grouped_breaks: breaks };
+    this._config = { ...this._config, tabs };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _showAllTabChanged(ev) {
+    const tabs = { ...this._config.tabs, show_all_tab: ev.target.checked };
+    this._config = { ...this._config, tabs };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _gridColumnsChanged(ev) {
+    const val = Number(ev.target.value);
+    const grid = { ...this._config.grid, columns: isNaN(val) ? 0 : val };
+    this._config = { ...this._config, grid };
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
@@ -2661,6 +2756,9 @@ class TallyListFreeDrinksCard extends LitElement {
     _comment: { state: true },
     _drinkNames: { state: true },
     _commentType: { state: true },
+    _tabs: { state: true },
+    _visibleUsers: { state: true },
+    _currentTab: { state: true },
   };
 
   _fmtCache = new Map();
@@ -2675,15 +2773,38 @@ class TallyListFreeDrinksCard extends LitElement {
     this._comment = '';
     this._drinkNames = {};
     this._commentType = '';
+    this._tabs = [];
+    this._visibleUsers = [];
+    this._currentTab = 'all';
+    this._buckets = new Map();
+    this._sortedUsers = [];
+    this._usersKey = '';
+    this._ownUser = null;
+    try {
+      const stored = window.localStorage.getItem('tally-list-admins');
+      this._tallyAdmins = stored ? JSON.parse(stored) : [];
+    } catch (err) {
+      this._tallyAdmins = [];
+    }
   }
 
   setConfig(config) {
     const presets = parseCommentPresets(config?.comment_presets);
+    const tabs = {
+      mode: 'per-letter',
+      grouped_breaks: ['A–E', 'F–J', 'K–O', 'P–T', 'U–Z'],
+      show_all_tab: true,
+      ...(config?.tabs || {}),
+    };
+    const grid = { columns: 0, ...(config?.grid || {}) };
     this.config = {
       show_prices: true,
       language: 'auto',
+      user_selector: 'list',
       ...(config || {}),
       comment_presets: presets,
+      tabs,
+      grid,
     };
     if (!this._commentType && this.config.comment_presets?.length) {
       this._commentType = this.config.comment_presets[0].label;
@@ -2811,10 +2932,9 @@ class TallyListFreeDrinksCard extends LitElement {
         this.selectedUser = u ? u.slug : slug;
       }
     }
-  }
-
-  _onUserPick(ev) {
-    this.selectedUser = ev.currentTarget.dataset.id;
+    if (changedProps.has('_visibleUsers')) {
+      _umUpdateButtonHeight(this);
+    }
   }
 
   _inc(ev) {
@@ -2939,8 +3059,34 @@ class TallyListFreeDrinksCard extends LitElement {
     const presets = this.config.comment_presets || [];
     const selectedPreset = presets.find((p) => p.label === this._commentType);
     const showPrices = this.config.show_prices !== false;
+    const userNames = [this.hass.user?.name, ...this._currentPersonNames()];
+    const isAdmin = userNames.some((n) => (this._tallyAdmins || []).includes(n));
+    const mode = this.config.user_selector || 'list';
+    let usersList = users;
+    if (!isAdmin) {
+      const uid = this.hass.user?.id;
+      const slugs = this._currentPersonSlugs();
+      usersList = users.filter((u) => u.user_id === uid || slugs.includes(u.slug));
+    }
+    _umEnsureBuckets(this, usersList);
+    usersList = this._sortedUsers;
+    const own = this._ownUser;
+    if (!this.selectedUser || !usersList.some((u) => (u.slug || u.name) === this.selectedUser)) {
+      this.selectedUser = own ? (own.slug || own.name) : (usersList[0]?.slug || usersList[0]?.name);
+    }
+    const userMenu = _renderUserMenu(
+      this,
+      usersList,
+      this.selectedUser,
+      mode,
+      isAdmin,
+      (id) => {
+        this.selectedUser = id;
+        this.requestUpdate('selectedUser');
+      }
+    );
     const drinks = [];
-    const user = users.find((u) => u.slug === this.selectedUser);
+    const user = usersList.find((u) => (u.slug || u.name) === this.selectedUser);
     if (user) {
       for (const drink of Object.keys(user.drinks)) {
         const name = this._drinkNames[drink] || drink;
@@ -2957,7 +3103,7 @@ class TallyListFreeDrinksCard extends LitElement {
     );
     return html`
       <ha-card>
-        <div class="user-list">${this._renderUserChips(users)}</div>
+        ${userMenu}
         <table>
           <thead>
             <tr>
@@ -3023,17 +3169,34 @@ class TallyListFreeDrinksCard extends LitElement {
     return `fd-${s}`;
   }
 
-  _renderUserChips(list) {
-    const pressed = this.selectedUser;
-    return repeat(
-      list,
-      (u) => u.slug,
-      (u) => {
-        const name = u.name || u.slug;
-        const cls = `user-chip ${u.slug === pressed ? 'active' : 'inactive'}`;
-        return html`<button class="${cls}" data-id="${u.slug}" @pointerdown=${this._onUserPick}>${name}</button>`;
+  _currentPersonNames() {
+    const userId = this.hass.user?.id;
+    if (!userId) return [];
+    const names = [];
+    for (const [entity, state] of Object.entries(this.hass.states)) {
+      if (entity.startsWith('person.') && state.attributes.user_id === userId) {
+        const friendly = state.attributes.friendly_name;
+        if (friendly) names.push(friendly);
       }
-    );
+    }
+    return names;
+  }
+
+  _currentPersonSlugs() {
+    const userId = this.hass.user?.id;
+    if (!userId) return [];
+    const slugs = [];
+    for (const [entity, state] of Object.entries(this.hass.states)) {
+      if (entity.startsWith('person.') && state.attributes.user_id === userId) {
+        const slug = entity.substring('person.'.length);
+        slugs.push(slug);
+        const alt = fdSlugify(state.attributes.friendly_name || '');
+        if (alt && alt !== slug) {
+          slugs.push(alt);
+        }
+      }
+    }
+    return slugs;
   }
 
   static getConfigElement() {
@@ -3044,32 +3207,13 @@ class TallyListFreeDrinksCard extends LitElement {
     return { show_prices: true };
   }
 
-  static styles = css`
+  static styles = [TallyListCard.styles, css`
     :host {
       display: block;
     }
     ha-card {
       padding: 16px;
       text-align: center;
-    }
-    .user-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      justify-content: center;
-      margin-bottom: 8px;
-    }
-    .user-chip {
-      border-radius: 12px;
-      background: #2b2b2b;
-      color: #ddd;
-      border: none;
-      padding: 0 12px;
-      height: 44px;
-    }
-    .user-chip.active {
-      background: var(--success-color, #2e7d32);
-      color: #fff;
     }
     table {
       width: 100%;
@@ -3158,7 +3302,7 @@ class TallyListFreeDrinksCard extends LitElement {
       background: var(--primary-color);
       color: var(--text-primary-color, #fff);
     }
-  `;
+  `];
 }
 
 customElements.define('tally-list-free-drinks-card', TallyListFreeDrinksCard);
