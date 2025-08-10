@@ -3106,9 +3106,7 @@ class TallyListFreeDrinksCard extends LitElement {
     const drinks = [];
     if (user) {
       for (const drink of Object.keys(user.drinks)) {
-        const name =
-          this._drinkNames[drink] ||
-          drink.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+        const name = this._drinkNames[drink] || drink;
         drinks.push({ drink, name });
       }
     }
