@@ -93,7 +93,7 @@ type: custom:tally-list-free-drinks-card
 
 Options:
 
-* **user_mode** – `auto` (default) shows a user selector, `fixed` uses the logged-in user.
 * **show_prices** – Display drink prices (`true` by default).
-* **sensor_refresh_after_submit** – Refresh drink sensors after submission.
+* **Language** – Force **Auto**, **Deutsch**, or **English**.
+* **Version** – Display the installed version.
 

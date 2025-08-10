@@ -92,7 +92,7 @@ type: custom:tally-list-free-drinks-card
 
 Optionen:
 
-* **user_mode** – `auto` (Standard) zeigt eine Nutzerauswahl, `fixed` nutzt den angemeldeten Nutzer.
 * **show_prices** – Preise anzeigen (`true` standardmäßig).
-* **sensor_refresh_after_submit** – Sensoren nach dem Abschicken aktualisieren.
+* **Sprache** – Erzwinge **Auto**, **Deutsch** oder **Englisch**.
+* **Version** – Zeigt die installierte Version an.
 

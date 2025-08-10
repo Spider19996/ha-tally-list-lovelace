@@ -2436,11 +2436,12 @@ customElements.define('tally-due-ranking-card-editor', TallyDueRankingCardEditor
 // ----- Free Drinks Card Editor -----
 const FD_STRINGS = {
   en: {
-    user_mode: 'User mode',
-    user_mode_auto: 'Auto',
-    user_mode_fixed: 'Fixed',
+    debug: 'Debug',
+    language: 'Language',
+    auto: 'Auto',
+    german: 'German',
+    english: 'English',
     show_prices: 'Show prices',
-    sensor_refresh_after_submit: 'Refresh sensors after submit',
     version: 'Version',
     card_name: 'Free Drinks Card',
     card_desc: 'Book free drinks with a required comment.',
@@ -2453,11 +2454,12 @@ const FD_STRINGS = {
     free_booked: 'Free drinks booked',
   },
   de: {
-    user_mode: 'Nutzermodus',
-    user_mode_auto: 'Auto',
-    user_mode_fixed: 'Fixiert',
+    debug: 'Debug',
+    language: 'Sprache',
+    auto: 'Auto',
+    german: 'Deutsch',
+    english: 'Englisch',
     show_prices: 'Preise anzeigen',
-    sensor_refresh_after_submit: 'Sensoren nach Buchung aktualisieren',
     version: 'Version',
     card_name: 'Freigetränke Karte',
     card_desc: 'Freigetränke mit Pflichtkommentar buchen.',
@@ -2482,34 +2484,17 @@ class TallyListFreeDrinksCardEditor extends LitElement {
 
   setConfig(config) {
     this._config = {
-      user_mode: 'auto',
       show_prices: true,
-      sensor_refresh_after_submit: false,
+      language: 'auto',
       ...(config || {}),
     };
   }
 
   render() {
     if (!this._config) return html``;
-    const idMode = this._fid('mode');
     const idPrices = this._fid('prices');
-    const idRefresh = this._fid('refresh');
+    const idLanguage = this._fid('language');
     return html`
-      <div class="form">
-        <label for="${idMode}">${fdT(this.hass, this._config.language, 'user_mode')}</label>
-        <select id="${idMode}" @change=${this._modeChanged}>
-          <option value="auto" ?selected=${this._config.user_mode === 'auto'}>${fdT(
-            this.hass,
-            this._config.language,
-            'user_mode_auto'
-          )}</option>
-          <option value="fixed" ?selected=${this._config.user_mode === 'fixed'}>${fdT(
-            this.hass,
-            this._config.language,
-            'user_mode_fixed'
-          )}</option>
-        </select>
-      </div>
       <div class="form">
         <input
           id="${idPrices}"
@@ -2519,26 +2504,31 @@ class TallyListFreeDrinksCardEditor extends LitElement {
         />
         <label for="${idPrices}">${fdT(this.hass, this._config.language, 'show_prices')}</label>
       </div>
-      <div class="form">
-        <input
-          id="${idRefresh}"
-          type="checkbox"
-          .checked=${this._config.sensor_refresh_after_submit}
-          @change=${this._refreshChanged}
-        />
-        <label for="${idRefresh}">${fdT(
-          this.hass,
-          this._config.language,
-          'sensor_refresh_after_submit'
-        )}</label>
-      </div>
-      <div class="version">${fdT(this.hass, this._config.language, 'version')}: ${CARD_VERSION}</div>
+      <details class="debug">
+        <summary>${fdT(this.hass, this._config.language, 'debug')}</summary>
+        <div class="form">
+          <label for="${idLanguage}">${fdT(this.hass, this._config.language, 'language')}</label>
+          <select id="${idLanguage}" name="language" @change=${this._languageChanged}>
+            <option value="auto" ?selected=${this._config.language === 'auto'}>${fdT(
+              this.hass,
+              this._config.language,
+              'auto'
+            )}</option>
+            <option value="de" ?selected=${this._config.language === 'de'}>${fdT(
+              this.hass,
+              this._config.language,
+              'german'
+            )}</option>
+            <option value="en" ?selected=${this._config.language === 'en'}>${fdT(
+              this.hass,
+              this._config.language,
+              'english'
+            )}</option>
+          </select>
+        </div>
+        <div class="version">${fdT(this.hass, this._config.language, 'version')}: ${CARD_VERSION}</div>
+      </details>
     `;
-  }
-
-  _modeChanged(ev) {
-    this._config = { ...this._config, user_mode: ev.target.value };
-    fireEvent(this, 'config-changed', { config: this._config });
   }
 
   _pricesChanged(ev) {
@@ -2546,11 +2536,8 @@ class TallyListFreeDrinksCardEditor extends LitElement {
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
-  _refreshChanged(ev) {
-    this._config = {
-      ...this._config,
-      sensor_refresh_after_submit: ev.target.checked,
-    };
+  _languageChanged(ev) {
+    this._config = { ...this._config, language: ev.target.value };
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
@@ -2558,14 +2545,7 @@ class TallyListFreeDrinksCardEditor extends LitElement {
     return `fde-${s}`;
   }
 
-  static styles = css`
-    .form {
-      margin-bottom: 8px;
-    }
-    .version {
-      margin-top: 16px;
-    }
-  `;
+  static styles = TallyListCardEditor.styles;
 }
 
 customElements.define('tally-list-free-drinks-card-editor', TallyListFreeDrinksCardEditor);
@@ -2618,9 +2598,8 @@ class TallyListFreeDrinksCard extends LitElement {
 
   setConfig(config) {
     this.config = {
-      user_mode: 'auto',
       show_prices: true,
-      sensor_refresh_after_submit: false,
+      language: 'auto',
       ...(config || {}),
     };
   }
@@ -2745,11 +2724,6 @@ class TallyListFreeDrinksCard extends LitElement {
         const u = users.find((u) => u.slug === slug);
         this.selectedUser = u ? u.slug : slug;
       }
-      if (this.config.user_mode === 'fixed' && this.hass.user) {
-        const slug = fdSlugify(this.hass.user.name);
-        const u = users.find((u) => u.slug === slug);
-        this.selectedUser = u ? u.slug : slug;
-      }
     }
   }
 
@@ -2830,14 +2804,6 @@ class TallyListFreeDrinksCard extends LitElement {
           free_drink: true,
           comment,
         });
-        if (this.config.sensor_refresh_after_submit) {
-          const entity = uObj?.drinks?.[drink];
-          if (entity) {
-            this.hass.callService('homeassistant', 'update_entity', {
-              entity_id: entity,
-            });
-          }
-        }
       }
       this._pending = {};
       this._comment = '';
@@ -2878,9 +2844,7 @@ class TallyListFreeDrinksCard extends LitElement {
     const idComment = this._fid('comment');
     return html`
       <ha-card>
-        ${this.config.user_mode === 'auto'
-          ? html`<div class="user-list">${this._renderUserChips(users)}</div>`
-          : ''}
+        <div class="user-list">${this._renderUserChips(users)}</div>
         <table>
           <thead>
             <tr>
@@ -2956,7 +2920,7 @@ class TallyListFreeDrinksCard extends LitElement {
   }
 
   static getStubConfig() {
-    return { user_mode: 'auto', show_prices: true, sensor_refresh_after_submit: false };
+    return { show_prices: true, language: 'auto' };
   }
 
   static styles = css`
