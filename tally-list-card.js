@@ -23,7 +23,7 @@ export function fireEvent(node, type, detail = {}, options = {}) {
     })
   );
 }
-const CARD_VERSION = '09.08.2025';
+const CARD_VERSION = '10.08.2025';
 
 const TL_STRINGS = {
   en: {
