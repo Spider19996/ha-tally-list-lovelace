@@ -3355,11 +3355,16 @@ class TallyListFreeDrinksCard extends LitElement {
       gap: 8px;
     }
     .footer input {
-      height: 44px;
-      padding: 0 8px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--primary-text-color);
+      border: none;
+      border-radius: 8px;
+      padding: 6px 10px;
+      width: 100%;
       box-sizing: border-box;
-      border-radius: 12px;
-      border: 1px solid var(--ha-card-border-color);
+    }
+    .footer input::placeholder {
+      color: rgba(255, 255, 255, 0.4);
     }
     .footer select {
       padding: 0 12px;
