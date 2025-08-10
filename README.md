@@ -81,17 +81,3 @@ Options:
 * **show_copy** – Show the "Tabelle kopieren" button.
 * **show_step_select** – Show buttons to select the step size.
 
-## Free Drinks Card
-
-Book free drinks with a mandatory comment. Counts are kept locally until submitted.
-
-```yaml
-type: custom:tally-list-free-drinks-card
-```
-
-Options:
-
-* **user_mode** – `auto` (default) shows a user selector, `fixed` uses the logged-in user.
-* **show_prices** – Display drink prices (`true` by default).
-* **sensor_refresh_after_submit** – Refresh drink sensors after submission.
-
