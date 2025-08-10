@@ -532,7 +532,7 @@ class TallyListCard extends LitElement {
         const cost = count * price;
         total += cost;
         const costStr = this._formatPrice(cost) + ` ${this._currency}`;
-        rows.push({ drink, entity, count, priceStr, costStr, isAvailable, display: this._unslugify(drink) });
+        rows.push({ drink, entity, count, priceStr, costStr, isAvailable, display: drink.charAt(0).toUpperCase() + drink.slice(1) });
       });
 
     if (user.amount_due_entity) deps.add(user.amount_due_entity);
@@ -706,7 +706,7 @@ class TallyListCard extends LitElement {
                             drinks,
                             d => d,
                             d => html`<option value="${d}">
-                                ${this._unslugify(d)}
+                                ${d.charAt(0).toUpperCase() + d.slice(1)}
                               </option>`
                           )}
                         </select>
@@ -763,7 +763,7 @@ class TallyListCard extends LitElement {
       this._disabled = false;
       this.requestUpdate();
     }, delay);
-    const displayDrink = this._unslugify(drink);
+    const displayDrink = drink.charAt(0).toUpperCase() + drink.slice(1);
 
     const users = this.config.users || this._autoUsers || [];
     const user = users.find(u => (u.name || u.slug) === this.selectedUser);
@@ -819,7 +819,7 @@ class TallyListCard extends LitElement {
       this.requestUpdate();
     }, delay);
 
-    const displayDrink = this._unslugify(drink);
+    const displayDrink = drink.charAt(0).toUpperCase() + drink.slice(1);
 
     if (entity) {
       const base = this._optimisticCounts[entity] ?? count;
@@ -884,16 +884,6 @@ class TallyListCard extends LitElement {
   _gatherUsers() {
     const users = [];
     const states = this.hass.states;
-    const drinkSensors = {};
-    for (const entity of Object.keys(states)) {
-      const m = entity.match(/^sensor\.([a-z0-9_]+)_(.+)_count$/);
-      if (m) {
-        const slug = m[1];
-        const drink = m[2];
-        if (!drinkSensors[slug]) drinkSensors[slug] = {};
-        drinkSensors[slug][drink] = entity;
-      }
-    }
     for (const [entity, state] of Object.entries(states)) {
       const match = entity.match(/^sensor\.([a-z0-9_]+)_amount_due$/);
       if (match) {
@@ -902,7 +892,18 @@ class TallyListCard extends LitElement {
         const sensorName = (state.attributes.friendly_name || '')
           .replace(' Amount Due', '')
           .replace(' Offener Betrag', '');
-        const drinks = drinkSensors[slug] || {};
+        const drinks = {};
+        const prefix = `sensor.${slug}_`;
+        for (const [e2] of Object.entries(states)) {
+          const m2 =
+            e2.startsWith(prefix) &&
+            e2.endsWith('_count') &&
+            e2.match(/^sensor\.[a-z0-9_]+_(.+)_count$/);
+          if (m2) {
+            const drink = m2[1];
+            drinks[drink] = e2;
+          }
+        }
         let person = states[`person.${slug}`];
         if (!person) {
           for (const [pEntity, pState] of Object.entries(states)) {
@@ -925,10 +926,9 @@ class TallyListCard extends LitElement {
     const prices = {};
     const states = this.hass.states;
     for (const [entity, state] of Object.entries(states)) {
-      const prefix = 'sensor.price_list_';
-      const suffix = '_price';
-      if (entity.startsWith(prefix) && entity.endsWith(suffix)) {
-        const drink = entity.slice(prefix.length, -suffix.length);
+      const match = entity.match(/^sensor\.price_list_(.+)_price$/);
+      if (match) {
+        const drink = match[1];
         const price = parseFloat(state.state);
         prices[drink] = isNaN(price) ? 0 : price;
         if (!this._currency) {
@@ -1000,13 +1000,6 @@ class TallyListCard extends LitElement {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '_')
       .replace(/^_+|_+$/g, '');
-  }
-
-  _unslugify(str) {
-    if (!str) return '';
-    return str
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, c => c.toUpperCase());
   }
 
   _currentPersonNames() {
@@ -2010,16 +2003,6 @@ class TallyDueRankingCard extends LitElement {
   _gatherUsers() {
     const users = [];
     const states = this.hass.states;
-    const drinkSensors = {};
-    for (const entity of Object.keys(states)) {
-      const m = entity.match(/^sensor\.([a-z0-9_]+)_(.+)_count$/);
-      if (m) {
-        const slug = m[1];
-        const drink = m[2];
-        if (!drinkSensors[slug]) drinkSensors[slug] = {};
-        drinkSensors[slug][drink] = entity;
-      }
-    }
     for (const [entity, state] of Object.entries(states)) {
       const match = entity.match(/^sensor\.([a-z0-9_]+)_amount_due$/);
       if (match) {
@@ -2027,7 +2010,15 @@ class TallyDueRankingCard extends LitElement {
         const sensorName = (state.attributes.friendly_name || '')
           .replace(' Amount Due', '')
           .replace(' Offener Betrag', '');
-        const drinks = drinkSensors[slug] || {};
+        const drinks = {};
+        const prefix = `sensor.${slug}_`;
+        for (const [e2] of Object.entries(states)) {
+          const m2 = e2.startsWith(prefix) && e2.endsWith('_count') && e2.match(/^sensor\.[a-z0-9_]+_([^_]+)_count$/);
+          if (m2) {
+            const drink = m2[1];
+            drinks[drink] = e2;
+          }
+        }
         let person = states[`person.${slug}`];
         if (!person) {
           for (const [pEntity, pState] of Object.entries(states)) {
@@ -2050,10 +2041,9 @@ class TallyDueRankingCard extends LitElement {
     const prices = {};
     const states = this.hass.states;
     for (const [entity, state] of Object.entries(states)) {
-      const prefix = 'sensor.price_list_';
-      const suffix = '_price';
-      if (entity.startsWith(prefix) && entity.endsWith(suffix)) {
-        const drink = entity.slice(prefix.length, -suffix.length);
+      const match = entity.match(/^sensor\.price_list_(.+)_price$/);
+      if (match) {
+        const drink = match[1];
         const price = parseFloat(state.state);
         prices[drink] = isNaN(price) ? 0 : price;
         if (!this._currency) {
@@ -2642,16 +2632,6 @@ class TallyListFreeDrinksCard extends LitElement {
   _gatherUsers() {
     const users = [];
     const states = this.hass.states;
-    const drinkSensors = {};
-    for (const entity of Object.keys(states)) {
-      const m = entity.match(/^sensor\.([a-z0-9_]+)_(.+)_count$/);
-      if (m) {
-        const slug = m[1];
-        const drink = m[2];
-        if (!drinkSensors[slug]) drinkSensors[slug] = {};
-        drinkSensors[slug][drink] = entity;
-      }
-    }
     for (const [entity, state] of Object.entries(states)) {
       const match = entity.match(/^sensor\.([a-z0-9_]+)_amount_due$/);
       if (match) {
@@ -2660,7 +2640,18 @@ class TallyListFreeDrinksCard extends LitElement {
         const sensorName = (state.attributes.friendly_name || '')
           .replace(' Amount Due', '')
           .replace(' Offener Betrag', '');
-        const drinks = drinkSensors[slug] || {};
+        const drinks = {};
+        const prefix = `sensor.${slug}_`;
+        for (const [e2] of Object.entries(states)) {
+          const m2 =
+            e2.startsWith(prefix) &&
+            e2.endsWith('_count') &&
+            e2.match(/^sensor\.[a-z0-9_]+_(.+)_count$/);
+          if (m2) {
+            const drink = m2[1];
+            drinks[drink] = e2;
+          }
+        }
         let person = states[`person.${slug}`];
         if (!person) {
           for (const [pEntity, pState] of Object.entries(states)) {
@@ -2686,10 +2677,9 @@ class TallyListFreeDrinksCard extends LitElement {
     const prices = {};
     const states = this.hass.states;
     for (const [entity, state] of Object.entries(states)) {
-      const prefix = 'sensor.price_list_';
-      const suffix = '_price';
-      if (entity.startsWith(prefix) && entity.endsWith(suffix)) {
-        const drink = entity.slice(prefix.length, -suffix.length);
+      const match = entity.match(/^sensor\.price_list_(.+)_price$/);
+      if (match) {
+        const drink = match[1];
         const price = parseFloat(state.state);
         prices[drink] = isNaN(price) ? 0 : price;
         if (!this._currency) {
