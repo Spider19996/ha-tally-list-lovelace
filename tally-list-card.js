@@ -272,7 +272,7 @@ function _umRenderTabHeader(card) {
   </div>`;
 }
 
-function _umRenderButtons(card, list, selected, onSelect) {
+function _umRenderButtons(card, list, selected, onSelect, getVal = (u) => u.name || u.slug) {
   const cfg = card.config.grid || {};
   const cols = Number(cfg.columns);
   const columnStyle = cols > 0
@@ -285,28 +285,22 @@ function _umRenderButtons(card, list, selected, onSelect) {
       (u) => u.user_id || u.slug,
       (u) => {
         const name = u.name || u.slug;
-        return html`<button class="user-btn" data-id="${name}" aria-pressed="${name === selected}" @pointerdown=${(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          onSelect(name);
-        }}>${name}</button>`;
+        const val = getVal(u);
+        return html`<button class="user-btn" role="tab" aria-selected=${val === selected} @click=${() => onSelect(val)} @keydown=${(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(val)}>${name}</button>`;
       }
     )}
   </div>`;
 }
 
-function _umRenderChips(card, list, selected, onSelect) {
+function _umRenderChips(card, list, selected, onSelect, getVal = (u) => u.name || u.slug) {
   return repeat(
     list,
     (u) => u.user_id || u.slug,
     (u) => {
       const name = u.name || u.slug;
-      const cls = `user-chip ${name === selected ? 'active' : 'inactive'}`;
-      return html`<button class="${cls}" data-id="${name}" aria-pressed="${name === selected}" @pointerdown=${(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onSelect(name);
-      }}>${name}</button>`;
+      const val = getVal(u);
+      const cls = `user-chip ${val === selected ? 'active' : 'inactive'}`;
+      return html`<button class="${cls}" role="tab" aria-selected=${val === selected} @click=${() => onSelect(val)} @keydown=${(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(val)}>${name}</button>`;
     }
   );
 }
@@ -326,28 +320,29 @@ function _umUpdateButtonHeight(card) {
   grid.style.setProperty('--tl-btn-h', `${max}px`);
 }
 
-function _renderUserMenu(card, users, selectedId, layout, isAdmin, onSelect) {
+function _renderUserMenu(card, users, selectedId, layout, isAdmin, onSelect, getVal) {
+  const valFn = getVal || ((u) => u.name || u.slug);
   _umEnsureBuckets(card, users);
   if (!isAdmin) {
-    const own = users.find((u) => (u.name || u.slug) === selectedId) || users[0];
+    const own = users.find((u) => valFn(u) === selectedId) || users[0];
     const name = own?.name || own?.slug || '';
     return html`<div class="user-label">${name}</div>`;
   }
   if (layout === 'grid') {
-    const el = _umRenderButtons(card, card._sortedUsers, selectedId, onSelect);
+    const el = _umRenderButtons(card, card._sortedUsers, selectedId, onSelect, valFn);
     setTimeout(() => _umUpdateButtonHeight(card));
     return el;
   }
   if (layout === 'tabs') {
     const header = _umRenderTabHeader(card);
-    const chips = _umRenderChips(card, card._visibleUsers, selectedId, onSelect);
+    const chips = _umRenderChips(card, card._visibleUsers, selectedId, onSelect, valFn);
     return html`<div class="user-actions"><div class="alpha-tabs">${header}</div><div class="user-list">${chips}</div></div>`;
   }
   const idUser = card._fid ? card._fid('user') : 'user';
   return html`<div class="user-select"><label for="${idUser}">${t(card.hass, card.config.language, 'name')}: </label><select id="${idUser}" @change=${(e) => onSelect(e.target.value)}>${repeat(
     card._sortedUsers,
     (u) => u.user_id || u.slug,
-    (u) => html`<option value="${u.name || u.slug}" ?selected=${(u.name || u.slug) === selectedId}>${u.name}</option>`
+    (u) => html`<option value="${valFn(u)}" ?selected=${valFn(u) === selectedId}>${u.name}</option>`
   )}</select></div>`;
 }
 
@@ -2748,7 +2743,7 @@ class TallyListFreeDrinksCard extends LitElement {
   static properties = {
     hass: {},
     config: {},
-    selectedUser: { state: true },
+    selectedUserId: { type: String },
     _autoUsers: { state: true },
     _autoPrices: { state: true },
     _currency: { state: true },
@@ -2765,7 +2760,7 @@ class TallyListFreeDrinksCard extends LitElement {
 
   constructor() {
     super();
-    this.selectedUser = '';
+    this.selectedUserId = '';
     this._autoUsers = [];
     this._autoPrices = {};
     this._currency = '';
@@ -2813,6 +2808,20 @@ class TallyListFreeDrinksCard extends LitElement {
 
   getCardSize() {
     return 3;
+  }
+
+  firstUpdated() {
+    if (!this.selectedUserId) this.selectedUserId = this.hass?.user?.id || '';
+  }
+
+  get _isAdmin() {
+    const userNames = [this.hass.user?.name, ...this._currentPersonNames()];
+    return userNames.some((n) => (this._tallyAdmins || []).includes(n));
+  }
+
+  get _activeUserId() {
+    if (this._isAdmin) return this.selectedUserId || this.hass?.user?.id || '';
+    return this.hass?.user?.id || '';
   }
 
   _gatherUsers() {
@@ -2925,16 +2934,29 @@ class TallyListFreeDrinksCard extends LitElement {
       if (!this.config.prices && Object.keys(this._autoPrices).length === 0) {
         this._autoPrices = this._gatherPrices();
       }
-      const users = this.config.users || this._autoUsers || [];
-      if (!this.selectedUser && this.hass.user) {
-        const slug = fdSlugify(this.hass.user.name);
-        const u = users.find((u) => u.slug === slug);
-        this.selectedUser = u ? u.slug : slug;
-      }
     }
     if (changedProps.has('_visibleUsers')) {
       _umUpdateButtonHeight(this);
     }
+  }
+
+  _onUserSelect(id) {
+    if (id && this.selectedUserId !== id) {
+      this.selectedUserId = id;
+      this.requestUpdate('selectedUserId');
+    }
+  }
+
+  _renderUserMenu({ users, selectedUserId, layout, isAdmin, onSelect }) {
+    return _renderUserMenu(
+      this,
+      users,
+      selectedUserId,
+      layout,
+      isAdmin,
+      onSelect,
+      (u) => u.user_id
+    );
   }
 
   _inc(ev) {
@@ -3010,10 +3032,12 @@ class TallyListFreeDrinksCard extends LitElement {
         ? `${this._commentType}: ${extra}`
         : this._commentType
       : extra;
-    const slug = this.selectedUser;
+    const uid = this._activeUserId;
     const users = this.config.users || this._autoUsers || [];
-    const uObj = users.find((u) => u.slug === slug || u.name === slug);
-    const user = uObj?.name || slug;
+    const uObj = users.find(
+      (u) => u.user_id === uid || u.slug === uid || u.name === uid
+    );
+    const user = uObj?.name || uid;
     const drinks = Object.entries(this._pending).filter(([d, c]) => c > 0);
     try {
       for (const [drink, count] of drinks) {
@@ -3052,41 +3076,28 @@ class TallyListFreeDrinksCard extends LitElement {
   }
 
   render() {
-    const users = this.config.users || this._autoUsers;
+    const allUsers = this.config.users || this._autoUsers || [];
     const prices = this.config.prices || this._autoPrices;
     const pending = this._pending;
     const comment = this._comment;
     const presets = this.config.comment_presets || [];
     const selectedPreset = presets.find((p) => p.label === this._commentType);
     const showPrices = this.config.show_prices !== false;
-    const userNames = [this.hass.user?.name, ...this._currentPersonNames()];
-    const isAdmin = userNames.some((n) => (this._tallyAdmins || []).includes(n));
     const mode = this.config.user_selector || 'list';
-    let usersList = users;
-    if (!isAdmin) {
-      const uid = this.hass.user?.id;
-      const slugs = this._currentPersonSlugs();
-      usersList = users.filter((u) => u.user_id === uid || slugs.includes(u.slug));
-    }
-    _umEnsureBuckets(this, usersList);
-    usersList = this._sortedUsers;
-    const own = this._ownUser;
-    if (!this.selectedUser || !usersList.some((u) => (u.slug || u.name) === this.selectedUser)) {
-      this.selectedUser = own ? (own.slug || own.name) : (usersList[0]?.slug || usersList[0]?.name);
-    }
-    const userMenu = _renderUserMenu(
-      this,
-      usersList,
-      this.selectedUser,
-      mode,
+    const isAdmin = this._isAdmin;
+    const visibleUsers = isAdmin
+      ? allUsers
+      : allUsers.filter((u) => u.user_id === this.hass?.user?.id);
+    const selected = this.selectedUserId || this.hass?.user?.id || '';
+    const userMenu = this._renderUserMenu({
+      users: visibleUsers,
+      selectedUserId: selected,
+      layout: mode,
       isAdmin,
-      (id) => {
-        this.selectedUser = id;
-        this.requestUpdate('selectedUser');
-      }
-    );
+      onSelect: (id) => this._onUserSelect(id),
+    });
+    const user = visibleUsers.find((u) => u.user_id === selected);
     const drinks = [];
-    const user = usersList.find((u) => (u.slug || u.name) === this.selectedUser);
     if (user) {
       for (const drink of Object.keys(user.drinks)) {
         const name = this._drinkNames[drink] || drink;
