@@ -2451,9 +2451,6 @@ const FD_STRINGS = {
     price: 'Price',
     count: 'Count',
     free_booked: 'Free drinks booked',
-    reason: 'Reason',
-    comment_optional: 'Comment (optional)',
-    comment_types: 'Types (one per line, * = comment required)',
   },
   de: {
     user_mode: 'Nutzermodus',
@@ -2471,9 +2468,6 @@ const FD_STRINGS = {
     price: 'Preis',
     count: 'Zähler',
     free_booked: 'Freigetränke gebucht',
-    reason: 'Grund',
-    comment_optional: 'Kommentar (optional)',
-    comment_types: 'Typen (eine pro Zeile, * = Kommentar erforderlich)',
   },
 };
 
@@ -2491,7 +2485,6 @@ class TallyListFreeDrinksCardEditor extends LitElement {
       user_mode: 'auto',
       show_prices: true,
       sensor_refresh_after_submit: false,
-      comment_presets: [],
       ...(config || {}),
     };
   }
@@ -2501,7 +2494,6 @@ class TallyListFreeDrinksCardEditor extends LitElement {
     const idMode = this._fid('mode');
     const idPrices = this._fid('prices');
     const idRefresh = this._fid('refresh');
-    const idPresets = this._fid('presets');
     return html`
       <div class="form">
         <label for="${idMode}">${fdT(this.hass, this._config.language, 'user_mode')}</label>
@@ -2540,19 +2532,6 @@ class TallyListFreeDrinksCardEditor extends LitElement {
           'sensor_refresh_after_submit'
         )}</label>
       </div>
-      <div class="form">
-        <label for="${idPresets}">${fdT(
-          this.hass,
-          this._config.language,
-          'comment_types'
-        )}</label>
-        <textarea
-          id="${idPresets}"
-          @change=${this._presetsChanged}
-        >${(this._config.comment_presets || [])
-          .map((p) => `${p.label}${p.require_comment ? '*' : ''}`)
-          .join('\n')}</textarea>
-      </div>
       <div class="version">${fdT(this.hass, this._config.language, 'version')}: ${CARD_VERSION}</div>
     `;
   }
@@ -2575,19 +2554,6 @@ class TallyListFreeDrinksCardEditor extends LitElement {
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
-  _presetsChanged(ev) {
-    const lines = ev.target.value
-      .split(/\n+/)
-      .map((l) => l.trim())
-      .filter((l) => l);
-    const presets = lines.map((l) => ({
-      label: l.replace(/\*$/, ''),
-      require_comment: l.endsWith('*'),
-    }));
-    this._config = { ...this._config, comment_presets: presets };
-    fireEvent(this, 'config-changed', { config: this._config });
-  }
-
   _fid(s) {
     return `fde-${s}`;
   }
@@ -2595,11 +2561,6 @@ class TallyListFreeDrinksCardEditor extends LitElement {
   static styles = css`
     .form {
       margin-bottom: 8px;
-    }
-    .form textarea {
-      width: 100%;
-      box-sizing: border-box;
-      min-height: 60px;
     }
     .version {
       margin-top: 16px;
@@ -2640,7 +2601,6 @@ class TallyListFreeDrinksCard extends LitElement {
     _pending: { state: true },
     _comment: { state: true },
     _drinkNames: { state: true },
-    _commentType: { state: true },
   };
 
   _fmtCache = new Map();
@@ -2654,7 +2614,6 @@ class TallyListFreeDrinksCard extends LitElement {
     this._pending = {};
     this._comment = '';
     this._drinkNames = {};
-    this._commentType = '';
   }
 
   setConfig(config) {
@@ -2662,12 +2621,8 @@ class TallyListFreeDrinksCard extends LitElement {
       user_mode: 'auto',
       show_prices: true,
       sensor_refresh_after_submit: false,
-      comment_presets: [],
       ...(config || {}),
     };
-    if (!this._commentType && this.config.comment_presets?.length) {
-      this._commentType = this.config.comment_presets[0].label;
-    }
   }
 
   getCardSize() {
@@ -2819,19 +2774,8 @@ class TallyListFreeDrinksCard extends LitElement {
     this._comment = ev.target.value;
   }
 
-  _onPreset(ev) {
-    this._commentType = ev.target.value;
-  }
-
   _validComment() {
     const trimmed = this._comment.trim();
-    const preset = (this.config.comment_presets || []).find(
-      (p) => p.label === this._commentType
-    );
-    if (preset?.require_comment) {
-      return trimmed.length >= 3 && trimmed === this._comment;
-    }
-    if (trimmed.length === 0) return true;
     return trimmed.length >= 3 && trimmed === this._comment;
   }
 
@@ -2869,12 +2813,7 @@ class TallyListFreeDrinksCard extends LitElement {
 
   async _submit() {
     if (!this._validComment() || this._pendingSum() === 0) return;
-    const extra = this._comment.trim();
-    const comment = this._commentType
-      ? extra
-        ? `${this._commentType}: ${extra}`
-        : this._commentType
-      : extra;
+    const comment = this._comment.trim();
     const slug = this.selectedUser;
     const users = this.config.users || this._autoUsers || [];
     const uObj = users.find((u) => u.slug === slug || u.name === slug);
@@ -2902,9 +2841,6 @@ class TallyListFreeDrinksCard extends LitElement {
       }
       this._pending = {};
       this._comment = '';
-      if (this.config.comment_presets?.length) {
-        this._commentType = this.config.comment_presets[0].label;
-      }
       this.dispatchEvent(
         new CustomEvent('hass-notification', {
           detail: { message: fdT(this.hass, this.config.language, 'free_booked') },
@@ -2929,8 +2865,6 @@ class TallyListFreeDrinksCard extends LitElement {
     const prices = this.config.prices || this._autoPrices;
     const pending = this._pending;
     const comment = this._comment;
-    const presets = this.config.comment_presets || [];
-    const selectedPreset = presets.find((p) => p.label === this._commentType);
     const showPrices = this.config.show_prices !== false;
     const drinks = [];
     const user = users.find((u) => u.slug === this.selectedUser);
@@ -2942,12 +2876,6 @@ class TallyListFreeDrinksCard extends LitElement {
     }
     drinks.sort((a, b) => a.name.localeCompare(b.name));
     const idComment = this._fid('comment');
-    const idType = this._fid('type');
-    const placeholder = fdT(
-      this.hass,
-      this.config.language,
-      selectedPreset?.require_comment ? 'comment' : 'comment_optional'
-    );
     return html`
       <ha-card>
         ${this.config.user_mode === 'auto'
@@ -2980,20 +2908,12 @@ class TallyListFreeDrinksCard extends LitElement {
           </tbody>
         </table>
         <div class="footer">
-          ${presets.length
-            ? html`<div class="preset-select">
-                <span>${fdT(this.hass, this.config.language, 'reason')}:</span>
-                <select id="${idType}" @change=${this._onPreset} .value=${this._commentType}>
-                  ${presets.map((p) => html`<option value="${p.label}">${p.label}</option>`)}
-                </select>
-              </div>`
-            : ''}
           <input
             id="${idComment}"
             type="text"
             .value=${comment}
             @input=${this._onComment}
-            placeholder="${placeholder}"
+            placeholder="${fdT(this.hass, this.config.language, 'comment')}"
           />
           ${this._validComment()
             ? ''
@@ -3111,30 +3031,12 @@ class TallyListFreeDrinksCard extends LitElement {
       flex-direction: column;
       gap: 4px;
     }
-    .footer .preset-select {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
     .footer input {
       height: 44px;
       padding: 0 8px;
       box-sizing: border-box;
       border-radius: 12px;
       border: 1px solid var(--ha-card-border-color);
-    }
-    .footer select {
-      padding: 0 12px;
-      min-width: 120px;
-      font-size: 14px;
-      height: 44px;
-      line-height: 44px;
-      box-sizing: border-box;
-      border-radius: 12px;
-      border: 1px solid var(--ha-card-border-color);
-      background: var(--btn-neutral, #2b2b2b);
-      color: var(--primary-text-color, #fff);
-      appearance: none;
     }
     .footer .error {
       color: var(--error-color);

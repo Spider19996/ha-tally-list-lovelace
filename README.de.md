@@ -95,16 +95,4 @@ Optionen:
 * **user_mode** – `auto` (Standard) zeigt eine Nutzerauswahl, `fixed` nutzt den angemeldeten Nutzer.
 * **show_prices** – Preise anzeigen (`true` standardmäßig).
 * **sensor_refresh_after_submit** – Sensoren nach dem Abschicken aktualisieren.
-* **comment_presets** – Vordefinierte Kommentarpräfixe. Jedes Element hat `label` und optional `require_comment`.
-
-Beispiel:
-
-```yaml
-type: custom:tally-list-free-drinks-card
-comment_presets:
-  - label: Einsatz
-    require_comment: true
-  - label: Übung
-    require_comment: false
-```
 
