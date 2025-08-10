@@ -3359,7 +3359,7 @@ class TallyListFreeDrinksCard extends LitElement {
       background: rgba(255, 255, 255, 0.08);
       color: var(--primary-text-color);
       border: none;
-      border-radius: 8px;
+      border-radius: 12px;
       padding: 6px 10px;
       width: 100%;
       box-sizing: border-box;
