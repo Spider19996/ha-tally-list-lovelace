@@ -1,7 +1,6 @@
 // Tally List Card
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
 import { repeat } from 'https://unpkg.com/lit/directives/repeat.js?module';
-import './tally-list-free-drinks-card.js';
 
 export function detectLang(hass, override = 'auto') {
   if (override && override !== 'auto') return override;
