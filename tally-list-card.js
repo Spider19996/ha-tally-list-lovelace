@@ -3278,7 +3278,7 @@ class TallyListFreeDrinksCard extends LitElement {
       display: inline-flex;
       align-items: center;
       height: 40px;
-      border-radius: 999px;
+      border-radius: 12px;
       overflow: hidden;
     }
     .free-drinks .tl-counter .btn {
@@ -3296,7 +3296,7 @@ class TallyListFreeDrinksCard extends LitElement {
     .free-drinks .tl-counter .minus {
       background: var(--error-color, #c62828);
       color: var(--text-primary-color, #fff);
-      border-radius: 999px 0 0 999px;
+      border-radius: 12px 0 0 12px;
     }
     .free-drinks .tl-counter .count {
       min-width: 3.2em;
@@ -3311,7 +3311,7 @@ class TallyListFreeDrinksCard extends LitElement {
     .free-drinks .tl-counter .plus {
       background: var(--success-color, #2e7d32);
       color: var(--text-primary-color, #fff);
-      border-radius: 0 999px 999px 0;
+      border-radius: 0 12px 12px 0;
     }
     .free-drinks .tl-counter .btn:active {
       transform: translateY(0);
