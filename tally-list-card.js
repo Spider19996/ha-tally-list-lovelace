@@ -532,7 +532,7 @@ class TallyListCard extends LitElement {
         const cost = count * price;
         total += cost;
         const costStr = this._formatPrice(cost) + ` ${this._currency}`;
-        rows.push({ drink, entity, count, priceStr, costStr, isAvailable, display: drink.charAt(0).toUpperCase() + drink.slice(1) });
+        rows.push({ drink, entity, count, priceStr, costStr, isAvailable, display: this._unslugify(drink) });
       });
 
     if (user.amount_due_entity) deps.add(user.amount_due_entity);
@@ -706,7 +706,7 @@ class TallyListCard extends LitElement {
                             drinks,
                             d => d,
                             d => html`<option value="${d}">
-                                ${d.charAt(0).toUpperCase() + d.slice(1)}
+                                ${this._unslugify(d)}
                               </option>`
                           )}
                         </select>
@@ -763,7 +763,7 @@ class TallyListCard extends LitElement {
       this._disabled = false;
       this.requestUpdate();
     }, delay);
-    const displayDrink = drink.charAt(0).toUpperCase() + drink.slice(1);
+    const displayDrink = this._unslugify(drink);
 
     const users = this.config.users || this._autoUsers || [];
     const user = users.find(u => (u.name || u.slug) === this.selectedUser);
@@ -819,7 +819,7 @@ class TallyListCard extends LitElement {
       this.requestUpdate();
     }, delay);
 
-    const displayDrink = drink.charAt(0).toUpperCase() + drink.slice(1);
+    const displayDrink = this._unslugify(drink);
 
     if (entity) {
       const base = this._optimisticCounts[entity] ?? count;
@@ -894,13 +894,10 @@ class TallyListCard extends LitElement {
           .replace(' Offener Betrag', '');
         const drinks = {};
         const prefix = `sensor.${slug}_`;
+        const suffix = `_count`;
         for (const [e2] of Object.entries(states)) {
-          const m2 =
-            e2.startsWith(prefix) &&
-            e2.endsWith('_count') &&
-            e2.match(/^sensor\.[a-z0-9_]+_(.+)_count$/);
-          if (m2) {
-            const drink = m2[1];
+          if (e2.startsWith(prefix) && e2.endsWith(suffix)) {
+            const drink = e2.slice(prefix.length, -suffix.length);
             drinks[drink] = e2;
           }
         }
@@ -926,9 +923,10 @@ class TallyListCard extends LitElement {
     const prices = {};
     const states = this.hass.states;
     for (const [entity, state] of Object.entries(states)) {
-      const match = entity.match(/^sensor\.price_list_(.+)_price$/);
-      if (match) {
-        const drink = match[1];
+      const prefix = 'sensor.price_list_';
+      const suffix = '_price';
+      if (entity.startsWith(prefix) && entity.endsWith(suffix)) {
+        const drink = entity.slice(prefix.length, -suffix.length);
         const price = parseFloat(state.state);
         prices[drink] = isNaN(price) ? 0 : price;
         if (!this._currency) {
@@ -1000,6 +998,13 @@ class TallyListCard extends LitElement {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '_')
       .replace(/^_+|_+$/g, '');
+  }
+
+  _unslugify(str) {
+    if (!str) return '';
+    return str
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase());
   }
 
   _currentPersonNames() {
@@ -2012,10 +2017,10 @@ class TallyDueRankingCard extends LitElement {
           .replace(' Offener Betrag', '');
         const drinks = {};
         const prefix = `sensor.${slug}_`;
+        const suffix = `_count`;
         for (const [e2] of Object.entries(states)) {
-          const m2 = e2.startsWith(prefix) && e2.endsWith('_count') && e2.match(/^sensor\.[a-z0-9_]+_([^_]+)_count$/);
-          if (m2) {
-            const drink = m2[1];
+          if (e2.startsWith(prefix) && e2.endsWith(suffix)) {
+            const drink = e2.slice(prefix.length, -suffix.length);
             drinks[drink] = e2;
           }
         }
@@ -2041,9 +2046,10 @@ class TallyDueRankingCard extends LitElement {
     const prices = {};
     const states = this.hass.states;
     for (const [entity, state] of Object.entries(states)) {
-      const match = entity.match(/^sensor\.price_list_(.+)_price$/);
-      if (match) {
-        const drink = match[1];
+      const prefix = 'sensor.price_list_';
+      const suffix = '_price';
+      if (entity.startsWith(prefix) && entity.endsWith(suffix)) {
+        const drink = entity.slice(prefix.length, -suffix.length);
         const price = parseFloat(state.state);
         prices[drink] = isNaN(price) ? 0 : price;
         if (!this._currency) {
@@ -2642,13 +2648,10 @@ class TallyListFreeDrinksCard extends LitElement {
           .replace(' Offener Betrag', '');
         const drinks = {};
         const prefix = `sensor.${slug}_`;
+        const suffix = `_count`;
         for (const [e2] of Object.entries(states)) {
-          const m2 =
-            e2.startsWith(prefix) &&
-            e2.endsWith('_count') &&
-            e2.match(/^sensor\.[a-z0-9_]+_(.+)_count$/);
-          if (m2) {
-            const drink = m2[1];
+          if (e2.startsWith(prefix) && e2.endsWith(suffix)) {
+            const drink = e2.slice(prefix.length, -suffix.length);
             drinks[drink] = e2;
           }
         }
@@ -2677,9 +2680,10 @@ class TallyListFreeDrinksCard extends LitElement {
     const prices = {};
     const states = this.hass.states;
     for (const [entity, state] of Object.entries(states)) {
-      const match = entity.match(/^sensor\.price_list_(.+)_price$/);
-      if (match) {
-        const drink = match[1];
+      const prefix = 'sensor.price_list_';
+      const suffix = '_price';
+      if (entity.startsWith(prefix) && entity.endsWith(suffix)) {
+        const drink = entity.slice(prefix.length, -suffix.length);
         const price = parseFloat(state.state);
         prices[drink] = isNaN(price) ? 0 : price;
         if (!this._currency) {
