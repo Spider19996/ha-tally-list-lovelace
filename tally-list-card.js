@@ -2430,3 +2430,552 @@ class TallyDueRankingCardEditor extends LitElement {
 
 customElements.define('tally-due-ranking-card-editor', TallyDueRankingCardEditor);
 
+// ----- Free Drinks Card Editor -----
+const FD_STRINGS = {
+  en: {
+    user_mode: 'User mode',
+    user_mode_auto: 'Auto',
+    user_mode_fixed: 'Fixed',
+    show_prices: 'Show prices',
+    sensor_refresh_after_submit: 'Refresh sensors after submit',
+    version: 'Version',
+    card_name: 'Free Drinks Card',
+    card_desc: 'Book free drinks with a required comment.',
+    comment: 'Comment',
+    comment_error: 'Please enter at least 3 characters',
+    submit: 'Submit',
+    drink: 'Drink',
+    price: 'Price',
+    count: 'Count',
+    free_booked: 'Free drinks booked',
+  },
+  de: {
+    user_mode: 'Nutzermodus',
+    user_mode_auto: 'Auto',
+    user_mode_fixed: 'Fixiert',
+    show_prices: 'Preise anzeigen',
+    sensor_refresh_after_submit: 'Sensoren nach Buchung aktualisieren',
+    version: 'Version',
+    card_name: 'Freigetränke Karte',
+    card_desc: 'Freigetränke mit Pflichtkommentar buchen.',
+    comment: 'Kommentar',
+    comment_error: 'Bitte mindestens 3 Zeichen eingeben',
+    submit: 'Abschicken',
+    drink: 'Getränk',
+    price: 'Preis',
+    count: 'Zähler',
+    free_booked: 'Freigetränke gebucht',
+  },
+};
+
+function fdT(hass, override, key) {
+  return translate(hass, override, FD_STRINGS, key);
+}
+
+class TallyListFreeDrinksCardEditor extends LitElement {
+  static properties = {
+    _config: {},
+  };
+
+  setConfig(config) {
+    this._config = {
+      user_mode: 'auto',
+      show_prices: true,
+      sensor_refresh_after_submit: false,
+      ...(config || {}),
+    };
+  }
+
+  render() {
+    if (!this._config) return html``;
+    const idMode = this._fid('mode');
+    const idPrices = this._fid('prices');
+    const idRefresh = this._fid('refresh');
+    return html`
+      <div class="form">
+        <label for="${idMode}">${fdT(this.hass, this._config.language, 'user_mode')}</label>
+        <select id="${idMode}" @change=${this._modeChanged}>
+          <option value="auto" ?selected=${this._config.user_mode === 'auto'}>${fdT(
+            this.hass,
+            this._config.language,
+            'user_mode_auto'
+          )}</option>
+          <option value="fixed" ?selected=${this._config.user_mode === 'fixed'}>${fdT(
+            this.hass,
+            this._config.language,
+            'user_mode_fixed'
+          )}</option>
+        </select>
+      </div>
+      <div class="form">
+        <input
+          id="${idPrices}"
+          type="checkbox"
+          .checked=${this._config.show_prices !== false}
+          @change=${this._pricesChanged}
+        />
+        <label for="${idPrices}">${fdT(this.hass, this._config.language, 'show_prices')}</label>
+      </div>
+      <div class="form">
+        <input
+          id="${idRefresh}"
+          type="checkbox"
+          .checked=${this._config.sensor_refresh_after_submit}
+          @change=${this._refreshChanged}
+        />
+        <label for="${idRefresh}">${fdT(
+          this.hass,
+          this._config.language,
+          'sensor_refresh_after_submit'
+        )}</label>
+      </div>
+      <div class="version">${fdT(this.hass, this._config.language, 'version')}: ${CARD_VERSION}</div>
+    `;
+  }
+
+  _modeChanged(ev) {
+    this._config = { ...this._config, user_mode: ev.target.value };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _pricesChanged(ev) {
+    this._config = { ...this._config, show_prices: ev.target.checked };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _refreshChanged(ev) {
+    this._config = {
+      ...this._config,
+      sensor_refresh_after_submit: ev.target.checked,
+    };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _fid(s) {
+    return `fde-${s}`;
+  }
+
+  static styles = css`
+    .form {
+      margin-bottom: 8px;
+    }
+    .version {
+      margin-top: 16px;
+    }
+  `;
+}
+
+customElements.define('tally-list-free-drinks-card-editor', TallyListFreeDrinksCardEditor);
+
+// ----- Free Drinks Card -----
+window.customCards = window.customCards || [];
+const fdNavLang = detectLang();
+window.customCards.push({
+  type: 'tally-list-free-drinks-card',
+  name: FD_STRINGS[fdNavLang].card_name,
+  preview: true,
+  description: FD_STRINGS[fdNavLang].card_desc,
+});
+
+function fdSlugify(str) {
+  if (!str) return '';
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+class TallyListFreeDrinksCard extends LitElement {
+  static properties = {
+    hass: {},
+    config: {},
+    selectedUser: { state: true },
+    _autoUsers: { state: true },
+    _autoPrices: { state: true },
+    _currency: { state: true },
+    _pending: { state: true },
+    _comment: { state: true },
+  };
+
+  constructor() {
+    super();
+    this.selectedUser = '';
+    this._autoUsers = [];
+    this._autoPrices = {};
+    this._currency = '';
+    this._pending = {};
+    this._comment = '';
+  }
+
+  setConfig(config) {
+    this.config = {
+      user_mode: 'auto',
+      show_prices: true,
+      sensor_refresh_after_submit: false,
+      ...(config || {}),
+    };
+  }
+
+  getCardSize() {
+    return 3;
+  }
+
+  _gatherUsers() {
+    const users = [];
+    const states = this.hass.states;
+    for (const [entity, state] of Object.entries(states)) {
+      const match = entity.match(/^sensor\.([a-z0-9_]+)_amount_due$/);
+      if (match) {
+        const slug = match[1];
+        if (slug === 'free_drinks') continue;
+        const sensorName = (state.attributes.friendly_name || '')
+          .replace(' Amount Due', '')
+          .replace(' Offener Betrag', '');
+        const drinks = {};
+        const prefix = `sensor.${slug}_`;
+        for (const [e2] of Object.entries(states)) {
+          const m2 =
+            e2.startsWith(prefix) &&
+            e2.endsWith('_count') &&
+            e2.match(/^sensor\.[a-z0-9_]+_([^_]+)_count$/);
+          if (m2) {
+            const drink = m2[1];
+            drinks[drink] = e2;
+          }
+        }
+        let person = states[`person.${slug}`];
+        if (!person) {
+          for (const [pEntity, pState] of Object.entries(states)) {
+            if (
+              pEntity.startsWith('person.') &&
+              fdSlugify(pState.attributes?.friendly_name || '') === slug
+            ) {
+              person = pState;
+              break;
+            }
+          }
+        }
+        const user_id = person?.attributes?.user_id || null;
+        const personName = person?.attributes?.friendly_name;
+        const name = personName || sensorName || slug;
+        users.push({ name, slug, drinks, user_id });
+      }
+    }
+    return users;
+  }
+
+  _gatherPrices() {
+    const prices = {};
+    const states = this.hass.states;
+    for (const [entity, state] of Object.entries(states)) {
+      const match = entity.match(/^sensor\.price_list_([^_]+)_price$/);
+      if (match) {
+        const drink = match[1];
+        const price = parseFloat(state.state);
+        prices[drink] = isNaN(price) ? 0 : price;
+        if (!this._currency) {
+          const cur = state.attributes?.currency || state.attributes?.unit_of_measurement;
+          if (cur) this._currency = cur;
+        }
+      }
+    }
+    return prices;
+  }
+
+  updated(changedProps) {
+    if (changedProps.has('hass')) {
+      if (!this.config.users) {
+        this._autoUsers = this._gatherUsers();
+      }
+      if (!this.config.prices) {
+        this._autoPrices = this._gatherPrices();
+      }
+      const users = this.config.users || this._autoUsers || [];
+      if (!this.selectedUser && this.hass.user) {
+        const slug = fdSlugify(this.hass.user.name);
+        const u = users.find((u) => u.slug === slug);
+        this.selectedUser = u ? u.slug : slug;
+      }
+      if (this.config.user_mode === 'fixed' && this.hass.user) {
+        const slug = fdSlugify(this.hass.user.name);
+        const u = users.find((u) => u.slug === slug);
+        this.selectedUser = u ? u.slug : slug;
+      }
+    }
+  }
+
+  _onUserPick(ev) {
+    this.selectedUser = ev.currentTarget.dataset.id;
+  }
+
+  _inc(ev) {
+    const drink = ev.currentTarget.dataset.drink;
+    const cur = this._pending[drink] || 0;
+    this._pending = { ...this._pending, [drink]: cur + 1 };
+  }
+
+  _dec(ev) {
+    const drink = ev.currentTarget.dataset.drink;
+    const cur = this._pending[drink] || 0;
+    const next = Math.max(0, cur - 1);
+    this._pending = { ...this._pending, [drink]: next };
+  }
+
+  _onComment(ev) {
+    this._comment = ev.target.value;
+  }
+
+  _validComment() {
+    const trimmed = this._comment.trim();
+    return trimmed.length >= 3 && trimmed === this._comment;
+  }
+
+  _pendingSum() {
+    return Object.values(this._pending).reduce((a, b) => a + b, 0);
+  }
+
+  async _submit() {
+    if (!this._validComment() || this._pendingSum() === 0) return;
+    const comment = this._comment.trim();
+    const user = this.selectedUser;
+    const drinks = Object.entries(this._pending).filter(([d, c]) => c > 0);
+    try {
+      for (const [drink, count] of drinks) {
+        await this.hass.callService('tally_list', 'add_drink', {
+          user,
+          drink,
+          count,
+          free_drink: true,
+          comment,
+        });
+        if (this.config.sensor_refresh_after_submit) {
+          const users = this.config.users || this._autoUsers || [];
+          const u = users.find((u) => u.slug === user);
+          const entity = u?.drinks?.[drink];
+          if (entity) {
+            this.hass.callService('homeassistant', 'update_entity', {
+              entity_id: entity,
+            });
+          }
+        }
+      }
+      this._pending = {};
+      this._comment = '';
+      this.dispatchEvent(
+        new CustomEvent('hass-notification', {
+          detail: { message: fdT(this.hass, this.config.language, 'free_booked') },
+          bubbles: true,
+          composed: true,
+        })
+      );
+    } catch (err) {
+      const code = err?.error?.code || err?.code || err?.message || err;
+      this.dispatchEvent(
+        new CustomEvent('hass-notification', {
+          detail: { message: String(code) },
+          bubbles: true,
+          composed: true,
+        })
+      );
+    }
+  }
+
+  render() {
+    const users = this.config.users || this._autoUsers;
+    const prices = this.config.prices || this._autoPrices;
+    const pending = this._pending;
+    const comment = this._comment;
+    const showPrices = this.config.show_prices !== false;
+    const drinks = [];
+    const user = users.find((u) => u.slug === this.selectedUser);
+    if (user) {
+      const uname = (user.name || user.slug).toLowerCase();
+      for (const [drink, entity] of Object.entries(user.drinks)) {
+        const st = this.hass.states[entity];
+        let name = st?.attributes?.friendly_name || drink;
+        if (uname && name.toLowerCase().startsWith(uname)) {
+          name = name.slice(uname.length).replace(/^[\s-:]+/, '').trim();
+        }
+        drinks.push({ drink, name });
+      }
+    }
+    drinks.sort((a, b) => a.name.localeCompare(b.name));
+    const idComment = this._fid('comment');
+    return html`
+      <ha-card>
+        ${this.config.user_mode === 'auto'
+          ? html`<div class="user-list">${this._renderUserChips(users)}</div>`
+          : ''}
+        <table>
+          <thead>
+            <tr>
+              <th>${fdT(this.hass, this.config.language, 'drink')}</th>
+              ${showPrices ? html`<th>${fdT(this.hass, this.config.language, 'price')}</th>` : ''}
+              <th>${fdT(this.hass, this.config.language, 'count')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${repeat(
+              drinks,
+              (d) => d.drink,
+              (d) => html`<tr>
+                  <td>${d.name}</td>
+                  ${showPrices
+                    ? html`<td>${prices[d.drink]} ${this._currency}</td>`
+                    : ''}
+                  <td class="actions">
+                    <button class="action-btn minus" data-drink="${d.drink}" @pointerdown=${this._dec}>-</button>
+                    <span>${pending[d.drink] || 0}</span>
+                    <button class="action-btn plus" data-drink="${d.drink}" @pointerdown=${this._inc}>+</button>
+                  </td>
+                </tr>`
+            )}
+          </tbody>
+        </table>
+        <div class="footer">
+          <input
+            id="${idComment}"
+            type="text"
+            .value=${comment}
+            @input=${this._onComment}
+            placeholder="${fdT(this.hass, this.config.language, 'comment')}"
+          />
+          ${this._validComment()
+            ? ''
+            : html`<div class="error">${fdT(
+                this.hass,
+                this.config.language,
+                'comment_error'
+              )}</div>`}
+          <button
+            class="action-btn submit"
+            ?disabled=${!this._validComment() || this._pendingSum() === 0}
+            @pointerdown=${this._submit}
+          >
+            ${fdT(this.hass, this.config.language, 'submit')}
+          </button>
+        </div>
+      </ha-card>
+    `;
+  }
+
+  _fid(s) {
+    return `fd-${s}`;
+  }
+
+  _renderUserChips(list) {
+    const pressed = this.selectedUser;
+    return repeat(
+      list,
+      (u) => u.slug,
+      (u) => {
+        const name = u.name || u.slug;
+        const cls = `user-chip ${u.slug === pressed ? 'active' : 'inactive'}`;
+        return html`<button class="${cls}" data-id="${u.slug}" @pointerdown=${this._onUserPick}>${name}</button>`;
+      }
+    );
+  }
+
+  static getConfigElement() {
+    return document.createElement('tally-list-free-drinks-card-editor');
+  }
+
+  static getStubConfig() {
+    return { user_mode: 'auto', show_prices: true, sensor_refresh_after_submit: false };
+  }
+
+  static styles = css`
+    :host {
+      display: block;
+    }
+    ha-card {
+      padding: 16px;
+      text-align: center;
+    }
+    .user-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+    .user-chip {
+      border-radius: 12px;
+      background: #2b2b2b;
+      color: #ddd;
+      border: none;
+      padding: 0 12px;
+      height: 44px;
+    }
+    .user-chip.active {
+      background: var(--success-color, #2e7d32);
+      color: #fff;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th,
+    td {
+      padding: 4px;
+      border-bottom: 1px solid var(--divider-color);
+      text-align: center;
+    }
+    .actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 44px;
+      width: 44px;
+      min-width: 44px;
+      padding: 0;
+      font-weight: 700;
+      border-radius: 12px;
+      border: none;
+      font-size: 14px;
+      line-height: normal;
+      box-sizing: border-box;
+    }
+    .action-btn.plus {
+      background: var(--success-color, #2e7d32);
+      color: #fff;
+    }
+    .action-btn.minus {
+      background: var(--error-color, #c62828);
+      color: #fff;
+    }
+    .footer {
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .footer input {
+      height: 44px;
+      padding: 0 8px;
+      box-sizing: border-box;
+      border-radius: 12px;
+      border: 1px solid var(--ha-card-border-color);
+    }
+    .footer .error {
+      color: var(--error-color);
+      font-size: 0.9em;
+    }
+    .footer .submit {
+      width: 100%;
+      background: var(--primary-color);
+      color: var(--text-primary-color, #fff);
+    }
+  `;
+}
+
+customElements.define('tally-list-free-drinks-card', TallyListFreeDrinksCard);
+
