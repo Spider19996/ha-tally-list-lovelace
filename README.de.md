@@ -95,4 +95,6 @@ Optionen:
 * **user_mode** – `auto` (Standard) zeigt eine Nutzerauswahl, `fixed` nutzt den angemeldeten Nutzer.
 * **show_prices** – Preise anzeigen (`true` standardmäßig).
 * **sensor_refresh_after_submit** – Sensoren nach dem Abschicken aktualisieren.
+* **user_selector** – `list` (Standard) oder `tabs` für nach Buchstaben gruppierte Nutzer.
+* **tabs** – Optionen für `user_selector: tabs` (z. B. `mode`, `grouped_breaks`, `show_all_tab`).
 
