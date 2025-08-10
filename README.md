@@ -96,8 +96,6 @@ Options:
 * **show_prices** – Display drink prices (`true` by default).
 * **comment_presets** – Predefine comment prefixes. Each entry has a `label` and optional `require_comment`.
 * **free_drinks_timer_seconds** – Auto-reset timer in seconds (`0` to disable).
-* **free_drinks_per_item_limit** – Maximum free drinks per item (`0` to disable).
-* **free_drinks_total_limit** – Maximum free drinks overall (`0` to disable).
 
 Example:
 
