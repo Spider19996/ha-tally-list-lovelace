@@ -3113,7 +3113,7 @@ class TallyListFreeDrinksCard extends LitElement {
       selectedPreset?.require_comment ? 'comment' : 'comment_optional'
     );
     return html`
-      <ha-card>
+      <ha-card class="free-drinks">
         ${userMenu}
         <table>
           <thead>
@@ -3133,9 +3133,11 @@ class TallyListFreeDrinksCard extends LitElement {
                     ? html`<td>${this._formatPrice(prices[d.drink])} ${this._currency}</td>`
                     : ''}
                   <td class="actions">
-                    <button class="action-btn minus" data-drink="${d.drink}" @pointerdown=${this._dec}>-</button>
-                    <span>${pending[d.drink] || 0}</span>
-                    <button class="action-btn plus" data-drink="${d.drink}" @pointerdown=${this._inc}>+</button>
+                    <div class="tl-counter">
+                      <button class="action-btn btn minus" data-drink="${d.drink}" @pointerdown=${this._dec}>-</button>
+                      <span class="count">${pending[d.drink] || 0}</span>
+                      <button class="action-btn btn plus" data-drink="${d.drink}" @pointerdown=${this._inc}>+</button>
+                    </div>
                   </td>
                 </tr>`
             )}
@@ -3240,7 +3242,6 @@ class TallyListFreeDrinksCard extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
     }
     .action-btn {
       display: inline-flex;
@@ -3272,6 +3273,49 @@ class TallyListFreeDrinksCard extends LitElement {
     }
     .action-btn:focus {
       outline: 2px solid rgba(255, 255, 255, 0.25);
+    }
+    .free-drinks .tl-counter {
+      display: inline-flex;
+      align-items: center;
+      height: 40px;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .free-drinks .tl-counter .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      padding: 0 14px;
+      border: 0;
+      cursor: pointer;
+      width: auto;
+      min-width: 0;
+      border-radius: 0;
+    }
+    .free-drinks .tl-counter .minus {
+      background: var(--error-color, #c62828);
+      color: var(--text-primary-color, #fff);
+      border-radius: 12px 0 0 12px;
+    }
+    .free-drinks .tl-counter .count {
+      min-width: 3.2em;
+      height: 100%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 10px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--primary-text-color);
+    }
+    .free-drinks .tl-counter .plus {
+      background: var(--success-color, #2e7d32);
+      color: var(--text-primary-color, #fff);
+      border-radius: 0 12px 12px 0;
+    }
+    .free-drinks .tl-counter .btn:active {
+      transform: translateY(0);
+      opacity: .95;
     }
     .footer {
       margin-top: 8px;
