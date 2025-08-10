@@ -2771,7 +2771,7 @@ class TallyListFreeDrinksCard extends LitElement {
     _autoUsers: { state: true },
     _autoPrices: { state: true },
     _currency: { state: true },
-    _freeDrinkCounts: { state: true },
+    _pending: { state: true },
     _comment: { state: true },
     _drinkNames: { state: true },
     _commentType: { state: true },
@@ -2790,7 +2790,7 @@ class TallyListFreeDrinksCard extends LitElement {
     this._autoUsers = [];
     this._autoPrices = {};
     this._currency = '';
-    this._freeDrinkCounts = {};
+    this._pending = {};
     this._comment = '';
     this._drinkNames = {};
     this._commentType = '';
@@ -2832,33 +2832,9 @@ class TallyListFreeDrinksCard extends LitElement {
     this.config.free_drinks_timer_seconds = Number(
       config?.free_drinks_timer_seconds ?? 0
     );
-    this.config.free_drinks_per_item_limit = Number(
-      config?.free_drinks_per_item_limit ?? 0
-    );
-    this.config.free_drinks_total_limit = Number(
-      config?.free_drinks_total_limit ?? 0
-    );
     if (!this._commentType && this.config.comment_presets?.length) {
       this._commentType = this.config.comment_presets[0].label;
     }
-  }
-
-  get _perItemCap() {
-    return Math.max(0, Number(this.config?.free_drinks_per_item_limit || 0));
-  }
-
-  get _totalCap() {
-    return Math.max(0, Number(this.config?.free_drinks_total_limit || 0));
-  }
-
-  _getTotalCount() {
-    let sum = 0;
-    if (this._freeDrinkCounts) {
-      for (const k of Object.keys(this._freeDrinkCounts)) {
-        sum += Number(this._freeDrinkCounts[k] || 0);
-      }
-    }
-    return sum;
   }
 
   getCardSize() {
@@ -3019,29 +2995,19 @@ class TallyListFreeDrinksCard extends LitElement {
     );
   }
 
-  _fdInc(drinkId) {
-    const perCap = this._perItemCap;
-    const totalCap = this._totalCap;
-
-    const current = Number(this._freeDrinkCounts?.[drinkId] || 0);
-    const total = this._getTotalCount();
-
-    if (perCap > 0 && current >= perCap) return;
-    if (totalCap > 0 && total >= totalCap) return;
-
-    this._freeDrinkCounts[drinkId] = current + 1;
-    this.requestUpdate();
-    this._fdStartOrResetCountdown?.();
+  _inc(ev) {
+    const drink = ev.currentTarget.dataset.drink;
+    const cur = this._pending[drink] || 0;
+    this._pending = { ...this._pending, [drink]: cur + 1 };
+    this._fdStartOrResetCountdown();
   }
 
-  _fdDec(drinkId) {
-    const current = Number(this._freeDrinkCounts?.[drinkId] || 0);
-    const next = Math.max(0, current - 1);
-    if (next === current) return;
-
-    this._freeDrinkCounts[drinkId] = next;
-    this.requestUpdate();
-    this._fdStartOrResetCountdown?.();
+  _dec(ev) {
+    const drink = ev.currentTarget.dataset.drink;
+    const cur = this._pending[drink] || 0;
+    const next = Math.max(0, cur - 1);
+    this._pending = { ...this._pending, [drink]: next };
+    this._fdStartOrResetCountdown();
   }
 
   _fdStartOrResetCountdown() {
@@ -3074,43 +3040,23 @@ class TallyListFreeDrinksCard extends LitElement {
   }
 
   _fdResetAllCountersToZero() {
-    this._freeDrinkCounts = {};
-    this.requestUpdate('_freeDrinkCounts');
-  }
-
-  _fdValidateLimitsOrThrow() {
-    const total = this._getTotalCount();
-    if (this._totalCap > 0 && total > this._totalCap)
-      throw new Error('Gesamtlimit überschritten');
-    if (this._perItemCap > 0) {
-      for (const k of Object.keys(this._freeDrinkCounts ?? {})) {
-        const v = Number(this._freeDrinkCounts[k] || 0);
-        if (v > this._perItemCap)
-          throw new Error(`Limit je Getränk überschritten (${k})`);
-      }
-    }
+    this._pending = {};
+    this.requestUpdate('_pending');
   }
 
   _renderFdHeader() {
-    const enabledTimer = Number(this.config?.free_drinks_timer_seconds || 0) > 0;
+    const enabled = Number(this.config?.free_drinks_timer_seconds || 0) > 0;
     const running = !!this._fdTimerId;
-
-    const totalCap = this._totalCap;
-    const rest = totalCap > 0 ? Math.max(0, totalCap - this._getTotalCount()) : null;
-
     return html`
       <div class="fd-header">
         <span>${fdT(this.hass, this.config.language, 'count')}</span>
-        ${enabledTimer && running
+        ${enabled && running
           ? html`<span
               class="fd-countdown"
               aria-label="Auto-Reset in ${this._fdFormatTime(this._fdCountdownLeft)}"
             >
               ${this._fdFormatTime(this._fdCountdownLeft)}
             </span>`
-          : ''}
-        ${totalCap > 0
-          ? html`<span class="fd-rest" title="Verbleibend gesamt">${rest}</span>`
           : ''}
       </div>
     `;
@@ -3136,6 +3082,9 @@ class TallyListFreeDrinksCard extends LitElement {
     return trimmed.length >= 3 && trimmed === this._comment;
   }
 
+  _pendingSum() {
+    return Object.values(this._pending).reduce((a, b) => a + b, 0);
+  }
 
   _formatPrice(value) {
     const locale = this.hass?.locale;
@@ -3166,7 +3115,7 @@ class TallyListFreeDrinksCard extends LitElement {
   }
 
   async _submit() {
-    if (!this._validComment() || this._getTotalCount() === 0) return;
+    if (!this._validComment() || this._pendingSum() === 0) return;
     const extra = this._comment.trim();
     const comment = this._commentType
       ? extra
@@ -3179,9 +3128,8 @@ class TallyListFreeDrinksCard extends LitElement {
       (u) => u.user_id === uid || u.slug === uid || u.name === uid
     );
     const user = uObj?.name || uid;
-    const drinks = Object.entries(this._freeDrinkCounts).filter(([d, c]) => c > 0);
+    const drinks = Object.entries(this._pending).filter(([d, c]) => c > 0);
     try {
-      this._fdValidateLimitsOrThrow();
       for (const [drink, count] of drinks) {
         const drinkName =
           (this._drinkNames[drink] || drink)
@@ -3195,7 +3143,7 @@ class TallyListFreeDrinksCard extends LitElement {
           comment,
         });
       }
-      this._fdResetAllCountersToZero();
+      this._pending = {};
       this._fdStopCountdown();
       this._fdCountdownLeft = 0;
       this.requestUpdate('_fdCountdownLeft');
@@ -3211,7 +3159,6 @@ class TallyListFreeDrinksCard extends LitElement {
         })
       );
     } catch (err) {
-      console.warn('[free-drinks] submit blocked:', err);
       const code = err?.error?.code || err?.code || err?.message || err;
       this.dispatchEvent(
         new CustomEvent('hass-notification', {
@@ -3224,7 +3171,7 @@ class TallyListFreeDrinksCard extends LitElement {
   }
 
   _reset() {
-    this._fdResetAllCountersToZero();
+    this._pending = {};
     this._fdStopCountdown();
     this._fdCountdownLeft = 0;
     this.requestUpdate('_fdCountdownLeft');
@@ -3233,7 +3180,7 @@ class TallyListFreeDrinksCard extends LitElement {
   render() {
     const allUsers = this.config.users || this._autoUsers || [];
     const prices = this.config.prices || this._autoPrices;
-    const counts = this._freeDrinkCounts;
+    const pending = this._pending;
     const comment = this._comment;
     const presets = this.config.comment_presets || [];
     const selectedPreset = presets.find((p) => p.label === this._commentType);
@@ -3285,26 +3232,19 @@ class TallyListFreeDrinksCard extends LitElement {
             ${repeat(
               drinks,
               (d) => d.drink,
-              (d) => {
-                const count = Number(counts?.[d.drink] || 0);
-                const total = this._getTotalCount();
-                const atPerItemCap = this._perItemCap > 0 && count >= this._perItemCap;
-                const atTotalCap = this._totalCap > 0 && total >= this._totalCap;
-                const disablePlus = atPerItemCap || atTotalCap;
-                return html`<tr>
+              (d) => html`<tr>
                   <td>${d.name}</td>
                   ${showPrices
                     ? html`<td>${this._formatPrice(prices[d.drink])} ${this._currency}</td>`
                     : ''}
                   <td class="actions">
                     <div class="tl-counter">
-                      <button class="action-btn btn minus" @pointerdown=${() => this._fdDec(d.drink)}>-</button>
-                      <span class="count">${count}</span>
-                      <button class="action-btn btn plus" ?disabled=${disablePlus} @pointerdown=${() => this._fdInc(d.drink)}>+</button>
+                      <button class="action-btn btn minus" data-drink="${d.drink}" @pointerdown=${this._dec}>-</button>
+                      <span class="count">${pending[d.drink] || 0}</span>
+                      <button class="action-btn btn plus" data-drink="${d.drink}" @pointerdown=${this._inc}>+</button>
                     </div>
                   </td>
-                </tr>`;
-              }
+                </tr>`
             )}
           </tbody>
         </table>
@@ -3334,14 +3274,14 @@ class TallyListFreeDrinksCard extends LitElement {
           <div class="buttons">
             <button
               class="action-btn reset"
-              ?disabled=${this._getTotalCount() === 0}
+              ?disabled=${this._pendingSum() === 0}
               @pointerdown=${this._reset}
             >
               ${fdT(this.hass, this.config.language, 'reset')}
             </button>
             <button
               class="action-btn submit"
-              ?disabled=${!this._validComment() || this._getTotalCount() === 0}
+              ?disabled=${!this._validComment() || this._pendingSum() === 0}
               @pointerdown=${this._submit}
             >
               ${fdT(this.hass, this.config.language, 'submit')}
@@ -3424,15 +3364,6 @@ class TallyListFreeDrinksCard extends LitElement {
       gap: 8px;
     }
     .fd-countdown {
-      font-variant-numeric: tabular-nums;
-      padding: 2px 8px;
-      border-radius: 999px;
-      background: var(--chip-background-color, rgba(255,255,255,0.08));
-      color: var(--primary-text-color);
-      line-height: 1.6;
-      font-size: 0.9em;
-    }
-    .fd-rest {
       font-variant-numeric: tabular-nums;
       padding: 2px 8px;
       border-radius: 999px;
