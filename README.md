@@ -96,4 +96,16 @@ Options:
 * **user_mode** – `auto` (default) shows a user selector, `fixed` uses the logged-in user.
 * **show_prices** – Display drink prices (`true` by default).
 * **sensor_refresh_after_submit** – Refresh drink sensors after submission.
+* **comment_presets** – Predefine comment prefixes. Each entry has a `label` and optional `require_comment`.
+
+Example:
+
+```yaml
+type: custom:tally-list-free-drinks-card
+comment_presets:
+  - label: Einsatz
+    require_comment: true
+  - label: Übung
+    require_comment: false
+```
 
