@@ -3328,12 +3328,20 @@ class TallyListFreeDrinksCard extends LitElement {
       align-items: center;
       gap: 8px;
     }
-    .footer input {
-      height: 44px;
-      padding: 0 8px;
+    .free-drinks .footer input,
+    .free-drinks .footer textarea {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--primary-text-color);
+      border: none;
+      border-radius: 8px;
+      padding: 6px 10px;
+      width: 100%;
       box-sizing: border-box;
-      border-radius: 12px;
-      border: 1px solid var(--ha-card-border-color);
+      height: 44px;
+    }
+    .free-drinks .footer input::placeholder,
+    .free-drinks .footer textarea::placeholder {
+      color: rgba(255, 255, 255, 0.4);
     }
     .footer select {
       padding: 0 12px;
