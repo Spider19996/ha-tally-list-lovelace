@@ -3025,6 +3025,14 @@ class TallyListFreeDrinksCard extends LitElement {
       background: var(--error-color, #c62828);
       color: #fff;
     }
+    .action-btn:hover,
+    .action-btn:focus,
+    .action-btn:active {
+      filter: brightness(1.1);
+    }
+    .action-btn:focus {
+      outline: 2px solid rgba(255, 255, 255, 0.25);
+    }
     .footer {
       margin-top: 8px;
       display: flex;
