@@ -3398,7 +3398,11 @@ class TallyListFreeDrinksCard extends LitElement {
     }
     .footer .submit {
       flex: 1;
-      background: var(--primary-color);
+      background: #2196f3;
+      color: var(--text-primary-color, #fff);
+    }
+    .footer .submit:disabled {
+      background: #2196f3;
       color: var(--text-primary-color, #fff);
     }
   `];
