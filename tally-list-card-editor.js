@@ -6,6 +6,7 @@ const TL_STRINGS = {
   en: {
     lock_ms: 'Lock duration (ms)',
     max_width: 'Maximum width (px)',
+    free_drinks_timer_seconds: 'Free drinks timer (s)',
     show_remove_menu: 'Show remove menu',
     only_self: 'Only show own user even for admins',
     show_step_select: 'Show step selection',
@@ -31,6 +32,7 @@ const TL_STRINGS = {
   de: {
     lock_ms: 'Sperrzeit (ms)',
     max_width: 'Maximale Breite (px)',
+    free_drinks_timer_seconds: 'Freigetränke-Timer (s)',
     show_remove_menu: 'Entfernen-Menü anzeigen',
     only_self: 'Trotz Admin nur eigenen Nutzer anzeigen',
     show_step_select: 'Schrittweiten-Auswahl anzeigen',
@@ -78,6 +80,7 @@ class TallyListCardEditor extends LitElement {
     this._config = {
       lock_ms: 400,
       max_width: '500px',
+      free_drinks_timer_seconds: 0,
       show_remove: true,
       only_self: false,
       show_step_select: true,
@@ -112,6 +115,14 @@ class TallyListCardEditor extends LitElement {
           type="number"
           .value=${(this._config.max_width ?? '').replace(/px$/, '')}
           @input=${this._widthChanged}
+        />
+      </div>
+      <div class="form">
+        <label>${this._t('free_drinks_timer_seconds')}</label>
+        <input
+          type="number"
+          .value=${this._config.free_drinks_timer_seconds}
+          @input=${this._fdTimerChanged}
         />
       </div>
       <div class="form">
@@ -278,6 +289,15 @@ class TallyListCardEditor extends LitElement {
     this._config = {
       ...this._config,
       grid: { ...this._config.grid, columns },
+    };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _fdTimerChanged(ev) {
+    const value = Number(ev.target.value);
+    this._config = {
+      ...this._config,
+      free_drinks_timer_seconds: isNaN(value) ? 0 : value,
     };
     fireEvent(this, 'config-changed', { config: this._config });
   }
