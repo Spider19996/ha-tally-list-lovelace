@@ -956,6 +956,130 @@ class TallyListCard extends LitElement {
     return prices;
   }
 
+  _firstLetter(name) {
+    return name
+      .trim()
+      .charAt(0)
+      .toUpperCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
+
+  _bucketizeUsers(users, cfg) {
+    const misc = [];
+    if ((cfg.mode || 'per-letter') === 'grouped') {
+      const ranges = (cfg.grouped_breaks || []).map((b) => {
+        const [s, e] = b.split('–');
+        return {
+          key: b,
+          start: this._firstLetter(s || ''),
+          end: this._firstLetter(e || ''),
+          users: [],
+        };
+      });
+      users.forEach((u) => {
+        const ch = this._firstLetter(u.name || u.slug);
+        let placed = false;
+        for (const r of ranges) {
+          if (ch >= r.start && ch <= r.end) {
+            r.users.push(u);
+            placed = true;
+            break;
+          }
+        }
+        if (!placed) misc.push(u);
+      });
+      return { ranges, misc };
+    }
+    const letters = new Map();
+    users.forEach((u) => {
+      const ch = this._firstLetter(u.name || u.slug);
+      if (ch >= 'A' && ch <= 'Z') {
+        if (!letters.has(ch)) letters.set(ch, []);
+        letters.get(ch).push(u);
+      } else {
+        misc.push(u);
+      }
+    });
+    return { letters, misc };
+  }
+
+  _updateBuckets(users, locale) {
+    const cfg = this.config.tabs || {};
+    const data = this._bucketizeUsers(users, cfg);
+    let tabs = [];
+    if (cfg.mode === 'grouped') {
+      tabs = data.ranges
+        .filter((r) => r.users.length > 0)
+        .map((r) => ({ key: r.key, label: r.key, users: r.users }));
+    } else {
+      const letters = Array.from(data.letters.keys()).sort((a, b) =>
+        a.localeCompare(b, locale)
+      );
+      tabs = letters.map((l) => ({ key: l, label: l, users: data.letters.get(l) }));
+    }
+    if (data.misc.length > 0) {
+      tabs.push({
+        key: '#',
+        label: fdT(this.hass, this.config.language, 'tab_misc_label'),
+        users: data.misc,
+      });
+    }
+    if (cfg.show_all_tab !== false) {
+      tabs.unshift({
+        key: 'all',
+        label: fdT(this.hass, this.config.language, 'tab_all_label'),
+        users,
+      });
+    }
+    this._tabs = tabs;
+    this._buckets = new Map([
+      ['*ALL*', users],
+      ...tabs.map((t) => [t.key, t.key === 'all' ? users : t.users]),
+    ]);
+    if (!this._buckets.has(this._currentTab)) {
+      this._currentTab = tabs[0]?.key || 'all';
+    }
+    this._visibleUsers = this._buckets.get(this._currentTab) || [];
+  }
+
+  _setTab(tab) {
+    this._currentTab = tab;
+    this._visibleUsers = this._buckets.get(tab) || this._buckets.get('*ALL*') || [];
+  }
+
+  _onTabbarPointerDown(e) {
+    const btn = e.target.closest('.tab');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const tab = btn.dataset.tab;
+    this._setTab(tab);
+    this.requestUpdate();
+  }
+
+  _renderTabHeader() {
+    const tabs = this._tabs || [];
+    return html`<div class="tabs" role="tablist" @pointerdown=${this._onTabbarPointerDown}>
+      ${repeat(
+        tabs,
+        (t) => t.key,
+        (t) => html`<button class="tab ${t.key === this._currentTab ? 'active' : ''}" role="tab" data-tab="${t.key}" aria-selected="${t.key === this._currentTab}">${t.label}</button>`
+      )}
+    </div>`;
+  }
+
+  _renderUserSelector(users) {
+    const mode = this.config.user_selector || 'list';
+    if (mode === 'tabs') {
+      return html`
+        <div class="alpha-tabs">${this._renderTabHeader()}</div>
+        <div class="user-list">${this._renderUserChips(this._visibleUsers)}</div>
+      `;
+    }
+    return html`<div class="user-list">${this._renderUserChips(users)}</div>`;
+  }
+
   _gatherFreeAmount() {
     const state = this.hass.states['sensor.price_list_free_amount'];
     if (!state) return 0;
@@ -2451,6 +2575,16 @@ const FD_STRINGS = {
     price: 'Price',
     count: 'Count',
     free_booked: 'Free drinks booked',
+    user_selector: 'User selector',
+    user_selector_list: 'List',
+    user_selector_tabs: 'Tabs',
+    tab_mode: 'Tab mode',
+    per_letter: 'Per letter',
+    grouped: 'Grouped',
+    grouped_breaks: 'Grouped breaks',
+    show_all_tab: 'Show "All" tab',
+    tab_all_label: 'All',
+    tab_misc_label: '#',
   },
   de: {
     user_mode: 'Nutzermodus',
@@ -2468,6 +2602,16 @@ const FD_STRINGS = {
     price: 'Preis',
     count: 'Zähler',
     free_booked: 'Freigetränke gebucht',
+    user_selector: 'Nutzerauswahl',
+    user_selector_list: 'Liste',
+    user_selector_tabs: 'Tabs',
+    tab_mode: 'Tab-Modus',
+    per_letter: 'Pro Buchstabe',
+    grouped: 'Gruppiert',
+    grouped_breaks: 'Gruppierte Unterteilungen',
+    show_all_tab: 'Tab "Alle" anzeigen',
+    tab_all_label: 'Alle',
+    tab_misc_label: '#',
   },
 };
 
@@ -2481,11 +2625,19 @@ class TallyListFreeDrinksCardEditor extends LitElement {
   };
 
   setConfig(config) {
+    const tabs = {
+      mode: 'per-letter',
+      grouped_breaks: ['A–E', 'F–J', 'K–O', 'P–T', 'U–Z'],
+      show_all_tab: true,
+      ...(config?.tabs || {}),
+    };
     this._config = {
       user_mode: 'auto',
       show_prices: true,
       sensor_refresh_after_submit: false,
-      ...(config || {}),
+      user_selector: 'list',
+      ...config,
+      tabs,
     };
   }
 
@@ -2494,6 +2646,10 @@ class TallyListFreeDrinksCardEditor extends LitElement {
     const idMode = this._fid('mode');
     const idPrices = this._fid('prices');
     const idRefresh = this._fid('refresh');
+    const idUserSelector = this._fid('user-selector');
+    const idTabMode = this._fid('tab-mode');
+    const idGroupedBreaks = this._fid('grouped-breaks');
+    const idShowAllTab = this._fid('show-all-tab');
     return html`
       <div class="form">
         <label for="${idMode}">${fdT(this.hass, this._config.language, 'user_mode')}</label>
@@ -2532,6 +2688,68 @@ class TallyListFreeDrinksCardEditor extends LitElement {
           'sensor_refresh_after_submit'
         )}</label>
       </div>
+      <div class="form">
+        <label for="${idUserSelector}">${fdT(this.hass, this._config.language, 'user_selector')}</label>
+        <select id="${idUserSelector}" @change=${this._userSelectorChanged}>
+          <option value="list" ?selected=${this._config.user_selector === 'list'}>${fdT(
+            this.hass,
+            this._config.language,
+            'user_selector_list',
+          )}</option>
+          <option value="tabs" ?selected=${this._config.user_selector === 'tabs'}>${fdT(
+            this.hass,
+            this._config.language,
+            'user_selector_tabs',
+          )}</option>
+        </select>
+      </div>
+      ${this._config.user_selector === 'tabs'
+        ? html`
+            <div class="form">
+              <label for="${idTabMode}">${fdT(this.hass, this._config.language, 'tab_mode')}</label>
+              <select id="${idTabMode}" @change=${this._tabModeChanged}>
+                <option value="per-letter" ?selected=${this._config.tabs.mode === 'per-letter'}>${fdT(
+                  this.hass,
+                  this._config.language,
+                  'per_letter',
+                )}</option>
+                <option value="grouped" ?selected=${this._config.tabs.mode === 'grouped'}>${fdT(
+                  this.hass,
+                  this._config.language,
+                  'grouped',
+                )}</option>
+              </select>
+            </div>
+            ${this._config.tabs.mode === 'grouped'
+              ? html`<div class="form">
+                  <label for="${idGroupedBreaks}">${fdT(
+                    this.hass,
+                    this._config.language,
+                    'grouped_breaks',
+                  )}</label>
+                  <input
+                    id="${idGroupedBreaks}"
+                    type="text"
+                    .value=${this._config.tabs.grouped_breaks.join(',')}
+                    @input=${this._groupedBreaksChanged}
+                  />
+                </div>`
+              : ''}
+            <div class="form">
+              <input
+                id="${idShowAllTab}"
+                type="checkbox"
+                .checked=${this._config.tabs.show_all_tab}
+                @change=${this._showAllTabChanged}
+              />
+              <label for="${idShowAllTab}">${fdT(
+                this.hass,
+                this._config.language,
+                'show_all_tab',
+              )}</label>
+            </div>
+          `
+        : ''}
       <div class="version">${fdT(this.hass, this._config.language, 'version')}: ${CARD_VERSION}</div>
     `;
   }
@@ -2550,6 +2768,39 @@ class TallyListFreeDrinksCardEditor extends LitElement {
     this._config = {
       ...this._config,
       sensor_refresh_after_submit: ev.target.checked,
+    };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _userSelectorChanged(ev) {
+    this._config = { ...this._config, user_selector: ev.target.value };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _tabModeChanged(ev) {
+    this._config = {
+      ...this._config,
+      tabs: { ...this._config.tabs, mode: ev.target.value },
+    };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _groupedBreaksChanged(ev) {
+    const arr = ev.target.value
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s);
+    this._config = {
+      ...this._config,
+      tabs: { ...this._config.tabs, grouped_breaks: arr },
+    };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _showAllTabChanged(ev) {
+    this._config = {
+      ...this._config,
+      tabs: { ...this._config.tabs, show_all_tab: ev.target.checked },
     };
     fireEvent(this, 'config-changed', { config: this._config });
   }
@@ -2601,6 +2852,10 @@ class TallyListFreeDrinksCard extends LitElement {
     _pending: { state: true },
     _comment: { state: true },
     _drinkNames: { state: true },
+    _tabs: { state: true },
+    _visibleUsers: { state: true },
+    _currentTab: { state: true },
+    _buckets: { state: true },
   };
 
   _fmtCache = new Map();
@@ -2614,14 +2869,26 @@ class TallyListFreeDrinksCard extends LitElement {
     this._pending = {};
     this._comment = '';
     this._drinkNames = {};
+    this._tabs = [];
+    this._visibleUsers = [];
+    this._currentTab = 'all';
+    this._buckets = new Map();
   }
 
   setConfig(config) {
+    const tabs = {
+      mode: 'per-letter',
+      grouped_breaks: ['A–E', 'F–J', 'K–O', 'P–T', 'U–Z'],
+      show_all_tab: true,
+      ...(config?.tabs || {}),
+    };
     this.config = {
       user_mode: 'auto',
       show_prices: true,
       sensor_refresh_after_submit: false,
-      ...(config || {}),
+      user_selector: 'list',
+      ...config,
+      tabs,
     };
   }
 
@@ -2691,6 +2958,129 @@ class TallyListFreeDrinksCard extends LitElement {
     return prices;
   }
 
+  _firstLetter(name) {
+    return name
+      .trim()
+      .charAt(0)
+      .toUpperCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
+
+  _bucketizeUsers(users, cfg) {
+    const misc = [];
+    if ((cfg.mode || 'per-letter') === 'grouped') {
+      const ranges = (cfg.grouped_breaks || []).map((b) => {
+        const [s, e] = b.split('–');
+        return {
+          key: b,
+          start: this._firstLetter(s || ''),
+          end: this._firstLetter(e || ''),
+          users: [],
+        };
+      });
+      users.forEach((u) => {
+        const ch = this._firstLetter(u.name || u.slug);
+        let placed = false;
+        for (const r of ranges) {
+          if (ch >= r.start && ch <= r.end) {
+            r.users.push(u);
+            placed = true;
+            break;
+          }
+        }
+        if (!placed) misc.push(u);
+      });
+      return { ranges, misc };
+    }
+    const letters = new Map();
+    users.forEach((u) => {
+      const ch = this._firstLetter(u.name || u.slug);
+      if (ch >= 'A' && ch <= 'Z') {
+        if (!letters.has(ch)) letters.set(ch, []);
+        letters.get(ch).push(u);
+      } else {
+        misc.push(u);
+      }
+    });
+    return { letters, misc };
+  }
+
+  _updateBuckets(users, locale) {
+    const cfg = this.config.tabs || {};
+    const data = this._bucketizeUsers(users, cfg);
+    let tabs = [];
+    if (cfg.mode === 'grouped') {
+      tabs = data.ranges
+        .filter((r) => r.users.length > 0)
+        .map((r) => ({ key: r.key, label: r.key, users: r.users }));
+    } else {
+      const letters = Array.from(data.letters.keys()).sort((a, b) =>
+        a.localeCompare(b, locale)
+      );
+      tabs = letters.map((l) => ({ key: l, label: l, users: data.letters.get(l) }));
+    }
+    if (data.misc.length > 0) {
+      tabs.push({
+        key: '#',
+        label: fdT(this.hass, this.config.language, 'tab_misc_label'),
+        users: data.misc,
+      });
+    }
+    if (cfg.show_all_tab !== false) {
+      tabs.unshift({
+        key: 'all',
+        label: fdT(this.hass, this.config.language, 'tab_all_label'),
+        users,
+      });
+    }
+    this._tabs = tabs;
+    this._buckets = new Map([
+      ['*ALL*', users],
+      ...tabs.map((t) => [t.key, t.key === 'all' ? users : t.users]),
+    ]);
+    if (!this._buckets.has(this._currentTab)) {
+      this._currentTab = tabs[0]?.key || 'all';
+    }
+    this._visibleUsers = this._buckets.get(this._currentTab) || [];
+  }
+
+  _setTab(tab) {
+    this._currentTab = tab;
+    this._visibleUsers = this._buckets.get(tab) || this._buckets.get('*ALL*') || [];
+  }
+
+  _onTabbarPointerDown(e) {
+    const btn = e.target.closest('.tab');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const tab = btn.dataset.tab;
+    this._setTab(tab);
+    this.requestUpdate();
+  }
+
+  _renderTabHeader() {
+    const tabs = this._tabs || [];
+    return html`<div class="tabs" role="tablist" @pointerdown=${this._onTabbarPointerDown}>
+      ${repeat(
+        tabs,
+        (t) => t.key,
+        (t) => html`<button class="tab ${t.key === this._currentTab ? 'active' : ''}" role="tab" data-tab="${t.key}" aria-selected="${t.key === this._currentTab}">${t.label}</button>`
+      )}
+    </div>`;
+  }
+
+  _renderUserSelector(users) {
+    const mode = this.config.user_selector || 'list';
+    if (mode === 'tabs') {
+      return html`
+        <div class="alpha-tabs">${this._renderTabHeader()}</div>
+        <div class="user-list">${this._renderUserChips(this._visibleUsers)}</div>
+      `;
+    }
+    return html`<div class="user-list">${this._renderUserChips(users)}</div>`;
+  }
   async _fetchDrinks() {
     if (!this.hass?.connection) return;
     try {
@@ -2749,6 +3139,10 @@ class TallyListFreeDrinksCard extends LitElement {
         const slug = fdSlugify(this.hass.user.name);
         const u = users.find((u) => u.slug === slug);
         this.selectedUser = u ? u.slug : slug;
+      }
+      if (this.config.user_selector === 'tabs') {
+        const locale = this.hass?.locale?.language;
+        this._updateBuckets(users, locale);
       }
     }
   }
@@ -2876,11 +3270,10 @@ class TallyListFreeDrinksCard extends LitElement {
     }
     drinks.sort((a, b) => a.name.localeCompare(b.name));
     const idComment = this._fid('comment');
+    const selector = this.config.user_mode === 'auto' ? this._renderUserSelector(users) : '';
     return html`
       <ha-card>
-        ${this.config.user_mode === 'auto'
-          ? html`<div class="user-list">${this._renderUserChips(users)}</div>`
-          : ''}
+        ${selector}
         <table>
           <thead>
             <tr>
@@ -2966,6 +3359,37 @@ class TallyListFreeDrinksCard extends LitElement {
     ha-card {
       padding: 16px;
       text-align: center;
+    }
+    .alpha-tabs {
+      border-bottom: 1px solid var(--ha-card-border-color, var(--divider-color));
+      margin-bottom: 8px;
+    }
+    .tabs {
+      display: flex;
+      overflow-x: auto;
+    }
+    .tab {
+      flex: 0 0 auto;
+      padding: 0 12px;
+      height: 44px;
+      background: #2b2b2b;
+      color: #ddd;
+      border: none;
+      border-right: 1px solid var(--ha-card-border-color, var(--divider-color));
+      border-bottom: 1px solid var(--ha-card-border-color, var(--divider-color));
+      font-size: 14px;
+    }
+    .tab:first-child {
+      border-top-left-radius: 14px;
+    }
+    .tab:last-child {
+      border-top-right-radius: 14px;
+      border-right: none;
+    }
+    .tab.active {
+      background: var(--success-color, #2e7d32);
+      color: #fff;
+      border-bottom: none;
     }
     .user-list {
       display: flex;
