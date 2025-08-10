@@ -94,7 +94,6 @@ Optionen:
 
 * **show_prices** – Preise anzeigen (`true` standardmäßig).
 * **comment_presets** – Vordefinierte Kommentarpräfixe. Jedes Element hat `label` und optional `require_comment`.
-* **free_drinks_timer_seconds** – Auto-Reset-Timer in Sekunden (`0` = aus).
 
 Beispiel:
 
