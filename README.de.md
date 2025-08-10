@@ -80,3 +80,17 @@ Optionen:
 * **show_copy** – Schaltfläche **Tabelle kopieren** anzeigen.
 * **show_step_select** – Auswahl der Schrittweiten anzeigen.
 
+## Freigetränke-Karte
+
+Bucht Freigetränke mit Pflichtkommentar. Zähler werden lokal gepuffert, bis sie abgeschickt werden.
+
+```yaml
+type: custom:tally-list-free-drinks-card
+```
+
+Optionen:
+
+* **user_mode** – `auto` (Standard) zeigt eine Nutzerauswahl, `fixed` nutzt den angemeldeten Nutzer.
+* **show_prices** – Preise anzeigen (`true` standardmäßig).
+* **sensor_refresh_after_submit** – Sensoren nach dem Abschicken aktualisieren.
+
