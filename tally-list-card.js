@@ -201,7 +201,9 @@ function renderCoverLogin(card) {
         }
       );
   const digits = [1, 2, 3, 4, 5, 6, 7, 8, 9, '⌫', 0, 'OK'];
-  const pinMask = '•'.repeat(card.pinBuffer.length);
+  const pinMask = Array.from({ length: 4 }, (_, i) =>
+    html`<span class="pin-dot ${card.pinBuffer.length > i ? 'filled' : ''}"></span>`
+  );
   return html`<ha-card class="cover-login"><div class="content">${userMenu}
     <div class="pin-display">${pinMask}</div>
     <div class="keypad">
@@ -1431,10 +1433,20 @@ class TallyListCard extends LitElement {
       gap: 8px;
     }
     .pin-display {
-      letter-spacing: 8px;
-      font-size: 32px;
+      display: flex;
+      gap: 8px;
       height: 44px;
-      line-height: 44px;
+      align-items: center;
+    }
+    .pin-dot {
+      width: 32px;
+      height: 32px;
+      border: 2px solid currentColor;
+      border-radius: 50%;
+      box-sizing: border-box;
+    }
+    .pin-dot.filled {
+      background-color: currentColor;
     }
     .keypad {
       display: grid;
