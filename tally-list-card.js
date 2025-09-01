@@ -1070,20 +1070,11 @@ class TallyListCard extends LitElement {
 
     setTimeout(async () => {
       try {
-        if (this.isPublic) {
-          await this.hass.callWS({
-            type: 'tally_list/add_drink',
-            user_id: this.sessionUserId,
-            drink: displayDrink,
-            count: this.selectedCount,
-          });
-        } else {
-          await this.hass.callService('tally_list', 'add_drink', {
-            user: this.selectedUser,
-            drink: displayDrink,
-            count: this.selectedCount,
-          });
-        }
+        await this.hass.callService('tally_list', 'add_drink', {
+          user: this.selectedUser,
+          drink: displayDrink,
+          count: this.selectedCount,
+        });
       } catch (e) {
         const code = e?.error?.code || e?.code || e?.message;
         if (['not_logged_in', 'invalid_session'].includes(code)) {
@@ -1140,20 +1131,11 @@ class TallyListCard extends LitElement {
 
     setTimeout(async () => {
       try {
-        if (this.isPublic) {
-          await this.hass.callWS({
-            type: 'tally_list/remove_drink',
-            user_id: this.sessionUserId,
-            drink: displayDrink,
-            count: this.selectedCount,
-          });
-        } else {
-          await this.hass.callService('tally_list', 'remove_drink', {
-            user: this.selectedUser,
-            drink: displayDrink,
-            count: this.selectedCount,
-          });
-        }
+        await this.hass.callService('tally_list', 'remove_drink', {
+          user: this.selectedUser,
+          drink: displayDrink,
+          count: this.selectedCount,
+        });
       } catch (e) {
         const code = e?.error?.code || e?.code || e?.message;
         if (['not_logged_in', 'invalid_session'].includes(code)) {
@@ -3737,24 +3719,13 @@ class TallyListFreeDrinksCard extends LitElement {
           (this._drinkNames[drink] || drink)
             .replace(/_/g, ' ')
             .replace(/\b\w/g, (c) => c.toUpperCase());
-        if (this.isPublic) {
-          await this.hass.callWS({
-            type: 'tally_list/add_drink',
-            user_id: this.sessionUserId,
-            drink: drinkName,
-            count,
-            free_drink: true,
-            comment,
-          });
-        } else {
-          await this.hass.callService('tally_list', 'add_drink', {
-            user,
-            drink: drinkName,
-            count,
-            free_drink: true,
-            comment,
-          });
-        }
+        await this.hass.callService('tally_list', 'add_drink', {
+          user,
+          drink: drinkName,
+          count,
+          free_drink: true,
+          comment,
+        });
       }
       this._fdResetAllCountersToZero();
       this._fdStopCountdown();
