@@ -647,6 +647,52 @@ class TallyListCard extends LitElement {
     super.disconnectedCallback();
   }
 
+  get isPublic() {
+    return PUBLIC_SESSION.isPublic;
+  }
+  set isPublic(v) {
+    PUBLIC_SESSION.isPublic = v;
+  }
+
+  get sessionReady() {
+    return PUBLIC_SESSION.sessionReady;
+  }
+  set sessionReady(v) {
+    PUBLIC_SESSION.sessionReady = v;
+  }
+
+  get loginPending() {
+    return PUBLIC_SESSION.loginPending;
+  }
+  set loginPending(v) {
+    PUBLIC_SESSION.loginPending = v;
+  }
+
+  get sessionUserId() {
+    return PUBLIC_SESSION.sessionUserId;
+  }
+  set sessionUserId(v) {
+    PUBLIC_SESSION.sessionUserId = v;
+  }
+
+  get sessionUserName() {
+    return PUBLIC_SESSION.sessionUserName;
+  }
+  set sessionUserName(v) {
+    PUBLIC_SESSION.sessionUserName = v;
+  }
+
+  get pinBuffer() {
+    return PUBLIC_SESSION.pinBuffer;
+  }
+  set pinBuffer(v) {
+    PUBLIC_SESSION.pinBuffer = v;
+  }
+
+  get countdownSec() {
+    return PUBLIC_SESSION.countdownSec;
+  }
+
   needsLogin() {
     return this.isPublic === true && this.sessionReady !== true;
   }
