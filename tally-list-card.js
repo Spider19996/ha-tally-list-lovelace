@@ -1,6 +1,7 @@
 // Tally List Card
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
 import { repeat } from 'https://unpkg.com/lit/directives/repeat.js?module';
+import '@material/mwc-button?module';
 
 export function detectLang(hass, override = 'auto') {
   if (override && override !== 'auto') return override;
@@ -385,6 +386,12 @@ class TallyListCard extends LitElement {
     _tabs: { state: true },
     _visibleUsers: { state: true },
     _currentTab: { state: true },
+    isPublic: { state: true },
+    sessionReady: { state: true },
+    sessionUserId: { state: true },
+    pinBuffer: { state: true },
+    sessionExpiresAt: { state: true },
+    countdownSec: { state: true },
   };
 
   selectedRemoveDrink = '';
@@ -402,6 +409,15 @@ class TallyListCard extends LitElement {
   _ownUser = null;
   _fmtCache = new Map();
   _tableCache = null;
+  isPublic = false;
+  sessionReady = false;
+  sessionUserId = null;
+  pinBuffer = '';
+  sessionExpiresAt = 0;
+  countdownSec = 0;
+  countdownTimer = null;
+  _publicChecked = false;
+  _kpLock = false;
 
   static COUNT_STEPS = [1, 3, 5, 10];
 
@@ -441,10 +457,20 @@ class TallyListCard extends LitElement {
     super.connectedCallback();
     this._resizeHandler = () => _umUpdateButtonHeight(this);
     window.addEventListener('resize', this._resizeHandler);
+    this._wsReadyHandler = () => {
+      this._stopCountdown();
+      this.sessionReady = false;
+      this.sessionUserId = null;
+      this.pinBuffer = '';
+      this.requestUpdate();
+    };
+    this.hass?.connection?.addEventListener('ready', this._wsReadyHandler);
   }
 
   disconnectedCallback() {
     window.removeEventListener('resize', this._resizeHandler);
+     this.hass?.connection?.removeEventListener('ready', this._wsReadyHandler);
+     this._stopCountdown();
     super.disconnectedCallback();
   }
 
@@ -645,6 +671,19 @@ class TallyListCard extends LitElement {
         this.requestUpdate('selectedUser');
       }
     );
+    const coverMenu = this.isPublic && !this.sessionReady
+      ? _renderUserMenu(
+          this,
+          users,
+          this.selectedUser,
+          mode,
+          true,
+          (id) => {
+            this._setSelectedUser(id, mode);
+            this.requestUpdate('selectedUser');
+          }
+        )
+      : null;
     if (this.config.show_step_select === false) {
       if (this.selectedCount !== 1) {
         this.selectedCount = 1;
@@ -665,11 +704,27 @@ class TallyListCard extends LitElement {
             )}
           </div>`;
     const idRemoveSelect = this._fid('remove-drink');
+    const warn = this.countdownSec < 10;
+    const displayUserName = user.name || user.slug;
+    const topMenu = this.isPublic
+      ? this.sessionReady
+        ? html`<div class="public-header"><span class="user-label">${displayUserName}</span><span class="countdown ${warn ? 'warn' : ''}">${this.countdownSec}</span><mwc-button class="logout-btn" @click=${this._doLogout}>Logout</mwc-button></div>`
+        : ''
+      : mode === 'tabs' && isAdmin
+        ? userMenu
+        : '';
+    const innerMenu = this.isPublic
+      ? this.sessionReady
+        ? ''
+        : ''
+      : mode === 'tabs' && isAdmin
+        ? ''
+        : userMenu;
     return html`
       <ha-card style="${cardStyle}">
-        ${mode === 'tabs' && isAdmin ? userMenu : ''}
+        ${topMenu}
         <div class="content">
-          ${mode === 'tabs' && isAdmin ? '' : userMenu}
+          ${innerMenu}
           <div class="container-grid">
             <table class="obere-zeile">
             <thead><tr><th></th><th>${this._t('drink')}</th><th>${this._t('count')}</th><th>${this._t('price')}</th><th>${this._t('sum')}</th></tr></thead>
@@ -726,6 +781,11 @@ class TallyListCard extends LitElement {
               : ''}
           </div>
       </div>
+      ${this.isPublic && !this.sessionReady ? html`<div class="login-cover">${coverMenu}<div class="pin-display">${'•'.repeat(this.pinBuffer.length).padEnd(4, '○')}</div><div class="keypad">${['1','2','3','4','5','6','7','8','9','back','0','ok'].map(k => k === 'back'
+            ? html`<button class="key-btn" @click=${() => this._onKeypadPress('back')}>⌫</button>`
+            : k === 'ok'
+            ? html`<button class="key-btn" ?disabled=${!(this.selectedUser && this.pinBuffer.length === 4)} @click=${() => this._onKeypadPress('ok')}>OK</button>`
+            : html`<button class="key-btn" @click=${() => this._onKeypadPress(k)}>${k}</button>`)}</div></div>` : ''}
       </ha-card>
     `;
   }
@@ -737,6 +797,7 @@ class TallyListCard extends LitElement {
 
   _selectRemoveDrink(ev) {
     this.selectedRemoveDrink = ev.target.value;
+    this._touch();
     this.requestUpdate();
   }
 
@@ -745,6 +806,7 @@ class TallyListCard extends LitElement {
     ev?.stopPropagation();
     const count = Number(ev.currentTarget.dataset.count);
     this.selectedCount = count;
+    this._touch();
     this.requestUpdate('selectedCount');
   }
 
@@ -752,6 +814,7 @@ class TallyListCard extends LitElement {
     ev.preventDefault();
     ev.stopPropagation();
     const drink = ev.currentTarget.dataset.drink;
+    this._touch();
     this._addDrink(drink);
   }
 
@@ -759,6 +822,7 @@ class TallyListCard extends LitElement {
     ev.preventDefault();
     ev.stopPropagation();
     const drink = ev.currentTarget.dataset.drink;
+    this._touch();
     this._removeDrink(drink);
   }
 
@@ -789,11 +853,18 @@ class TallyListCard extends LitElement {
     }
 
     setTimeout(() => {
+      const userId = this.isPublic ? this.sessionUserId : this.selectedUser;
       this.hass
-        .callService('tally_list', 'add_drink', {
-          user: this.selectedUser,
+        .callWS({
+          type: 'tally_list/add_drink',
+          user_id: userId,
           drink: displayDrink,
           count: this.selectedCount,
+        })
+        .catch((err) => {
+          if (err?.code === 'not_logged_in' || err?.code === 'invalid_session') {
+            this._doLogout(false);
+          }
         });
       if (entity) {
         this.hass.callService('homeassistant', 'update_entity', {
@@ -801,6 +872,103 @@ class TallyListCard extends LitElement {
         });
       }
     }, 0);
+  }
+
+  _touch() {
+    if (!this.isPublic || !this.sessionReady) return;
+    this.sessionExpiresAt = Date.now() + 30000;
+    const sec = Math.max(0, Math.floor((this.sessionExpiresAt - Date.now()) / 1000));
+    if (sec !== this.countdownSec) {
+      this.countdownSec = sec;
+      this.requestUpdate('countdownSec');
+    }
+  }
+
+  _startCountdown() {
+    this._stopCountdown();
+    const update = () => {
+      const sec = Math.max(0, Math.floor((this.sessionExpiresAt - Date.now()) / 1000));
+      if (sec !== this.countdownSec) {
+        this.countdownSec = sec;
+        this.requestUpdate('countdownSec');
+      }
+      if (sec <= 0) {
+        this._doLogout();
+      }
+    };
+    update();
+    this.countdownTimer = setInterval(update, 1000);
+  }
+
+  _stopCountdown() {
+    if (this.countdownTimer) {
+      clearInterval(this.countdownTimer);
+      this.countdownTimer = null;
+    }
+  }
+
+  _onKeypadPress(val) {
+    if (this._kpLock) return;
+    this._kpLock = true;
+    setTimeout(() => (this._kpLock = false), 150);
+    if (val === 'back') {
+      this.pinBuffer = this.pinBuffer.slice(0, -1);
+    } else if (val === 'ok') {
+      this._doLogin();
+      return;
+    } else if (this.pinBuffer.length < 4) {
+      this.pinBuffer += val;
+    }
+    this.requestUpdate('pinBuffer');
+  }
+
+  async _doLogin() {
+    if (!this.selectedUser || this.pinBuffer.length !== 4) return;
+    try {
+      const resp = await this.hass.callWS({
+        type: 'tally_list/login',
+        user: this.selectedUser,
+        pin: this.pinBuffer,
+      });
+      const ok =
+        resp === true ||
+        resp === null ||
+        resp === undefined ||
+        (typeof resp === 'object' && Object.keys(resp).length === 0) ||
+        resp?.success === true;
+      if (ok) {
+        const list = this.config.users || this._autoUsers || [];
+        const u = list.find((u) => (u.name || u.slug) === this.selectedUser);
+        this.sessionReady = true;
+        this.sessionUserId = u?.user_id || this.selectedUser;
+        this.pinBuffer = '';
+        this.sessionExpiresAt = Date.now() + 30000;
+        this.countdownSec = 30;
+        this._startCountdown();
+        this.requestUpdate();
+        return;
+      }
+    } catch (err) {
+      const code = err?.code;
+      let msg = 'Fehler';
+      if (code === 'invalid_pin') msg = 'PIN ungültig';
+      else if (code === 'unauthorized' || code === 'not_logged_in') msg = 'Nicht angemeldet';
+      else if (code === 'unknown_command') msg = 'Befehl fehlt/Integration neu laden';
+      fireEvent(this, 'show-toast', { message: msg });
+      return;
+    }
+    fireEvent(this, 'show-toast', { message: 'PIN ungültig' });
+  }
+
+  async _doLogout(call = true) {
+    try {
+      if (call) await this.hass.callWS({ type: 'tally_list/logout' });
+    } catch (e) {}
+    this.sessionReady = false;
+    this.sessionUserId = null;
+    this.pinBuffer = '';
+    this._stopCountdown();
+    this.requestUpdate();
   }
 
   _removeDrink(drink) {
@@ -841,11 +1009,18 @@ class TallyListCard extends LitElement {
     }
 
     setTimeout(() => {
+      const userId = this.isPublic ? this.sessionUserId : this.selectedUser;
       this.hass
-        .callService('tally_list', 'remove_drink', {
-          user: this.selectedUser,
+        .callWS({
+          type: 'tally_list/remove_drink',
+          user_id: userId,
           drink: displayDrink,
           count: this.selectedCount,
+        })
+        .catch((err) => {
+          if (err?.code === 'not_logged_in' || err?.code === 'invalid_session') {
+            this._doLogout(false);
+          }
         });
       if (entity) {
         this.hass.callService('homeassistant', 'update_entity', {
@@ -867,6 +1042,20 @@ class TallyListCard extends LitElement {
         this._freeAmount = this._gatherFreeAmount();
       }
       this._fetchTallyAdmins();
+      if (!this._publicChecked) {
+        this._publicChecked = true;
+        this.hass
+          .callWS({ type: 'tally_list/is_public_device' })
+          .then((res) => {
+            this.isPublic = !!res;
+            this.requestUpdate('isPublic');
+          })
+          .catch(() => {
+            this.isPublic = false;
+            this.requestUpdate('isPublic');
+          });
+      }
+      this.hass?.connection?.addEventListener('ready', this._wsReadyHandler);
 
       // Sync optimistic counts with real states when updates arrive
       const updated = { ...this._optimisticCounts };
@@ -1107,6 +1296,7 @@ class TallyListCard extends LitElement {
       text-align: center;
       margin: 0 auto;
       max-width: var(--dcc-max-width, none);
+      position: relative;
     }
     .controls {
       display: flex;
@@ -1126,6 +1316,23 @@ class TallyListCard extends LitElement {
     .user-label {
       font-weight: 600;
       margin-bottom: 8px;
+    }
+    .public-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      gap: 8px;
+    }
+    .countdown {
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: var(--primary-color);
+      color: var(--text-primary-color, #fff);
+      transition: background 200ms ease;
+    }
+    .countdown.warn {
+      background: var(--error-color);
     }
     .segments {
       display: flex;
@@ -1393,6 +1600,36 @@ class TallyListCard extends LitElement {
     }
     tfoot td {
       font-weight: bold;
+    }
+    .login-cover {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--ha-card-background, #1e1e1e);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+      gap: 16px;
+    }
+    .pin-display {
+      font-size: 24px;
+      letter-spacing: 8px;
+    }
+    .keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      width: 100%;
+      max-width: 240px;
+    }
+    .key-btn {
+      height: 48px;
+      border-radius: 8px;
+      font-size: 18px;
     }
   `;
 }
@@ -2007,7 +2244,7 @@ class TallyDueRankingCard extends LitElement {
   }
 
   updated(changedProps) {
-    if (changedProps.has('hass')) {
+      if (changedProps.has('hass')) {
       if (!this.config.users) {
         this._autoUsers = this._gatherUsers();
       }
