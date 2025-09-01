@@ -477,12 +477,7 @@ function _umRenderTabHeader(card) {
 }
 
 function _umRenderButtons(card, list, selected, onSelect, getVal = (u) => u.name || u.slug) {
-  const cfg = card.config.grid || {};
-  const cols = Number(cfg.columns);
-  const columnStyle = cols > 0
-    ? `grid-template-columns:repeat(${cols},1fr);`
-    : `grid-template-columns:repeat(auto-fit,minmax(0,1fr));`;
-  return html`<div class="user-grid" aria-label="${t(card.hass, card.config.language, 'name')}" style="${columnStyle}">
+  return html`<div class="user-grid" aria-label="${t(card.hass, card.config.language, 'name')}">
     ${repeat(
       list,
       (u) => u.user_id || u.slug,
@@ -509,21 +504,6 @@ function _umRenderChips(card, list, selected, onSelect, getVal = (u) => u.name |
   );
 }
 
-function _umUpdateButtonHeight(card) {
-  const grid = card.renderRoot?.querySelector('.user-grid');
-  if (!grid) return;
-  const buttons = grid.querySelectorAll('button');
-  if (!buttons.length) return;
-  buttons.forEach((btn) => (btn.style.height = 'auto'));
-  let max = 32;
-  buttons.forEach((btn) => {
-    const h = btn.offsetHeight;
-    if (h > max) max = h;
-  });
-  buttons.forEach((btn) => btn.style.removeProperty('height'));
-  grid.style.setProperty('--tl-btn-h', `${max}px`);
-}
-
 function _renderUserMenu(card, users, selectedId, layout, isAdmin, onSelect, getVal) {
   const valFn = getVal || ((u) => u.name || u.slug);
   _umEnsureBuckets(card, users);
@@ -533,9 +513,7 @@ function _renderUserMenu(card, users, selectedId, layout, isAdmin, onSelect, get
     return html`<div class="user-label">${name}</div>`;
   }
   if (layout === 'grid') {
-    const el = _umRenderButtons(card, card._sortedUsers, selectedId, onSelect, valFn);
-    setTimeout(() => _umUpdateButtonHeight(card));
-    return el;
+    return _umRenderButtons(card, card._sortedUsers, selectedId, onSelect, valFn);
   }
   if (layout === 'tabs') {
     const header = _umRenderTabHeader(card);
@@ -638,13 +616,10 @@ class TallyListCard extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this._resizeHandler = () => _umUpdateButtonHeight(this);
-    window.addEventListener('resize', this._resizeHandler);
     _psSubscribe(this);
   }
 
   disconnectedCallback() {
-    window.removeEventListener('resize', this._resizeHandler);
     _psUnsubscribe(this);
     super.disconnectedCallback();
   }
@@ -1185,9 +1160,6 @@ class TallyListCard extends LitElement {
         this._optimisticCounts = updated;
       }
     }
-    if (changedProps.has('_visibleUsers')) {
-      _umUpdateButtonHeight(this);
-    }
   }
 
   _gatherUsers() {
@@ -1582,7 +1554,8 @@ class TallyListCard extends LitElement {
       display: none;
     }
     .user-grid {
-      display: grid;
+      display: flex;
+      flex-wrap: wrap;
       transition: none;
       content-visibility: auto;
       contain-intrinsic-size: 500px 300px;
@@ -1590,7 +1563,6 @@ class TallyListCard extends LitElement {
       padding: 8px 0;
     }
     .user-grid .user-chip {
-      width: 100%;
       white-space: normal;
       overflow-wrap: anywhere;
     }
@@ -3514,9 +3486,6 @@ class TallyListFreeDrinksCard extends LitElement {
       if (!this.config.prices && Object.keys(this._autoPrices).length === 0) {
         this._autoPrices = this._gatherPrices();
       }
-    }
-    if (changedProps.has('_visibleUsers')) {
-      _umUpdateButtonHeight(this);
     }
   }
 
