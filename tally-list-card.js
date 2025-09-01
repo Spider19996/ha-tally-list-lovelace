@@ -1434,7 +1434,7 @@ class TallyListCard extends LitElement {
     }
     .pin-display {
       display: flex;
-      gap: 8px;
+      gap: 12px;
       height: 36px;
       align-items: center;
     }
