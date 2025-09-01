@@ -1435,12 +1435,12 @@ class TallyListCard extends LitElement {
     .pin-display {
       display: flex;
       gap: 8px;
-      height: 44px;
+      height: 36px;
       align-items: center;
     }
     .pin-dot {
-      width: 32px;
-      height: 32px;
+      width: 24px;
+      height: 24px;
       border: 2px solid currentColor;
       border-radius: 50%;
       box-sizing: border-box;
