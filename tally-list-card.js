@@ -1431,9 +1431,10 @@ class TallyListCard extends LitElement {
       gap: 8px;
     }
     .pin-display {
-      letter-spacing: 6px;
-      font-size: 20px;
-      min-height: 24px;
+      letter-spacing: 8px;
+      font-size: 32px;
+      height: 44px;
+      line-height: 44px;
     }
     .keypad {
       display: grid;
