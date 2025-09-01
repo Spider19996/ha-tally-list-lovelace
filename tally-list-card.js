@@ -213,7 +213,7 @@ function renderCoverLogin(card) {
               card.loginPending
             }>OK</button>`
           : d === '⌫'
-          ? html`<button class="key" @click=${() => _psBackspace(card)}>⌫</button>`
+          ? html`<button class="key del" @click=${() => _psBackspace(card)}>⌫</button>`
           : html`<button class="key" @click=${() => _psAddDigit(card, d)}>${d}</button>`
       )}
     </div></div></ha-card>`;
@@ -1461,6 +1461,14 @@ class TallyListCard extends LitElement {
     .keypad .key {
       height: 44px;
       font-size: 16px;
+      border-radius: 12px;
+      border: none;
+      background: #2b2b2b;
+      color: #ddd;
+    }
+    .keypad .key.del {
+      background: var(--error-color, #b71c1c);
+      color: #fff;
     }
     .keypad .key.ok {
       background: var(--primary-color);
@@ -1480,6 +1488,12 @@ class TallyListCard extends LitElement {
     }
     .logout-btn {
       margin-left: auto;
+      border-radius: 12px;
+      background: #2b2b2b;
+      color: #ddd;
+      border: none;
+      height: 32px;
+      padding: 0 12px;
     }
     .segments {
       display: flex;
