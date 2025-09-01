@@ -221,7 +221,7 @@ function renderCoverLogin(card) {
     </div></div></ha-card>`;
 }
 
-const CARD_VERSION = '10.08.2025';
+const CARD_VERSION = '01.09.2025';
 
 const TL_STRINGS = {
   en: {
@@ -476,26 +476,6 @@ function _umRenderTabHeader(card) {
   </div>`;
 }
 
-function _umRenderButtons(card, list, selected, onSelect, getVal = (u) => u.name || u.slug) {
-  const cfg = card.config.grid || {};
-  const cols = Number(cfg.columns);
-  const columnStyle = cols > 0
-    ? `grid-template-columns:repeat(${cols},1fr);`
-    : `grid-template-columns:repeat(auto-fit,minmax(0,1fr));`;
-  const style = `${columnStyle}--tl-btn-h:40px;`;
-  return html`<div class="user-grid" aria-label="${t(card.hass, card.config.language, 'name')}" style="${style}">
-    ${repeat(
-      list,
-      (u) => u.user_id || u.slug,
-      (u) => {
-        const name = u.name || u.slug;
-        const val = getVal(u);
-        return html`<button class="user-btn" role="tab" aria-selected=${val === selected} @click=${() => onSelect(val)} @keydown=${(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(val)}>${name}</button>`;
-      }
-    )}
-  </div>`;
-}
-
 function _umRenderChips(card, list, selected, onSelect, getVal = (u) => u.name || u.slug) {
   return repeat(
     list,
@@ -509,21 +489,6 @@ function _umRenderChips(card, list, selected, onSelect, getVal = (u) => u.name |
   );
 }
 
-function _umUpdateButtonHeight(card) {
-  const grid = card.renderRoot?.querySelector('.user-grid');
-  if (!grid) return;
-  const buttons = grid.querySelectorAll('button');
-  if (!buttons.length) return;
-  buttons.forEach((btn) => (btn.style.height = 'auto'));
-  let max = 32;
-  buttons.forEach((btn) => {
-    const h = btn.offsetHeight;
-    if (h > max) max = h;
-  });
-  buttons.forEach((btn) => btn.style.removeProperty('height'));
-  grid.style.setProperty('--tl-btn-h', `${max}px`);
-}
-
 function _renderUserMenu(card, users, selectedId, layout, isAdmin, onSelect, getVal) {
   const valFn = getVal || ((u) => u.name || u.slug);
   _umEnsureBuckets(card, users);
@@ -533,9 +498,8 @@ function _renderUserMenu(card, users, selectedId, layout, isAdmin, onSelect, get
     return html`<div class="user-label">${name}</div>`;
   }
   if (layout === 'grid') {
-    const el = _umRenderButtons(card, card._sortedUsers, selectedId, onSelect, valFn);
-    setTimeout(() => _umUpdateButtonHeight(card));
-    return el;
+    const chips = _umRenderChips(card, card._sortedUsers, selectedId, onSelect, valFn);
+    return html`<div class="user-actions"><div class="user-list">${chips}</div></div>`;
   }
   if (layout === 'tabs') {
     const header = _umRenderTabHeader(card);
@@ -638,13 +602,10 @@ class TallyListCard extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this._resizeHandler = () => _umUpdateButtonHeight(this);
-    window.addEventListener('resize', this._resizeHandler);
     _psSubscribe(this);
   }
 
   disconnectedCallback() {
-    window.removeEventListener('resize', this._resizeHandler);
     _psUnsubscribe(this);
     super.disconnectedCallback();
   }
@@ -1185,9 +1146,6 @@ class TallyListCard extends LitElement {
         this._optimisticCounts = updated;
       }
     }
-    if (changedProps.has('_visibleUsers')) {
-      _umUpdateButtonHeight(this);
-    }
   }
 
   _gatherUsers() {
@@ -1581,40 +1539,9 @@ class TallyListCard extends LitElement {
     .user-chip::before {
       display: none;
     }
-    .user-grid {
-      display: grid;
-      transition: none;
-      content-visibility: auto;
-      contain-intrinsic-size: 500px 300px;
-      gap: 8px;
-      padding: 8px 0;
-      --tl-btn-h: 44px;
-    }
-    .user-grid button {
-      position: relative;
-      min-height: var(--tl-btn-h, 44px);
-      height: auto;
-      font-size: 14px;
-      width: 100%;
-      white-space: normal;
-      overflow-wrap: anywhere;
-      border: none;
-      border-radius: 12px;
-      background: #2b2b2b;
-      color: #ddd;
-      transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
-    }
-    .user-grid button::before {
-      display: none;
-    }
-    .user-grid button[aria-pressed='true'] {
-      background: var(--success-color, #2e7d32);
-      color: #fff;
-    }
     .tab:focus,
     .segment:focus,
     .action-btn:focus,
-    .user-grid button:focus,
     .user-chip:focus {
       outline: 2px solid rgba(255,255,255,.25);
     }
@@ -1624,8 +1551,6 @@ class TallyListCard extends LitElement {
     .segment:focus,
     .action-btn:hover,
     .action-btn:focus,
-    .user-grid button:hover,
-    .user-grid button:focus,
     .user-chip:hover,
     .user-chip:focus {
       filter: brightness(1.1);
@@ -3534,9 +3459,6 @@ class TallyListFreeDrinksCard extends LitElement {
       if (!this.config.prices && Object.keys(this._autoPrices).length === 0) {
         this._autoPrices = this._gatherPrices();
       }
-    }
-    if (changedProps.has('_visibleUsers')) {
-      _umUpdateButtonHeight(this);
     }
   }
 
