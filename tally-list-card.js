@@ -647,6 +647,18 @@ class TallyListCard extends LitElement {
     super.disconnectedCallback();
   }
 
+  needsLogin() {
+    return this.isPublic === true && this.sessionReady !== true;
+  }
+
+  renderCoverLogin() {
+    return renderCoverLogin(this);
+  }
+
+  get isRankingView() {
+    return false;
+  }
+
   setConfig(config) {
     const tabs = {
       mode: 'per-letter',
@@ -782,8 +794,8 @@ class TallyListCard extends LitElement {
     if (users.length === 0) {
       return html`<ha-card>...</ha-card>`;
     }
-    if (this.isPublic && !this.sessionReady) {
-      return renderCoverLogin(this);
+    if (!this.isRankingView && this.needsLogin()) {
+      return this.renderCoverLogin();
     }
     const userNames = [this.hass.user?.name, ...this._currentPersonNames()];
     const isAdmin = userNames.some((n) => (this._tallyAdmins || []).includes(n));
@@ -3262,6 +3274,14 @@ class TallyListFreeDrinksCard extends LitElement {
     return PUBLIC_SESSION.countdownSec;
   }
 
+  needsLogin() {
+    return this.isPublic === true && this.sessionReady !== true;
+  }
+
+  renderCoverLogin() {
+    return renderCoverLogin(this);
+  }
+
   connectedCallback() {
     super.connectedCallback?.();
     _psSubscribe(this);
@@ -3710,8 +3730,8 @@ class TallyListFreeDrinksCard extends LitElement {
   render() {
     const allUsers = this.config.users || this._autoUsers || [];
     if (allUsers.length === 0) return html`<ha-card>...</ha-card>`;
-    if (this.isPublic && !this.sessionReady) {
-      return renderCoverLogin(this);
+    if (this.needsLogin()) {
+      return this.renderCoverLogin();
     }
     const prices = this.config.prices || this._autoPrices;
     const counts = this._freeDrinkCounts;
