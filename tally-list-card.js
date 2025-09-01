@@ -221,7 +221,7 @@ function renderCoverLogin(card) {
     </div></div></ha-card>`;
 }
 
-const CARD_VERSION = '10.08.2025';
+const CARD_VERSION = '01.09.2025';
 
 const TL_STRINGS = {
   en: {
@@ -476,21 +476,6 @@ function _umRenderTabHeader(card) {
   </div>`;
 }
 
-function _umRenderButtons(card, list, selected, onSelect, getVal = (u) => u.name || u.slug) {
-  return html`<div class="user-grid" aria-label="${t(card.hass, card.config.language, 'name')}">
-    ${repeat(
-      list,
-      (u) => u.user_id || u.slug,
-      (u) => {
-        const name = u.name || u.slug;
-        const val = getVal(u);
-        const cls = `user-chip ${val === selected ? 'active' : 'inactive'}`;
-        return html`<button class="${cls}" role="tab" aria-selected=${val === selected} @click=${() => onSelect(val)} @keydown=${(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(val)}>${name}</button>`;
-      }
-    )}
-  </div>`;
-}
-
 function _umRenderChips(card, list, selected, onSelect, getVal = (u) => u.name || u.slug) {
   return repeat(
     list,
@@ -513,7 +498,8 @@ function _renderUserMenu(card, users, selectedId, layout, isAdmin, onSelect, get
     return html`<div class="user-label">${name}</div>`;
   }
   if (layout === 'grid') {
-    return _umRenderButtons(card, card._sortedUsers, selectedId, onSelect, valFn);
+    const chips = _umRenderChips(card, card._sortedUsers, selectedId, onSelect, valFn);
+    return html`<div class="user-actions"><div class="user-list">${chips}</div></div>`;
   }
   if (layout === 'tabs') {
     const header = _umRenderTabHeader(card);
@@ -1552,19 +1538,6 @@ class TallyListCard extends LitElement {
     }
     .user-chip::before {
       display: none;
-    }
-    .user-grid {
-      display: flex;
-      flex-wrap: wrap;
-      transition: none;
-      content-visibility: auto;
-      contain-intrinsic-size: 500px 300px;
-      gap: 8px;
-      padding: 8px 0;
-    }
-    .user-grid .user-chip {
-      white-space: normal;
-      overflow-wrap: anywhere;
     }
     .tab:focus,
     .segment:focus,
