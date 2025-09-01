@@ -385,6 +385,12 @@ class TallyListCard extends LitElement {
     _tabs: { state: true },
     _visibleUsers: { state: true },
     _currentTab: { state: true },
+    isPublic: { state: true },
+    sessionReady: { state: true },
+    sessionUserId: { state: true },
+    pinBuffer: { state: true },
+    sessionExpiresAt: { state: true },
+    countdownSec: { state: true },
   };
 
   selectedRemoveDrink = '';
@@ -402,6 +408,7 @@ class TallyListCard extends LitElement {
   _ownUser = null;
   _fmtCache = new Map();
   _tableCache = null;
+  countdownTimer = 0;
 
   static COUNT_STEPS = [1, 3, 5, 10];
 
@@ -421,10 +428,142 @@ class TallyListCard extends LitElement {
     this._selectRemoveDrink = this._selectRemoveDrink.bind(this);
     this._bootstrapped = true;
     this._loading = false;
+    this.isPublic = false;
+    this.sessionReady = false;
+    this.sessionUserId = null;
+    this.pinBuffer = '';
+    this.sessionExpiresAt = 0;
+    this.countdownSec = 0;
+    this._checkedPublic = false;
+    this._lastConnId = null;
+    this._selectedLoginUser = null;
   }
 
   _fid(key) {
     return `tally-${this._uid}-${key}`;
+  }
+
+  async _checkPublic() {
+    try {
+      const resp = await this.hass.callWS({ type: 'tally_list/is_public_device' });
+      this.isPublic = resp === true;
+      this.requestUpdate('isPublic');
+    } catch (e) {
+      this.isPublic = false;
+    }
+  }
+
+  _touch() {
+    if (!this.isPublic || !this.sessionReady) return;
+    const exp = Date.now() + 30000;
+    this.sessionExpiresAt = exp;
+    if (this.countdownSec !== 30) {
+      this.countdownSec = 30;
+      this.requestUpdate('countdownSec');
+    }
+  }
+
+  _startCountdown() {
+    this._stopCountdown();
+    this.sessionExpiresAt = Date.now() + 30000;
+    this.countdownSec = 30;
+    this.countdownTimer = window.setInterval(() => {
+      const sec = Math.max(0, Math.ceil((this.sessionExpiresAt - Date.now()) / 1000));
+      if (sec !== this.countdownSec) {
+        this.countdownSec = sec;
+        this.requestUpdate('countdownSec');
+      }
+      if (sec <= 0) this._logout();
+    }, 1000);
+  }
+
+  _stopCountdown() {
+    if (this.countdownTimer) {
+      clearInterval(this.countdownTimer);
+      this.countdownTimer = 0;
+    }
+  }
+
+  _onKeypad(key) {
+    if (key === 'back') {
+      this.pinBuffer = this.pinBuffer.slice(0, -1);
+    } else if (key === 'ok') {
+      this._login();
+      return;
+    } else if (this.pinBuffer.length < 4 && /\d/.test(key)) {
+      this.pinBuffer += key;
+    }
+    this.requestUpdate('pinBuffer');
+  }
+
+  async _login() {
+    if (!this._selectedLoginUser || this.pinBuffer.length !== 4) return;
+    try {
+      const resp = await this.hass.callWS({
+        type: 'tally_list/login',
+        user: this._selectedLoginUser,
+        pin: this.pinBuffer,
+      });
+      const ok =
+        resp === true ||
+        (resp && resp.success) ||
+        resp == null ||
+        (typeof resp === 'object' && Object.keys(resp).length === 0);
+      if (ok) {
+        this.sessionReady = true;
+        this.sessionUserId = this._selectedLoginUser;
+        this.selectedUser = this._selectedLoginUser;
+        this.pinBuffer = '';
+        this._startCountdown();
+        this.requestUpdate();
+      } else {
+        this._showToast('Nicht angemeldet');
+      }
+    } catch (err) {
+      const code = err?.error?.code || err?.code || err?.message;
+      let msg = 'Fehler';
+      if (code === 'invalid_pin') msg = 'PIN ungültig';
+      else if (code === 'unauthorized' || code === 'not_logged_in') msg = 'Nicht angemeldet';
+      else if (code === 'unknown_command') msg = 'Befehl fehlt/Integration neu laden';
+      else msg = String(code || err);
+      this._showToast(msg);
+    }
+  }
+
+  async _logout() {
+    try {
+      await this.hass.callWS({ type: 'tally_list/logout' });
+    } catch (e) {}
+    this.sessionReady = false;
+    this.sessionUserId = null;
+    this.pinBuffer = '';
+    this._stopCountdown();
+    this.requestUpdate();
+  }
+
+  _showToast(message) {
+    this.dispatchEvent(
+      new CustomEvent('hass-notification', {
+        detail: { message },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  _renderCover(users, mode) {
+    if (!this.isPublic || this.sessionReady) return '';
+    const userMenu = _renderUserMenu(this, users, this._selectedLoginUser, mode, true, (id) => {
+      this._selectedLoginUser = id;
+      this.requestUpdate('_selectedLoginUser');
+    });
+    const pin = '•'.repeat(this.pinBuffer.length).padEnd(4, '○');
+    const keys = ['1','2','3','4','5','6','7','8','9','back','0','ok'];
+    return html`<div class="pub-cover">${userMenu}<div class="pin">${pin}</div><div class="keypad">${keys.map(k=>{
+      const label = k==='back'?'⌫':k==='ok'?'OK':k;
+      const disabled = k==='ok' && (!this._selectedLoginUser || this.pinBuffer.length!==4);
+      return html`<button class="key" data-k="${k}" ?disabled=${disabled} @pointerdown=${() => this._onKeypad(k)}>${label}</button>`;
+    })}</div></div>`;
   }
 
   set hass(h) {
@@ -445,6 +584,7 @@ class TallyListCard extends LitElement {
 
   disconnectedCallback() {
     window.removeEventListener('resize', this._resizeHandler);
+    this._stopCountdown();
     super.disconnectedCallback();
   }
 
@@ -645,6 +785,18 @@ class TallyListCard extends LitElement {
         this.requestUpdate('selectedUser');
       }
     );
+    const cover = this._renderCover(users, mode);
+    const showMenu = !this.isPublic || !this.sessionReady;
+    const activeUserMenu = showMenu ? userMenu : '';
+    let sessionBar = '';
+    if (this.isPublic && this.sessionReady) {
+      const cur = users.find(
+        (u) => u.name === this.sessionUserId || u.slug === this.sessionUserId
+      );
+      const label = cur?.name || cur?.slug || this.sessionUserId;
+      const warn = this.countdownSec <= 10 ? 'warn' : '';
+      sessionBar = html`<div class="session-bar"><span class="user">${label}</span><span class="countdown ${warn}">${this.countdownSec}</span><button class="action-btn logout" @pointerdown=${this._logout}>Logout</button></div>`;
+    }
     if (this.config.show_step_select === false) {
       if (this.selectedCount !== 1) {
         this.selectedCount = 1;
@@ -667,9 +819,11 @@ class TallyListCard extends LitElement {
     const idRemoveSelect = this._fid('remove-drink');
     return html`
       <ha-card style="${cardStyle}">
-        ${mode === 'tabs' && isAdmin ? userMenu : ''}
+        ${sessionBar}
+        ${cover}
+        ${mode === 'tabs' && isAdmin && showMenu ? activeUserMenu : ''}
         <div class="content">
-          ${mode === 'tabs' && isAdmin ? '' : userMenu}
+          ${mode === 'tabs' && isAdmin ? '' : activeUserMenu}
           <div class="container-grid">
             <table class="obere-zeile">
             <thead><tr><th></th><th>${this._t('drink')}</th><th>${this._t('count')}</th><th>${this._t('price')}</th><th>${this._t('sum')}</th></tr></thead>
@@ -737,6 +891,7 @@ class TallyListCard extends LitElement {
 
   _selectRemoveDrink(ev) {
     this.selectedRemoveDrink = ev.target.value;
+    this._touch();
     this.requestUpdate();
   }
 
@@ -745,6 +900,7 @@ class TallyListCard extends LitElement {
     ev?.stopPropagation();
     const count = Number(ev.currentTarget.dataset.count);
     this.selectedCount = count;
+    this._touch();
     this.requestUpdate('selectedCount');
   }
 
@@ -766,6 +922,7 @@ class TallyListCard extends LitElement {
     if (this._disabled) {
       return;
     }
+    this._touch();
     this._disabled = true;
     this.requestUpdate();
     const delay = Number(this.config.lock_ms ?? 400);
@@ -794,6 +951,7 @@ class TallyListCard extends LitElement {
           user: this.selectedUser,
           drink: displayDrink,
           count: this.selectedCount,
+          user_id: this.sessionUserId,
         });
       if (entity) {
         this.hass.callService('homeassistant', 'update_entity', {
@@ -807,6 +965,7 @@ class TallyListCard extends LitElement {
     if (this._disabled || !drink) {
       return;
     }
+    this._touch();
 
     const users = this.config.users || this._autoUsers || [];
     const user = users.find(u => (u.name || u.slug) === this.selectedUser);
@@ -846,6 +1005,7 @@ class TallyListCard extends LitElement {
           user: this.selectedUser,
           drink: displayDrink,
           count: this.selectedCount,
+          user_id: this.sessionUserId,
         });
       if (entity) {
         this.hass.callService('homeassistant', 'update_entity', {
@@ -857,6 +1017,15 @@ class TallyListCard extends LitElement {
 
   updated(changedProps) {
     if (changedProps.has('hass')) {
+      if (!this._checkedPublic && this.hass) {
+        this._checkedPublic = true;
+        this._checkPublic();
+      }
+      if (this._lastConnId && this.hass?.connection?.connectionId !== this._lastConnId) {
+        this.sessionReady = false;
+        this._stopCountdown();
+      }
+      this._lastConnId = this.hass?.connection?.connectionId;
       if (!this.config.users) {
         this._autoUsers = this._gatherUsers();
       }
@@ -984,6 +1153,133 @@ class TallyListCard extends LitElement {
     }
   }
 
+  async _checkPublic() {
+    try {
+      const resp = await this.hass.callWS({ type: 'tally_list/is_public_device' });
+      this.isPublic = resp === true;
+      this.requestUpdate('isPublic');
+    } catch (e) {
+      this.isPublic = false;
+    }
+  }
+
+  _touch() {
+    if (!this.isPublic || !this.sessionReady) return;
+    this.sessionExpiresAt = Date.now() + 30000;
+    if (this.countdownSec !== 30) {
+      this.countdownSec = 30;
+      this.requestUpdate('countdownSec');
+    }
+  }
+
+  _startCountdown() {
+    this._stopCountdown();
+    this.sessionExpiresAt = Date.now() + 30000;
+    this.countdownSec = 30;
+    this.countdownTimer = window.setInterval(() => {
+      const sec = Math.max(0, Math.ceil((this.sessionExpiresAt - Date.now()) / 1000));
+      if (sec !== this.countdownSec) {
+        this.countdownSec = sec;
+        this.requestUpdate('countdownSec');
+      }
+      if (sec <= 0) this._logout();
+    }, 1000);
+  }
+
+  _stopCountdown() {
+    if (this.countdownTimer) {
+      clearInterval(this.countdownTimer);
+      this.countdownTimer = 0;
+    }
+  }
+
+  _onKeypad(k) {
+    if (k === 'back') this.pinBuffer = this.pinBuffer.slice(0, -1);
+    else if (k === 'ok') {
+      this._login();
+      return;
+    } else if (this.pinBuffer.length < 4 && /\d/.test(k)) {
+      this.pinBuffer += k;
+    }
+    this.requestUpdate('pinBuffer');
+  }
+
+  async _login() {
+    if (!this._selectedLoginUser || this.pinBuffer.length !== 4) return;
+    try {
+      const resp = await this.hass.callWS({
+        type: 'tally_list/login',
+        user: this._selectedLoginUser,
+        pin: this.pinBuffer,
+      });
+      const ok =
+        resp === true ||
+        (resp && resp.success) ||
+        resp == null ||
+        (typeof resp === 'object' && Object.keys(resp).length === 0);
+      if (ok) {
+        this.sessionReady = true;
+        this.sessionUserId = this._selectedLoginUser;
+        this.selectedUserId = this._selectedLoginUser;
+        this.pinBuffer = '';
+        this._startCountdown();
+        this.requestUpdate();
+      } else {
+        this._showToast('Nicht angemeldet');
+      }
+    } catch (err) {
+      const code = err?.error?.code || err?.code || err?.message;
+      let msg = 'Fehler';
+      if (code === 'invalid_pin') msg = 'PIN ungültig';
+      else if (code === 'unauthorized' || code === 'not_logged_in') msg = 'Nicht angemeldet';
+      else if (code === 'unknown_command') msg = 'Befehl fehlt/Integration neu laden';
+      else msg = String(code || err);
+      this._showToast(msg);
+    }
+  }
+
+  async _logout() {
+    try {
+      await this.hass.callWS({ type: 'tally_list/logout' });
+    } catch (e) {}
+    this.sessionReady = false;
+    this.sessionUserId = null;
+    this.pinBuffer = '';
+    this._stopCountdown();
+    this.requestUpdate();
+  }
+
+  _showToast(message) {
+    this.dispatchEvent(
+      new CustomEvent('hass-notification', {
+        detail: { message },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  _renderCover(users, mode) {
+    if (!this.isPublic || this.sessionReady) return '';
+    const menu = this._renderUserMenu({
+      users,
+      selectedUserId: this._selectedLoginUser,
+      layout: mode,
+      isAdmin: true,
+      onSelect: (id) => {
+        this._selectedLoginUser = id;
+        this.requestUpdate('_selectedLoginUser');
+      },
+    });
+    const pin = '•'.repeat(this.pinBuffer.length).padEnd(4, '○');
+    const keys = ['1','2','3','4','5','6','7','8','9','back','0','ok'];
+    return html`<div class="pub-cover">${menu}<div class="pin">${pin}</div><div class="keypad">${keys.map(k=>{
+      const label = k==='back'?'⌫':k==='ok'?'OK':k;
+      const dis = k==='ok' && (!this._selectedLoginUser || this.pinBuffer.length!==4);
+      return html`<button class="key" ?disabled=${dis} @pointerdown=${() => this._onKeypad(k)}>${label}</button>`;
+    })}</div></div>`;
+  }
+
   _hasTally() {
     const h = this.hass;
     if (!h) return false;
@@ -1107,6 +1403,7 @@ class TallyListCard extends LitElement {
       text-align: center;
       margin: 0 auto;
       max-width: var(--dcc-max-width, none);
+      position: relative;
     }
     .controls {
       display: flex;
@@ -1741,6 +2038,48 @@ class TallyListCardEditor extends LitElement {
       padding: 0 16px 16px;
       text-align: center;
       color: var(--secondary-text-color);
+    }
+    .pub-cover {
+      position: absolute;
+      inset: 0;
+      background: var(--card-background-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 16px;
+      transition: opacity 0.2s ease;
+    }
+    .pub-cover .pin {
+      letter-spacing: 8px;
+      font-size: 24px;
+    }
+    .pub-cover .keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .pub-cover .key {
+      height: 48px;
+      font-size: 18px;
+    }
+    .session-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .session-bar .countdown {
+      margin-left: auto;
+      margin-right: 8px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: var(--secondary-background-color);
+    }
+    .session-bar .countdown.warn {
+      background: var(--error-color);
+      color: var(--text-primary-color, #fff);
     }
   `;
 }
@@ -2869,6 +3208,12 @@ class TallyListFreeDrinksCard extends LitElement {
     _currentTab: { state: true },
     _fdCountdownLeft: { type: Number },
     _fdTimerId: { type: Number },
+    isPublic: { state: true },
+    sessionReady: { state: true },
+    sessionUserId: { state: true },
+    pinBuffer: { state: true },
+    sessionExpiresAt: { state: true },
+    countdownSec: { state: true },
   };
 
   _fmtCache = new Map();
@@ -2888,6 +3233,16 @@ class TallyListFreeDrinksCard extends LitElement {
     this._currentTab = 'all';
     this._fdCountdownLeft = 0;
     this._fdTimerId = 0;
+    this.isPublic = false;
+    this.sessionReady = false;
+    this.sessionUserId = null;
+    this.pinBuffer = '';
+    this.sessionExpiresAt = 0;
+    this.countdownSec = 0;
+    this._checkedPublic = false;
+    this._lastConnId = null;
+    this._selectedLoginUser = null;
+    this.countdownTimer = 0;
     this._buckets = new Map();
     this._sortedUsers = [];
     this._usersKey = '';
@@ -2961,6 +3316,7 @@ class TallyListFreeDrinksCard extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback?.();
     this._fdStopCountdown();
+    this._stopCountdown();
   }
 
   get _isAdmin() {
@@ -3074,6 +3430,15 @@ class TallyListFreeDrinksCard extends LitElement {
 
   updated(changedProps) {
     if (changedProps.has('hass')) {
+      if (!this._checkedPublic && this.hass) {
+        this._checkedPublic = true;
+        this._checkPublic();
+      }
+      if (this._lastConnId && this.hass?.connection?.connectionId !== this._lastConnId) {
+        this.sessionReady = false;
+        this._stopCountdown();
+      }
+      this._lastConnId = this.hass?.connection?.connectionId;
       if (!this.config.users) {
         this._autoUsers = this._gatherUsers();
       }
@@ -3121,6 +3486,7 @@ class TallyListFreeDrinksCard extends LitElement {
     this._freeDrinkCounts[drinkId] = current + 1;
     this.requestUpdate();
     this._fdStartOrResetCountdown?.();
+    this._touch();
   }
 
   _fdDec(drinkId) {
@@ -3131,6 +3497,7 @@ class TallyListFreeDrinksCard extends LitElement {
     this._freeDrinkCounts[drinkId] = next;
     this.requestUpdate();
     this._fdStartOrResetCountdown?.();
+    this._touch();
   }
 
   _fdStartOrResetCountdown() {
@@ -3207,10 +3574,12 @@ class TallyListFreeDrinksCard extends LitElement {
 
   _onComment(ev) {
     this._comment = ev.target.value;
+    this._touch();
   }
 
   _onPreset(ev) {
     this._commentType = ev.target.value;
+    this._touch();
   }
 
   _validComment() {
@@ -3256,6 +3625,7 @@ class TallyListFreeDrinksCard extends LitElement {
 
   async _submit() {
     if (!this._validComment() || this._getTotalCount() === 0) return;
+    this._touch();
     const extra = this._comment.trim();
     const comment = this._commentType
       ? extra
@@ -3282,6 +3652,7 @@ class TallyListFreeDrinksCard extends LitElement {
           count,
           free_drink: true,
           comment,
+          user_id: this.sessionUserId,
         });
       }
       this._fdResetAllCountersToZero();
@@ -3316,6 +3687,7 @@ class TallyListFreeDrinksCard extends LitElement {
     this._fdResetAllCountersToZero();
     this._fdStopCountdown();
     this._fdCountdownLeft = 0;
+    this._touch();
     this.requestUpdate('_fdCountdownLeft');
   }
 
@@ -3340,6 +3712,18 @@ class TallyListFreeDrinksCard extends LitElement {
       isAdmin,
       onSelect: (id) => this._onUserSelect(id),
     });
+    const cover = this._renderCover(visibleUsers, mode);
+    const showMenu = !this.isPublic || !this.sessionReady;
+    const activeUserMenu = showMenu ? userMenu : '';
+    let sessionBar = '';
+    if (this.isPublic && this.sessionReady) {
+      const cur = visibleUsers.find(
+        (u) => u.user_id === this.sessionUserId || u.slug === this.sessionUserId || u.name === this.sessionUserId
+      );
+      const label = cur?.name || cur?.slug || this.sessionUserId;
+      const warn = this.countdownSec <= 10 ? 'warn' : '';
+      sessionBar = html`<div class="session-bar"><span class="user">${label}</span><span class="countdown ${warn}">${this.countdownSec}</span><button class="action-btn logout" @pointerdown=${this._logout}>Logout</button></div>`;
+    }
     const user = visibleUsers.find((u) => u.user_id === selected);
     const drinks = [];
     if (user) {
@@ -3361,7 +3745,9 @@ class TallyListFreeDrinksCard extends LitElement {
     );
     return html`
       <ha-card class="free-drinks">
-        ${userMenu}
+        ${sessionBar}
+        ${cover}
+        ${activeUserMenu}
         <table>
           <thead>
             <tr>
