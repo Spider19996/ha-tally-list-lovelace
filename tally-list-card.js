@@ -121,21 +121,24 @@ async function _psLogout(card) {
   }
 }
 
-async function _psLogin(card, user, pin) {
+const _psLoginOk = (r) =>
+  r === true ||
+  r?.success === true ||
+  r == null ||
+  (typeof r === 'object' && !('error' in r) && !('success' in r));
+
+async function _psLogin(card, userLabel, pinStr) {
   try {
-    const r = await card.hass.callWS({
+    const res = await card.hass.callWS({
       type: 'tally_list/login',
-      user,
-      pin,
+      user: userLabel,
+      pin: pinStr,
     });
-    if (r && r.success === true) {
-      return { ok: true };
-    }
-    const code = r?.error?.code || r?.code || 'invalid_pin';
-    return { ok: false, code };
+    console.debug('tally_list/login result:', res);
+    return { ok: _psLoginOk(res), code: res?.error?.code || res?.code };
   } catch (e) {
-    const code = e?.error?.code || e?.code || e?.message;
-    return { ok: false, code };
+    console.warn('login error:', e);
+    return { ok: false, code: e?.error?.code || e?.code };
   }
 }
 
@@ -154,25 +157,26 @@ async function _psOk(card) {
   if (PUBLIC_SESSION.loginPending) return;
   const users = card.config.users || card._autoUsers || [];
   const uObj = users.find(
-    (u) => (u.name || u.slug || u.user_id) === card.selectedUser
+    (u) => u.user_id === card.selectedUser || u.name === card.selectedUser || u.slug === card.selectedUser
   );
-  if (!uObj) return;
+  const label = uObj?.name || uObj?.slug;
+  if (!uObj || !label || PUBLIC_SESSION.pinBuffer.length !== 4) return;
   PUBLIC_SESSION.loginPending = true;
   _psNotify();
-  const res = await _psLogin(
+  const { ok, code } = await _psLogin(
     card,
-    uObj.user_id || card.selectedUser,
-    PUBLIC_SESSION.pinBuffer
+    String(label),
+    String(PUBLIC_SESSION.pinBuffer)
   );
   PUBLIC_SESSION.loginPending = false;
-  if (!res.ok) {
+  if (!ok) {
     let msg;
-    if (res.code === 'unknown_command') {
+    if (code === 'unknown_command') {
       msg = 'Befehl fehlt/Integration neu laden';
-    } else if (res.code === 'invalid_pin') {
+    } else if (code === 'invalid_pin') {
       msg = 'PIN ungültig';
-    } else if (res.code) {
-      msg = String(res.code);
+    } else if (code) {
+      msg = String(code);
     } else {
       msg = 'Netzwerkfehler';
     }
@@ -181,8 +185,8 @@ async function _psOk(card) {
     _psNotify();
     return;
   }
-  PUBLIC_SESSION.sessionUserId = uObj.user_id || card.selectedUser;
-  PUBLIC_SESSION.sessionUserName = uObj.name || card.selectedUser;
+  PUBLIC_SESSION.sessionUserId = uObj.user_id || null;
+  PUBLIC_SESSION.sessionUserName = label;
   PUBLIC_SESSION.sessionReady = true;
   PUBLIC_SESSION.pinBuffer = '';
   _psStartCountdown(card);
