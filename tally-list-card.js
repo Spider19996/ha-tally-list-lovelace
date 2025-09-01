@@ -121,76 +121,58 @@ async function _psLogout(card) {
   }
 }
 
-const _psLoginOk = (r) =>
-  r === true ||
-  r?.success === true ||
-  r == null ||
-  (typeof r === 'object' && !('error' in r) && !('success' in r));
-
-async function _psLogin(card, userLabel, pinStr) {
-  try {
-    const res = await card.hass.callWS({
-      type: 'tally_list/login',
-      user: userLabel,
-      pin: pinStr,
-    });
-    console.debug('tally_list/login result:', res);
-    return { ok: _psLoginOk(res), code: res?.error?.code || res?.code };
-  } catch (e) {
-    console.warn('login error:', e);
-    return { ok: false, code: e?.error?.code || e?.code };
-  }
+async function wsLogin(hass, userLabel, pinStr) {
+  const res = await hass.callWS({
+    type: 'tally_list/login',
+    user: String(userLabel),
+    pin: String(pinStr),
+  });
+  return res?.success === true;
 }
 
 function _psAddDigit(card, d) {
-  if (PUBLIC_SESSION.pinBuffer.length >= 4) return;
-  PUBLIC_SESSION.pinBuffer += String(d);
+  if (card.pinBuffer.length >= 4) return;
+  card.pinBuffer += String(d);
   _psNotify();
 }
 
-function _psBackspace() {
-  PUBLIC_SESSION.pinBuffer = PUBLIC_SESSION.pinBuffer.slice(0, -1);
+function _psBackspace(card) {
+  card.pinBuffer = card.pinBuffer.slice(0, -1);
   _psNotify();
 }
 
 async function _psOk(card) {
-  if (PUBLIC_SESSION.loginPending) return;
+  if (card.loginPending) return;
   const users = card.config.users || card._autoUsers || [];
   const uObj = users.find(
     (u) => u.user_id === card.selectedUser || u.name === card.selectedUser || u.slug === card.selectedUser
   );
   const label = uObj?.name || uObj?.slug;
-  if (!uObj || !label || PUBLIC_SESSION.pinBuffer.length !== 4) return;
-  PUBLIC_SESSION.loginPending = true;
-  _psNotify();
-  const { ok, code } = await _psLogin(
-    card,
-    String(label),
-    String(PUBLIC_SESSION.pinBuffer)
-  );
-  PUBLIC_SESSION.loginPending = false;
-  if (!ok) {
-    let msg;
-    if (code === 'unknown_command') {
-      msg = 'Befehl fehlt/Integration neu laden';
-    } else if (code === 'invalid_pin') {
-      msg = 'PIN ungültig';
-    } else if (code) {
-      msg = String(code);
-    } else {
-      msg = 'Netzwerkfehler';
+  if (!uObj || !label || card.pinBuffer.length !== 4) return;
+  card.loginPending = true;
+  card.requestUpdate();
+  let ok;
+  try {
+    ok = await wsLogin(card.hass, label, card.pinBuffer);
+  } catch (e) {
+    const code = e?.error?.code || e?.code;
+    _psToast(card, code === 'unknown_command' ? 'Befehl fehlt/Integration neu laden' : 'Netzwerkfehler');
+  }
+  card.loginPending = false;
+  if (ok !== true) {
+    if (ok === false) {
+      _psToast(card, 'PIN ungültig');
+      card.pinBuffer = '';
     }
-    _psToast(card, msg);
-    PUBLIC_SESSION.pinBuffer = '';
-    _psNotify();
+    card.requestUpdate();
     return;
   }
-  PUBLIC_SESSION.sessionUserId = uObj.user_id || null;
-  PUBLIC_SESSION.sessionUserName = label;
-  PUBLIC_SESSION.sessionReady = true;
-  PUBLIC_SESSION.pinBuffer = '';
+  card.sessionUserId = uObj.user_id || null;
+  card.sessionUserName = label;
+  card.sessionReady = true;
+  card.pinBuffer = '';
   _psStartCountdown(card);
-  _psNotify();
+  card.requestUpdate();
 }
 
 function renderCoverLogin(card) {
@@ -219,7 +201,7 @@ function renderCoverLogin(card) {
         }
       );
   const digits = [1, 2, 3, 4, 5, 6, 7, 8, 9, '⌫', 0, 'OK'];
-  const pinMask = '•'.repeat(PUBLIC_SESSION.pinBuffer.length);
+  const pinMask = '•'.repeat(card.pinBuffer.length);
   return html`<ha-card class="cover-login"><div class="content">${userMenu}
     <div class="pin-display">${pinMask}</div>
     <div class="keypad">
@@ -227,11 +209,11 @@ function renderCoverLogin(card) {
         d === 'OK'
           ? html`<button class="key ok" @click=${() => _psOk(card)} ?disabled=${
               !card.selectedUser ||
-              PUBLIC_SESSION.pinBuffer.length !== 4 ||
-              PUBLIC_SESSION.loginPending
+              card.pinBuffer.length !== 4 ||
+              card.loginPending
             }>OK</button>`
           : d === '⌫'
-          ? html`<button class="key" @click=${_psBackspace}>⌫</button>`
+          ? html`<button class="key" @click=${() => _psBackspace(card)}>⌫</button>`
           : html`<button class="key" @click=${() => _psAddDigit(card, d)}>${d}</button>`
       )}
     </div></div></ha-card>`;
@@ -800,13 +782,13 @@ class TallyListCard extends LitElement {
     if (users.length === 0) {
       return html`<ha-card>...</ha-card>`;
     }
-    if (PUBLIC_SESSION.isPublic && !PUBLIC_SESSION.sessionReady) {
+    if (this.isPublic && !this.sessionReady) {
       return renderCoverLogin(this);
     }
     const userNames = [this.hass.user?.name, ...this._currentPersonNames()];
     const isAdmin = userNames.some((n) => (this._tallyAdmins || []).includes(n));
     let limitSelf = !isAdmin || this.config.only_self;
-    if (PUBLIC_SESSION.isPublic) limitSelf = false;
+    if (this.isPublic) limitSelf = false;
     if (limitSelf) {
       const allowedSlugs = this._currentPersonSlugs();
       const uid = this.hass.user?.id;
@@ -818,8 +800,8 @@ class TallyListCard extends LitElement {
     _umEnsureBuckets(this, users);
     users = this._sortedUsers;
     const own = this._ownUser;
-    if (PUBLIC_SESSION.isPublic && PUBLIC_SESSION.sessionReady) {
-      const u = users.find((u) => u.user_id === PUBLIC_SESSION.sessionUserId);
+    if (this.isPublic && this.sessionReady) {
+      const u = users.find((u) => u.user_id === this.sessionUserId);
       if (u) this.selectedUser = u.name || u.slug;
     } else if (!this.selectedUser || !users.some((u) => (u.name || u.slug) === this.selectedUser)) {
       // Prefer the current user when available, otherwise pick the first entry
@@ -859,8 +841,8 @@ class TallyListCard extends LitElement {
     const cardStyle = width ? `max-width:${width};margin:0 auto;` : '';
     const mode = this.config.user_selector || 'list';
     let userMenu;
-    if (PUBLIC_SESSION.isPublic && PUBLIC_SESSION.sessionReady) {
-      userMenu = html`<div class="user-select"><span class="user-badge">${PUBLIC_SESSION.sessionUserName}</span><span class="countdown-badge ${PUBLIC_SESSION.countdownSec < 10 ? 'warn' : ''}">${PUBLIC_SESSION.countdownSec}</span><button class="logout-btn" @click=${() => _psLogout(this)}>Logout</button></div>`;
+    if (this.isPublic && this.sessionReady) {
+      userMenu = html`<div class="user-select"><span class="user-badge">${this.sessionUserName}</span><span class="countdown-badge ${this.countdownSec < 10 ? 'warn' : ''}">${this.countdownSec}</span><button class="logout-btn" @click=${() => _psLogout(this)}>Logout</button></div>`;
     } else {
       userMenu = _renderUserMenu(
         this,
@@ -896,13 +878,13 @@ class TallyListCard extends LitElement {
     const idRemoveSelect = this._fid('remove-drink');
     return html`
       <ha-card style="${cardStyle}">
-        ${PUBLIC_SESSION.isPublic && PUBLIC_SESSION.sessionReady
+        ${this.isPublic && this.sessionReady
           ? ''
           : mode === 'tabs' && isAdmin
           ? userMenu
           : ''}
         <div class="content">
-          ${PUBLIC_SESSION.isPublic && PUBLIC_SESSION.sessionReady
+          ${this.isPublic && this.sessionReady
             ? userMenu
             : mode === 'tabs' && isAdmin
             ? ''
@@ -1030,10 +1012,10 @@ class TallyListCard extends LitElement {
 
     setTimeout(async () => {
       try {
-        if (PUBLIC_SESSION.isPublic) {
+        if (this.isPublic) {
           await this.hass.callWS({
             type: 'tally_list/add_drink',
-            user_id: PUBLIC_SESSION.sessionUserId,
+            user_id: this.sessionUserId,
             drink: displayDrink,
             count: this.selectedCount,
           });
@@ -1100,10 +1082,10 @@ class TallyListCard extends LitElement {
 
     setTimeout(async () => {
       try {
-        if (PUBLIC_SESSION.isPublic) {
+        if (this.isPublic) {
           await this.hass.callWS({
             type: 'tally_list/remove_drink',
-            user_id: PUBLIC_SESSION.sessionUserId,
+            user_id: this.sessionUserId,
             drink: displayDrink,
             count: this.selectedCount,
           });
@@ -3234,6 +3216,52 @@ class TallyListFreeDrinksCard extends LitElement {
     this.selectedUserId = v;
   }
 
+  get isPublic() {
+    return PUBLIC_SESSION.isPublic;
+  }
+  set isPublic(v) {
+    PUBLIC_SESSION.isPublic = v;
+  }
+
+  get sessionReady() {
+    return PUBLIC_SESSION.sessionReady;
+  }
+  set sessionReady(v) {
+    PUBLIC_SESSION.sessionReady = v;
+  }
+
+  get loginPending() {
+    return PUBLIC_SESSION.loginPending;
+  }
+  set loginPending(v) {
+    PUBLIC_SESSION.loginPending = v;
+  }
+
+  get sessionUserId() {
+    return PUBLIC_SESSION.sessionUserId;
+  }
+  set sessionUserId(v) {
+    PUBLIC_SESSION.sessionUserId = v;
+  }
+
+  get sessionUserName() {
+    return PUBLIC_SESSION.sessionUserName;
+  }
+  set sessionUserName(v) {
+    PUBLIC_SESSION.sessionUserName = v;
+  }
+
+  get pinBuffer() {
+    return PUBLIC_SESSION.pinBuffer;
+  }
+  set pinBuffer(v) {
+    PUBLIC_SESSION.pinBuffer = v;
+  }
+
+  get countdownSec() {
+    return PUBLIC_SESSION.countdownSec;
+  }
+
   connectedCallback() {
     super.connectedCallback?.();
     _psSubscribe(this);
@@ -3626,10 +3654,10 @@ class TallyListFreeDrinksCard extends LitElement {
           (this._drinkNames[drink] || drink)
             .replace(/_/g, ' ')
             .replace(/\b\w/g, (c) => c.toUpperCase());
-        if (PUBLIC_SESSION.isPublic) {
+        if (this.isPublic) {
           await this.hass.callWS({
             type: 'tally_list/add_drink',
-            user_id: PUBLIC_SESSION.sessionUserId,
+            user_id: this.sessionUserId,
             drink: drinkName,
             count,
             free_drink: true,
@@ -3682,7 +3710,7 @@ class TallyListFreeDrinksCard extends LitElement {
   render() {
     const allUsers = this.config.users || this._autoUsers || [];
     if (allUsers.length === 0) return html`<ha-card>...</ha-card>`;
-    if (PUBLIC_SESSION.isPublic && !PUBLIC_SESSION.sessionReady) {
+    if (this.isPublic && !this.sessionReady) {
       return renderCoverLogin(this);
     }
     const prices = this.config.prices || this._autoPrices;
@@ -3693,18 +3721,18 @@ class TallyListFreeDrinksCard extends LitElement {
     const showPrices = this.config.show_prices !== false;
     const mode = this.config.user_selector || 'list';
     const isAdmin = this._isAdmin;
-    const visibleUsers = PUBLIC_SESSION.isPublic
+    const visibleUsers = this.isPublic
       ? allUsers
       : isAdmin
       ? allUsers
       : allUsers.filter((u) => u.user_id === this.hass?.user?.id);
-    if (PUBLIC_SESSION.isPublic && PUBLIC_SESSION.sessionReady) {
-      this.selectedUserId = PUBLIC_SESSION.sessionUserId;
+    if (this.isPublic && this.sessionReady) {
+      this.selectedUserId = this.sessionUserId;
     }
     const selected = this.selectedUserId || this.hass?.user?.id || '';
     let userMenu;
-    if (PUBLIC_SESSION.isPublic && PUBLIC_SESSION.sessionReady) {
-      userMenu = html`<div class="user-select"><span class="user-badge">${PUBLIC_SESSION.sessionUserName}</span><span class="countdown-badge ${PUBLIC_SESSION.countdownSec < 10 ? 'warn' : ''}">${PUBLIC_SESSION.countdownSec}</span><button class="logout-btn" @click=${() => _psLogout(this)}>Logout</button></div>`;
+    if (this.isPublic && this.sessionReady) {
+      userMenu = html`<div class="user-select"><span class="user-badge">${this.sessionUserName}</span><span class="countdown-badge ${this.countdownSec < 10 ? 'warn' : ''}">${this.countdownSec}</span><button class="logout-btn" @click=${() => _psLogout(this)}>Logout</button></div>`;
     } else {
       userMenu = this._renderUserMenu({
         users: visibleUsers,
