@@ -207,14 +207,14 @@ function renderCoverLogin(card) {
     <div class="keypad">
       ${digits.map((d) =>
         d === 'OK'
-          ? html`<button class="key ok" @click=${() => _psOk(card)} ?disabled=${
+          ? html`<button class="key action-btn ok" @click=${() => _psOk(card)} ?disabled=${
               !card.selectedUser ||
               card.pinBuffer.length !== 4 ||
               card.loginPending
             }>OK</button>`
           : d === '⌫'
-          ? html`<button class="key del" @click=${() => _psBackspace(card)}>⌫</button>`
-          : html`<button class="key" @click=${() => _psAddDigit(card, d)}>${d}</button>`
+          ? html`<button class="key action-btn del" @click=${() => _psBackspace(card)}>⌫</button>`
+          : html`<button class="key action-btn" @click=${() => _psAddDigit(card, d)}>${d}</button>`
       )}
     </div></div></ha-card>`;
 }
@@ -1455,14 +1455,12 @@ class TallyListCard extends LitElement {
     }
     .keypad {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(3, 44px);
       gap: 8px;
+      justify-content: center;
     }
     .keypad .key {
-      height: 44px;
       font-size: 16px;
-      border-radius: 12px;
-      border: none;
       background: #2b2b2b;
       color: #ddd;
     }
@@ -1492,8 +1490,13 @@ class TallyListCard extends LitElement {
       background: #2b2b2b;
       color: #ddd;
       border: none;
-      height: 32px;
+      height: 44px;
       padding: 0 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      box-sizing: border-box;
     }
     .segments {
       display: flex;
