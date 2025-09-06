@@ -1531,6 +1531,7 @@ class TallyListCard extends LitElement {
       height: 36px;
       align-items: center;
       position: relative;
+      margin-top: 10px;
     }
     .pin-timer-overlay {
       position: absolute;
