@@ -188,7 +188,7 @@ async function _psTryLogin(card) {
       card.pinLocked = true;
       card.requestUpdate();
       _psNotify();
-      const delay = Number(card.config.lock_ms ?? 400);
+      const delay = Number(card.config.pin_lock_ms ?? 5000);
       setTimeout(() => {
         card.pinLocked = false;
         card.requestUpdate();
@@ -281,6 +281,7 @@ const TL_STRINGS = {
     free_amount: 'Free amount',
     amount_due: 'Amount due',
     lock_ms: 'Lock duration (ms)',
+    pin_lock_ms: 'PIN lock duration (ms)',
     max_width: 'Maximum width (px)',
     free_drinks_timer_seconds: 'Free drinks timer (s)',
     free_drinks_per_item_limit: 'Free drinks per item limit',
@@ -345,6 +346,7 @@ const TL_STRINGS = {
     free_amount: 'Freibetrag',
     amount_due: 'Zu zahlen',
     lock_ms: 'Sperrzeit (ms)',
+    pin_lock_ms: 'PIN-Sperrzeit (ms)',
     max_width: 'Maximale Breite (px)',
     free_drinks_timer_seconds: 'Freigetränke-Timer (s)',
     free_drinks_per_item_limit: 'Limit je Getränk (0 = aus)',
@@ -726,6 +728,7 @@ class TallyListCard extends LitElement {
     };
     this.config = {
       lock_ms: 400,
+      pin_lock_ms: 5000,
       max_width: '500px',
       show_remove: true,
       only_self: false,
@@ -1391,6 +1394,7 @@ class TallyListCard extends LitElement {
   static getStubConfig() {
     return {
       lock_ms: 400,
+      pin_lock_ms: 5000,
       max_width: '500px',
       show_remove: true,
       show_step_select: true,
@@ -1758,6 +1762,7 @@ class TallyListCardEditor extends LitElement {
     };
     this._config = {
       lock_ms: 400,
+      pin_lock_ms: 5000,
       max_width: '500px',
       free_drinks_timer_seconds: 0,
       free_drinks_per_item_limit: 0,
@@ -1782,6 +1787,7 @@ class TallyListCardEditor extends LitElement {
   render() {
     if (!this._config) return html``;
     const idLock = this._fid('lock-ms');
+    const idPinLock = this._fid('pin-lock-ms');
     const idWidth = this._fid('max-width');
     const idFdTimer = this._fid('fd-timer');
     const idFdPerItem = this._fid('fd-per-item');
@@ -1801,6 +1807,10 @@ class TallyListCardEditor extends LitElement {
       <div class="form">
         <label for="${idLock}">${this._t('lock_ms')}</label>
         <input id="${idLock}" name="lock_ms" type="number" .value=${this._config.lock_ms} @input=${this._lockChanged} />
+      </div>
+      <div class="form">
+        <label for="${idPinLock}">${this._t('pin_lock_ms')}</label>
+        <input id="${idPinLock}" name="pin_lock_ms" type="number" .value=${this._config.pin_lock_ms} @input=${this._pinLockChanged} />
       </div>
       <div class="form">
         <label for="${idWidth}">${this._t('max_width')}</label>
@@ -1888,6 +1898,18 @@ class TallyListCardEditor extends LitElement {
         <div class="version">${this._t('version')}: ${CARD_VERSION}</div>
       </details>
     `;
+  }
+
+  _pinLockChanged(ev) {
+    const value = Number(ev.target.value);
+    this._config = { ...this._config, pin_lock_ms: isNaN(value) ? 5000 : value };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
   }
 
   _lockChanged(ev) {
