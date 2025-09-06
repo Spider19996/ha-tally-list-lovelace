@@ -47,10 +47,25 @@ async function _psInit(hass) {
   if (PUBLIC_SESSION._init) return;
   PUBLIC_SESSION._init = true;
   try {
+    const stored = window.localStorage.getItem('tally-list-public');
+    if (stored !== null) {
+      PUBLIC_SESSION.isPublic = stored === '1';
+      _psNotify();
+    }
+  } catch (_) {
+    // ignore storage errors
+  }
+  try {
     const r = await hass.callWS({ type: 'tally_list/is_public_device' });
-    PUBLIC_SESSION.isPublic = r?.is_public === true;
+    const val = r?.is_public === true;
+    PUBLIC_SESSION.isPublic = val;
+    try {
+      window.localStorage.setItem('tally-list-public', val ? '1' : '0');
+    } catch (_) {
+      // ignore storage errors
+    }
   } catch (e) {
-    PUBLIC_SESSION.isPublic = false;
+    // keep previous value on error
   }
   _psNotify();
 }
@@ -221,7 +236,7 @@ function renderCoverLogin(card) {
     </div></div></ha-card>`;
 }
 
-const CARD_VERSION = '01.09.2025';
+const CARD_VERSION = '06.09.2025';
 
 const TL_STRINGS = {
   en: {
@@ -2075,6 +2090,7 @@ class TallyDueRankingCard extends LitElement {
   set hass(h) {
     const old = this._hass;
     this._hass = h;
+    _psInit(h);
     this.requestUpdate('hass', old);
   }
 
@@ -2213,12 +2229,13 @@ class TallyDueRankingCard extends LitElement {
     }
     const userNames = [this.hass.user?.name, ...this._currentPersonNames()];
     const isAdmin = userNames.some(n => (this._tallyAdmins || []).includes(n));
-    if (!isAdmin) {
+    const isPublicDevice = PUBLIC_SESSION.isPublic === true;
+    if (!isAdmin && !isPublicDevice) {
       const allowed = this._currentPersonSlugs();
       const uid = this.hass.user?.id;
       users = users.filter(u => u.user_id === uid || allowed.includes(u.slug));
     }
-    if (users.length === 0) {
+    if (users.length === 0 && !isPublicDevice) {
       return html`<ha-card>${this._t('no_user_access')}</ha-card>`;
     }
     const prices = this.config.prices || this._autoPrices || {};
@@ -2526,12 +2543,13 @@ class TallyDueRankingCard extends LitElement {
     let users = this.config.users || this._autoUsers || [];
     const userNames = [this.hass.user?.name, ...this._currentPersonNames()];
     const isAdmin = userNames.some(n => (this._tallyAdmins || []).includes(n));
-    if (!isAdmin) {
+    const isPublicDevice = PUBLIC_SESSION.isPublic === true;
+    if (!isAdmin && !isPublicDevice) {
       const allowed = this._currentPersonSlugs();
       const uid = this.hass.user?.id;
       users = users.filter(u => u.user_id === uid || allowed.includes(u.slug));
     }
-    if (users.length === 0) return;
+    if (users.length === 0 && !isPublicDevice) return;
     const prices = this.config.prices || this._autoPrices || {};
     const freeAmount = Number(this.config.free_amount ?? this._freeAmount ?? 0);
     let ranking = users.map(u => {
