@@ -1847,9 +1847,6 @@ class TallyListCardEditor extends LitElement {
       pin_lock_ms: 5000,
       session_timeout_seconds: 30,
       max_width: '500px',
-      free_drinks_timer_seconds: 0,
-      free_drinks_per_item_limit: 0,
-      free_drinks_total_limit: 0,
       show_remove: true,
       only_self: false,
       show_all_users: false,
@@ -1873,9 +1870,6 @@ class TallyListCardEditor extends LitElement {
     const idPinLock = this._fid('pin-lock-ms');
     const idSessionTimeout = this._fid('session-timeout');
     const idWidth = this._fid('max-width');
-    const idFdTimer = this._fid('fd-timer');
-    const idFdPerItem = this._fid('fd-per-item');
-    const idFdTotal = this._fid('fd-total');
     const idShowRemove = this._fid('show-remove');
     const idShowStepSelect = this._fid('show-step-select');
     const idOnlySelf = this._fid('only-self');
@@ -1903,18 +1897,6 @@ class TallyListCardEditor extends LitElement {
       <div class="form">
         <label for="${idWidth}">${this._t('max_width')}</label>
         <input id="${idWidth}" name="max_width" type="number" .value=${(this._config.max_width ?? '').replace(/px$/, '')} @input=${this._widthChanged} />
-      </div>
-      <div class="form">
-        <label for="${idFdTimer}">${this._t('free_drinks_timer_seconds')}</label>
-        <input id="${idFdTimer}" name="free_drinks_timer_seconds" type="number" .value=${this._config.free_drinks_timer_seconds} @input=${this._fdTimerChanged} />
-      </div>
-      <div class="form">
-        <label for="${idFdPerItem}">${this._t('free_drinks_per_item_limit')}</label>
-        <input id="${idFdPerItem}" name="free_drinks_per_item_limit" type="number" .value=${this._config.free_drinks_per_item_limit} @input=${this._fdPerItemChanged} />
-      </div>
-      <div class="form">
-        <label for="${idFdTotal}">${this._t('free_drinks_total_limit')}</label>
-        <input id="${idFdTotal}" name="free_drinks_total_limit" type="number" .value=${this._config.free_drinks_total_limit} @input=${this._fdTotalChanged} />
       </div>
       <div class="form">
         <input id="${idShowRemove}" name="show_remove" type="checkbox" .checked=${this._config.show_remove} @change=${this._removeChanged} />
@@ -2146,33 +2128,6 @@ class TallyListCardEditor extends LitElement {
     this._config = {
       ...this._config,
       grid: { ...this._config.grid, columns },
-    };
-    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
-  }
-
-  _fdTimerChanged(ev) {
-    const value = Number(ev.target.value);
-    this._config = {
-      ...this._config,
-      free_drinks_timer_seconds: isNaN(value) ? 0 : value,
-    };
-    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
-  }
-
-  _fdPerItemChanged(ev) {
-    const value = Number(ev.target.value);
-    this._config = {
-      ...this._config,
-      free_drinks_per_item_limit: isNaN(value) ? 0 : value,
-    };
-    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
-  }
-
-  _fdTotalChanged(ev) {
-    const value = Number(ev.target.value);
-    this._config = {
-      ...this._config,
-      free_drinks_total_limit: isNaN(value) ? 0 : value,
     };
     this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
   }
