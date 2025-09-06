@@ -3041,6 +3041,7 @@ class TallyListFreeDrinksCardEditor extends LitElement {
       free_drinks_per_item_limit: 0,
       free_drinks_total_limit: 0,
       session_timeout_seconds: 30,
+      pin_lock_ms: 5000,
       language: 'auto',
       user_selector: 'list',
       ...(config || {}),
@@ -3055,6 +3056,7 @@ class TallyListFreeDrinksCardEditor extends LitElement {
     const idPrices = this._fid('prices');
     const idPresets = this._fid('presets');
     const idSessionTimeout = this._fid('session-timeout');
+    const idPinLock = this._fid('pin-lock-ms');
     const idLanguage = this._fid('language');
     const idUserSelector = this._fid('user-selector');
     const idTabMode = this._fid('tab-mode');
@@ -3095,6 +3097,15 @@ class TallyListFreeDrinksCardEditor extends LitElement {
           type="number"
           .value=${this._config.session_timeout_seconds}
           @input=${this._sessionTimeoutChanged}
+        />
+      </div>
+      <div class="form">
+        <label for="${idPinLock}">${t(this.hass, this._config.language, 'pin_lock_ms')}</label>
+        <input
+          id="${idPinLock}"
+          type="number"
+          .value=${this._config.pin_lock_ms}
+          @input=${this._pinLockChanged}
         />
       </div>
       <div class="form">
@@ -3211,6 +3222,15 @@ class TallyListFreeDrinksCardEditor extends LitElement {
     this._config = {
       ...this._config,
       session_timeout_seconds: isNaN(value) ? 30 : value,
+    };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _pinLockChanged(ev) {
+    const value = Number(ev.target.value);
+    this._config = {
+      ...this._config,
+      pin_lock_ms: isNaN(value) ? 5000 : value,
     };
     fireEvent(this, 'config-changed', { config: this._config });
   }
@@ -3483,6 +3503,7 @@ class TallyListFreeDrinksCard extends LitElement {
     const grid = { columns: 0, ...(config?.grid || {}) };
     this.config = {
       show_prices: true,
+      pin_lock_ms: 5000,
       language: 'auto',
       user_selector: 'list',
       ...(config || {}),
@@ -3502,6 +3523,7 @@ class TallyListFreeDrinksCard extends LitElement {
     this.config.free_drinks_total_limit = Number(
       config?.free_drinks_total_limit ?? 0
     );
+    this.config.pin_lock_ms = Number(config?.pin_lock_ms ?? 5000);
     if (!this._commentType && this.config.comment_presets?.length) {
       this._commentType = this.config.comment_presets[0].label;
     }
