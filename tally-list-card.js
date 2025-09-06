@@ -267,7 +267,7 @@ function renderCoverLogin(card) {
           }
         }
       );
-  const digits = [1, 2, 3, 4, 5, 6, 7, 8, 9, '⌧', 0];
+  const digits = [1, 2, 3, 4, 5, 6, 7, 8, 9, '⟲', 0];
   const pinMask = Array.from({ length: 4 }, (_, i) =>
     html`<span class="pin-dot ${card.pinBuffer.length > i ? 'filled' : ''}"></span>`
   );
@@ -284,10 +284,10 @@ function renderCoverLogin(card) {
     </div>
     <div class="keypad">
       ${digits.map((d) =>
-        d === '⌧'
+        d === '⟲'
           ? html`<button class="key action-btn del" @click=${() => _psBackspace(card)} ?disabled=${
               card.loginPending || card.pinLocked
-            }>⌧</button>`
+            }>⟲</button>`
           : html`<button class="key action-btn" @click=${() => _psAddDigit(card, d)} ?disabled=${
               card.loginPending || card.pinLocked
             }>${d}</button>`
