@@ -250,7 +250,11 @@ function renderCoverLogin(card) {
         layout: mode,
         isAdmin: true,
         onSelect: (id) => {
+          const prev = card.selectedUser;
           card.selectedUser = id;
+          if (prev !== id) {
+            card.pinBuffer = '';
+          }
           _psNotify();
           if (card.pinBuffer.length === 4) {
             _psTryLogin(card);
@@ -264,7 +268,11 @@ function renderCoverLogin(card) {
         mode,
         true,
         (id) => {
+          const prev = card.selectedUser;
           card.selectedUser = id;
+          if (prev !== id) {
+            card.pinBuffer = '';
+          }
           _psNotify();
           if (card.pinBuffer.length === 4) {
             _psTryLogin(card);
@@ -3633,6 +3641,8 @@ class TallyListFreeDrinksCard extends LitElement {
     if (id && this.selectedUserId !== id) {
       this.selectedUserId = id;
       this.requestUpdate('selectedUserId');
+      this.pinBuffer = '';
+      _psNotify();
     }
   }
 
