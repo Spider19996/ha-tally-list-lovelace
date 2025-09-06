@@ -1,6 +1,6 @@
 import { LitElement, html, css } from 'https://unpkg.com/lit?module';
 import { translate, fireEvent } from './tally-list-card.js';
-const CARD_VERSION = '01.09.2025';
+const CARD_VERSION = '06.09.2025';
 
 const TL_STRINGS = {
   en: {
