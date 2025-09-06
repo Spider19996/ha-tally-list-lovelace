@@ -201,7 +201,6 @@ async function _psTryLogin(card) {
   card.loginPending = false;
   if (ok !== true) {
     if (ok === false) {
-      _psToast(card, 'PIN ungültig');
       card.pinBuffer = '';
       card.pinLocked = true;
       const delay = Number(card.config.pin_lock_ms ?? 5000);
@@ -291,7 +290,12 @@ function renderCoverLogin(card) {
             card.config?.language,
             TL_STRINGS,
             'pin_locked'
-          )}: ${Math.ceil(card.pinLockRemainingMs / 1000)}s</div>`
+          )}, ${Math.ceil(card.pinLockRemainingMs / 1000)}s ${translate(
+            card.hass,
+            card.config?.language,
+            TL_STRINGS,
+            'pin_locked_suffix'
+          )}</div>`
         : ''}
     </div>
     <div class="keypad">
@@ -337,7 +341,8 @@ const TL_STRINGS = {
     lock_ms: 'Lock duration (ms)',
     pin_lock_ms: 'PIN lock duration (ms)',
     session_timeout_seconds: 'Session timeout (s)',
-    pin_locked: 'PIN locked',
+    pin_locked: 'PIN invalid',
+    pin_locked_suffix: 'locked',
     max_width: 'Maximum width (px)',
     free_drinks_timer_seconds: 'Free drinks timer (s)',
     free_drinks_per_item_limit: 'Free drinks per item limit',
@@ -404,7 +409,8 @@ const TL_STRINGS = {
     lock_ms: 'Sperrzeit (ms)',
     pin_lock_ms: 'PIN-Sperrzeit (ms)',
     session_timeout_seconds: 'Session-Timeout (s)',
-    pin_locked: 'PIN gesperrt',
+    pin_locked: 'PIN ungültig',
+    pin_locked_suffix: 'gesperrt',
     max_width: 'Maximale Breite (px)',
     free_drinks_timer_seconds: 'Freigetränke-Timer (s)',
     free_drinks_per_item_limit: 'Limit je Getränk (0 = aus)',
