@@ -111,3 +111,24 @@ comment_presets:
     require_comment: false
 ```
 
+
+## PIN-Karte
+
+Nutzer können ihre eigene 4-stellige PIN setzen oder zurücksetzen. Administratoren können für jeden Nutzer die PIN festlegen. Die Karte kann über den Lovelace-Karteneditor hinzugefügt werden.
+Beim Öffnen der Karte erscheint ein Hinweis, keine wichtige PIN (z. B. die der Bankkarte) zu verwenden, da nicht garantiert werden kann, dass sie nicht entwendet wird.
+
+```yaml
+type: custom:tally-set-pin-card
+```
+
+Die Karte verwendet die gleiche Benutzerliste wie die Hauptkarte und benötigt normalerweise keine zusätzliche Konfiguration.
+
+Zum Speichern der neuen PIN wird der Service `tally_list.set_pin` aufgerufen, z. B.:
+
+```yaml
+action: tally_list.set_pin
+data:
+  user: Erika Mustermann
+  pin: "1234"
+```
+
