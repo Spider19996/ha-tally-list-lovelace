@@ -221,7 +221,7 @@ function renderCoverLogin(card) {
     </div></div></ha-card>`;
 }
 
-const CARD_VERSION = '01.09.2025';
+const CARD_VERSION = '06.09.2025';
 
 const TL_STRINGS = {
   en: {
@@ -2213,12 +2213,13 @@ class TallyDueRankingCard extends LitElement {
     }
     const userNames = [this.hass.user?.name, ...this._currentPersonNames()];
     const isAdmin = userNames.some(n => (this._tallyAdmins || []).includes(n));
-    if (!isAdmin) {
+    const isPublicDevice = PUBLIC_SESSION.isPublic === true;
+    if (!isAdmin && !isPublicDevice) {
       const allowed = this._currentPersonSlugs();
       const uid = this.hass.user?.id;
       users = users.filter(u => u.user_id === uid || allowed.includes(u.slug));
     }
-    if (users.length === 0) {
+    if (users.length === 0 && !isPublicDevice) {
       return html`<ha-card>${this._t('no_user_access')}</ha-card>`;
     }
     const prices = this.config.prices || this._autoPrices || {};
@@ -2526,12 +2527,13 @@ class TallyDueRankingCard extends LitElement {
     let users = this.config.users || this._autoUsers || [];
     const userNames = [this.hass.user?.name, ...this._currentPersonNames()];
     const isAdmin = userNames.some(n => (this._tallyAdmins || []).includes(n));
-    if (!isAdmin) {
+    const isPublicDevice = PUBLIC_SESSION.isPublic === true;
+    if (!isAdmin && !isPublicDevice) {
       const allowed = this._currentPersonSlugs();
       const uid = this.hass.user?.id;
       users = users.filter(u => u.user_id === uid || allowed.includes(u.slug));
     }
-    if (users.length === 0) return;
+    if (users.length === 0 && !isPublicDevice) return;
     const prices = this.config.prices || this._autoPrices || {};
     const freeAmount = Number(this.config.free_amount ?? this._freeAmount ?? 0);
     let ranking = users.map(u => {
