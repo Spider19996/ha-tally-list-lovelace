@@ -6,6 +6,7 @@ const TL_STRINGS = {
   en: {
     lock_ms: 'Lock duration (ms)',
     pin_lock_ms: 'PIN lock duration (ms)',
+    session_timeout_seconds: 'Session timeout (s)',
     max_width: 'Maximum width (px)',
     free_drinks_timer_seconds: 'Free drinks timer (s)',
     free_drinks_per_item_limit: 'Free drinks per item limit',
@@ -35,6 +36,7 @@ const TL_STRINGS = {
   de: {
     lock_ms: 'Sperrzeit (ms)',
     pin_lock_ms: 'PIN-Sperrzeit (ms)',
+    session_timeout_seconds: 'Session-Timeout (s)',
     max_width: 'Maximale Breite (px)',
     free_drinks_timer_seconds: 'Freigetränke-Timer (s)',
     free_drinks_per_item_limit: 'Limit je Getränk (0 = aus)',
@@ -86,6 +88,7 @@ class TallyListCardEditor extends LitElement {
     this._config = {
       lock_ms: 400,
       pin_lock_ms: 5000,
+      session_timeout_seconds: 30,
       max_width: '500px',
       free_drinks_timer_seconds: 0,
       free_drinks_per_item_limit: 0,
@@ -124,6 +127,14 @@ class TallyListCardEditor extends LitElement {
           type="number"
           .value=${this._config.pin_lock_ms}
           @input=${this._pinLockChanged}
+        />
+      </div>
+      <div class="form">
+        <label>${this._t('session_timeout_seconds')}</label>
+        <input
+          type="number"
+          .value=${this._config.session_timeout_seconds}
+          @input=${this._sessionTimeoutChanged}
         />
       </div>
       <div class="form">
@@ -248,6 +259,15 @@ class TallyListCardEditor extends LitElement {
   _lockChanged(ev) {
     const value = Number(ev.target.value);
     this._config = { ...this._config, lock_ms: isNaN(value) ? 400 : value };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _sessionTimeoutChanged(ev) {
+    const value = Number(ev.target.value);
+    this._config = {
+      ...this._config,
+      session_timeout_seconds: isNaN(value) ? 30 : value,
+    };
     fireEvent(this, 'config-changed', { config: this._config });
   }
 

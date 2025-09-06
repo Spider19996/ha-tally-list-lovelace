@@ -83,9 +83,10 @@ function _psUnsubscribe(card) {
   PUBLIC_SESSION.subs.delete(card);
 }
 
-function _psTouch() {
+function _psTouch(card) {
   if (PUBLIC_SESSION.sessionReady && PUBLIC_SESSION.isPublic) {
-    PUBLIC_SESSION.sessionExpiresAt = Date.now() + 30000;
+    const timeout = Number(card?.config?.session_timeout_seconds ?? 30);
+    PUBLIC_SESSION.sessionExpiresAt = Date.now() + timeout * 1000;
   }
 }
 
@@ -97,8 +98,9 @@ function _psStopCountdown() {
 }
 
 function _psStartCountdown(card) {
-  PUBLIC_SESSION.sessionExpiresAt = Date.now() + 30000;
-  PUBLIC_SESSION.countdownSec = 30;
+  const timeout = Number(card.config.session_timeout_seconds ?? 30);
+  PUBLIC_SESSION.sessionExpiresAt = Date.now() + timeout * 1000;
+  PUBLIC_SESSION.countdownSec = timeout;
   if (!PUBLIC_SESSION.countdownTimer) {
     PUBLIC_SESSION.countdownTimer = setInterval(() => {
       PUBLIC_SESSION.countdownSec = Math.max(
@@ -794,6 +796,7 @@ class TallyListCard extends LitElement {
     this.config = {
       lock_ms: 400,
       pin_lock_ms: 5000,
+      session_timeout_seconds: 30,
       max_width: '500px',
       show_remove: true,
       only_self: false,
@@ -1091,7 +1094,7 @@ class TallyListCard extends LitElement {
   _selectRemoveDrink(ev) {
     this.selectedRemoveDrink = ev.target.value;
     this.requestUpdate();
-    _psTouch();
+    _psTouch(this);
   }
 
   _onSelectCount(ev) {
@@ -1100,7 +1103,7 @@ class TallyListCard extends LitElement {
     const count = Number(ev.currentTarget.dataset.count);
     this.selectedCount = count;
     this.requestUpdate('selectedCount');
-    _psTouch();
+    _psTouch(this);
   }
 
   _onAddDrink(ev) {
@@ -1118,7 +1121,7 @@ class TallyListCard extends LitElement {
   }
 
   _addDrink(drink) {
-    _psTouch();
+    _psTouch(this);
     if (this._disabled) {
       return;
     }
@@ -1168,7 +1171,7 @@ class TallyListCard extends LitElement {
   }
 
   _removeDrink(drink) {
-    _psTouch();
+    _psTouch(this);
     if (this._disabled || !drink) {
       return;
     }
@@ -3444,6 +3447,9 @@ class TallyListFreeDrinksCard extends LitElement {
       tabs,
       grid,
     };
+    this.config.session_timeout_seconds = Number(
+      config?.session_timeout_seconds ?? 30
+    );
     this.config.free_drinks_timer_seconds = Number(
       config?.free_drinks_timer_seconds ?? 0
     );
@@ -3633,7 +3639,7 @@ class TallyListFreeDrinksCard extends LitElement {
   }
 
   _fdInc(drinkId) {
-    _psTouch();
+    _psTouch(this);
     const perCap = this._perItemCap;
     const totalCap = this._totalCap;
 
@@ -3649,7 +3655,7 @@ class TallyListFreeDrinksCard extends LitElement {
   }
 
   _fdDec(drinkId) {
-    _psTouch();
+    _psTouch(this);
     const current = Number(this._freeDrinkCounts?.[drinkId] || 0);
     const next = Math.max(0, current - 1);
     if (next === current) return;
@@ -3733,12 +3739,12 @@ class TallyListFreeDrinksCard extends LitElement {
 
   _onComment(ev) {
     this._comment = ev.target.value;
-    _psTouch();
+    _psTouch(this);
   }
 
   _onPreset(ev) {
     this._commentType = ev.target.value;
-    _psTouch();
+    _psTouch(this);
   }
 
   _validComment() {
@@ -3783,7 +3789,7 @@ class TallyListFreeDrinksCard extends LitElement {
   }
 
   async _submit() {
-    _psTouch();
+    _psTouch(this);
     if (!this._validComment() || this._getTotalCount() === 0) return;
     const extra = this._comment.trim();
     const comment = this._commentType
@@ -3840,7 +3846,7 @@ class TallyListFreeDrinksCard extends LitElement {
   }
 
   _reset() {
-    _psTouch();
+    _psTouch(this);
     this._fdResetAllCountersToZero();
     this._fdStopCountdown();
     this._fdCountdownLeft = 0;
