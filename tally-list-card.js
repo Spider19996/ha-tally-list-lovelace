@@ -33,6 +33,9 @@ const PUBLIC_SESSION = {
   sessionUserName: '',
   pinBuffer: '',
   pinLocked: false,
+  pinLockUntil: 0,
+  pinLockRemainingMs: 0,
+  pinLockTimer: null,
   sessionExpiresAt: 0,
   countdownSec: 0,
   countdownTimer: null,
@@ -110,6 +113,16 @@ function _psStartCountdown(card) {
   }
 }
 
+function _psStopPinLock() {
+  if (PUBLIC_SESSION.pinLockTimer) {
+    clearInterval(PUBLIC_SESSION.pinLockTimer);
+    PUBLIC_SESSION.pinLockTimer = null;
+  }
+  PUBLIC_SESSION.pinLocked = false;
+  PUBLIC_SESSION.pinLockRemainingMs = 0;
+  PUBLIC_SESSION.pinLockUntil = 0;
+}
+
 function _psToast(card, msg) {
   card.dispatchEvent(
     new CustomEvent('hass-notification', {
@@ -133,6 +146,7 @@ async function _psLogout(card) {
     PUBLIC_SESSION.sessionExpiresAt = 0;
     PUBLIC_SESSION.countdownSec = 0;
     _psStopCountdown();
+    _psStopPinLock();
     _psNotify();
   }
 }
@@ -186,14 +200,27 @@ async function _psTryLogin(card) {
       _psToast(card, 'PIN ungültig');
       card.pinBuffer = '';
       card.pinLocked = true;
+      const delay = Number(card.config.pin_lock_ms ?? 5000);
+      card.pinLockUntil = Date.now() + delay;
+      card.pinLockRemainingMs = delay;
       card.requestUpdate();
       _psNotify();
-      const delay = Number(card.config.pin_lock_ms ?? 5000);
-      setTimeout(() => {
-        card.pinLocked = false;
+      if (card.pinLockTimer) {
+        clearInterval(card.pinLockTimer);
+      }
+      card.pinLockTimer = setInterval(() => {
+        const remain = card.pinLockUntil - Date.now();
+        if (remain <= 0) {
+          clearInterval(card.pinLockTimer);
+          card.pinLockTimer = null;
+          card.pinLocked = false;
+          card.pinLockRemainingMs = 0;
+        } else {
+          card.pinLockRemainingMs = remain;
+        }
         card.requestUpdate();
         _psNotify();
-      }, delay);
+      }, 100);
     } else {
       card.requestUpdate();
       _psNotify();
@@ -245,7 +272,13 @@ function renderCoverLogin(card) {
     html`<span class="pin-dot ${card.pinBuffer.length > i ? 'filled' : ''}"></span>`
   );
   return html`<ha-card class="cover-login"><div class="content">${userMenu}
-    <div class="pin-display">${pinMask}</div>
+    <div class="pin-display">${pinMask}
+      ${card.pinLocked
+        ? html`<div class="pin-timer-overlay">${Math.ceil(
+            card.pinLockRemainingMs / 1000
+          )}</div>`
+        : ''}
+    </div>
     <div class="keypad">
       ${digits.map((d) =>
         d === '⌫'
@@ -697,6 +730,27 @@ class TallyListCard extends LitElement {
   }
   set pinLocked(v) {
     PUBLIC_SESSION.pinLocked = v;
+  }
+
+  get pinLockUntil() {
+    return PUBLIC_SESSION.pinLockUntil;
+  }
+  set pinLockUntil(v) {
+    PUBLIC_SESSION.pinLockUntil = v;
+  }
+
+  get pinLockRemainingMs() {
+    return PUBLIC_SESSION.pinLockRemainingMs;
+  }
+  set pinLockRemainingMs(v) {
+    PUBLIC_SESSION.pinLockRemainingMs = v;
+  }
+
+  get pinLockTimer() {
+    return PUBLIC_SESSION.pinLockTimer;
+  }
+  set pinLockTimer(v) {
+    PUBLIC_SESSION.pinLockTimer = v;
   }
 
   get countdownSec() {
@@ -1444,6 +1498,18 @@ class TallyListCard extends LitElement {
       gap: 12px;
       height: 36px;
       align-items: center;
+      position: relative;
+    }
+    .pin-timer-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--card-background-color, #fff);
     }
     .pin-dot {
       width: 24px;
