@@ -83,9 +83,10 @@ function _psUnsubscribe(card) {
   PUBLIC_SESSION.subs.delete(card);
 }
 
-function _psTouch() {
+function _psTouch(card) {
   if (PUBLIC_SESSION.sessionReady && PUBLIC_SESSION.isPublic) {
-    PUBLIC_SESSION.sessionExpiresAt = Date.now() + 30000;
+    const timeout = Number(card?.config?.session_timeout_seconds ?? 30);
+    PUBLIC_SESSION.sessionExpiresAt = Date.now() + timeout * 1000;
   }
 }
 
@@ -97,8 +98,9 @@ function _psStopCountdown() {
 }
 
 function _psStartCountdown(card) {
-  PUBLIC_SESSION.sessionExpiresAt = Date.now() + 30000;
-  PUBLIC_SESSION.countdownSec = 30;
+  const timeout = Number(card.config.session_timeout_seconds ?? 30);
+  PUBLIC_SESSION.sessionExpiresAt = Date.now() + timeout * 1000;
+  PUBLIC_SESSION.countdownSec = timeout;
   if (!PUBLIC_SESSION.countdownTimer) {
     PUBLIC_SESSION.countdownTimer = setInterval(() => {
       PUBLIC_SESSION.countdownSec = Math.max(
@@ -324,6 +326,7 @@ const TL_STRINGS = {
     amount_due: 'Amount due',
     lock_ms: 'Lock duration (ms)',
     pin_lock_ms: 'PIN lock duration (ms)',
+    session_timeout_seconds: 'Session timeout (s)',
     pin_locked: 'PIN locked',
     max_width: 'Maximum width (px)',
     free_drinks_timer_seconds: 'Free drinks timer (s)',
@@ -390,6 +393,7 @@ const TL_STRINGS = {
     amount_due: 'Zu zahlen',
     lock_ms: 'Sperrzeit (ms)',
     pin_lock_ms: 'PIN-Sperrzeit (ms)',
+    session_timeout_seconds: 'Session-Timeout (s)',
     pin_locked: 'PIN gesperrt',
     max_width: 'Maximale Breite (px)',
     free_drinks_timer_seconds: 'Freigetränke-Timer (s)',
@@ -794,6 +798,7 @@ class TallyListCard extends LitElement {
     this.config = {
       lock_ms: 400,
       pin_lock_ms: 5000,
+      session_timeout_seconds: 30,
       max_width: '500px',
       show_remove: true,
       only_self: false,
@@ -1091,7 +1096,7 @@ class TallyListCard extends LitElement {
   _selectRemoveDrink(ev) {
     this.selectedRemoveDrink = ev.target.value;
     this.requestUpdate();
-    _psTouch();
+    _psTouch(this);
   }
 
   _onSelectCount(ev) {
@@ -1100,7 +1105,7 @@ class TallyListCard extends LitElement {
     const count = Number(ev.currentTarget.dataset.count);
     this.selectedCount = count;
     this.requestUpdate('selectedCount');
-    _psTouch();
+    _psTouch(this);
   }
 
   _onAddDrink(ev) {
@@ -1118,7 +1123,7 @@ class TallyListCard extends LitElement {
   }
 
   _addDrink(drink) {
-    _psTouch();
+    _psTouch(this);
     if (this._disabled) {
       return;
     }
@@ -1168,7 +1173,7 @@ class TallyListCard extends LitElement {
   }
 
   _removeDrink(drink) {
-    _psTouch();
+    _psTouch(this);
     if (this._disabled || !drink) {
       return;
     }
@@ -1840,6 +1845,7 @@ class TallyListCardEditor extends LitElement {
     this._config = {
       lock_ms: 400,
       pin_lock_ms: 5000,
+      session_timeout_seconds: 30,
       max_width: '500px',
       free_drinks_timer_seconds: 0,
       free_drinks_per_item_limit: 0,
@@ -1865,6 +1871,7 @@ class TallyListCardEditor extends LitElement {
     if (!this._config) return html``;
     const idLock = this._fid('lock-ms');
     const idPinLock = this._fid('pin-lock-ms');
+    const idSessionTimeout = this._fid('session-timeout');
     const idWidth = this._fid('max-width');
     const idFdTimer = this._fid('fd-timer');
     const idFdPerItem = this._fid('fd-per-item');
@@ -1888,6 +1895,10 @@ class TallyListCardEditor extends LitElement {
       <div class="form">
         <label for="${idPinLock}">${this._t('pin_lock_ms')}</label>
         <input id="${idPinLock}" name="pin_lock_ms" type="number" .value=${this._config.pin_lock_ms} @input=${this._pinLockChanged} />
+      </div>
+      <div class="form">
+        <label for="${idSessionTimeout}">${this._t('session_timeout_seconds')}</label>
+        <input id="${idSessionTimeout}" name="session_timeout_seconds" type="number" .value=${this._config.session_timeout_seconds} @input=${this._sessionTimeoutChanged} />
       </div>
       <div class="form">
         <label for="${idWidth}">${this._t('max_width')}</label>
@@ -1992,6 +2003,21 @@ class TallyListCardEditor extends LitElement {
   _lockChanged(ev) {
     const value = Number(ev.target.value);
     this._config = { ...this._config, lock_ms: isNaN(value) ? 400 : value };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  _sessionTimeoutChanged(ev) {
+    const value = Number(ev.target.value);
+    this._config = {
+      ...this._config,
+      session_timeout_seconds: isNaN(value) ? 30 : value,
+    };
     this.dispatchEvent(
       new CustomEvent('config-changed', {
         detail: { config: this._config },
@@ -3014,6 +3040,7 @@ class TallyListFreeDrinksCardEditor extends LitElement {
       free_drinks_timer_seconds: 0,
       free_drinks_per_item_limit: 0,
       free_drinks_total_limit: 0,
+      session_timeout_seconds: 30,
       language: 'auto',
       user_selector: 'list',
       ...(config || {}),
@@ -3027,6 +3054,7 @@ class TallyListFreeDrinksCardEditor extends LitElement {
     if (!this._config) return html``;
     const idPrices = this._fid('prices');
     const idPresets = this._fid('presets');
+    const idSessionTimeout = this._fid('session-timeout');
     const idLanguage = this._fid('language');
     const idUserSelector = this._fid('user-selector');
     const idTabMode = this._fid('tab-mode');
@@ -3059,6 +3087,15 @@ class TallyListFreeDrinksCardEditor extends LitElement {
             .map((p) => `${p.label}${p.require_comment ? '*' : ''}`)
             .join('\n')}
         ></textarea>
+      </div>
+      <div class="form">
+        <label for="${idSessionTimeout}">${t(this.hass, this._config.language, 'session_timeout_seconds')}</label>
+        <input
+          id="${idSessionTimeout}"
+          type="number"
+          .value=${this._config.session_timeout_seconds}
+          @input=${this._sessionTimeoutChanged}
+        />
       </div>
       <div class="form">
         <label for="${idFdTimer}">${t(this.hass, this._config.language, 'free_drinks_timer_seconds')}</label>
@@ -3166,6 +3203,15 @@ class TallyListFreeDrinksCardEditor extends LitElement {
       require_comment: l.endsWith('*'),
     }));
     this._config = { ...this._config, comment_presets: presets };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _sessionTimeoutChanged(ev) {
+    const value = Number(ev.target.value);
+    this._config = {
+      ...this._config,
+      session_timeout_seconds: isNaN(value) ? 30 : value,
+    };
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
@@ -3444,6 +3490,9 @@ class TallyListFreeDrinksCard extends LitElement {
       tabs,
       grid,
     };
+    this.config.session_timeout_seconds = Number(
+      config?.session_timeout_seconds ?? 30
+    );
     this.config.free_drinks_timer_seconds = Number(
       config?.free_drinks_timer_seconds ?? 0
     );
@@ -3633,7 +3682,7 @@ class TallyListFreeDrinksCard extends LitElement {
   }
 
   _fdInc(drinkId) {
-    _psTouch();
+    _psTouch(this);
     const perCap = this._perItemCap;
     const totalCap = this._totalCap;
 
@@ -3649,7 +3698,7 @@ class TallyListFreeDrinksCard extends LitElement {
   }
 
   _fdDec(drinkId) {
-    _psTouch();
+    _psTouch(this);
     const current = Number(this._freeDrinkCounts?.[drinkId] || 0);
     const next = Math.max(0, current - 1);
     if (next === current) return;
@@ -3733,12 +3782,12 @@ class TallyListFreeDrinksCard extends LitElement {
 
   _onComment(ev) {
     this._comment = ev.target.value;
-    _psTouch();
+    _psTouch(this);
   }
 
   _onPreset(ev) {
     this._commentType = ev.target.value;
-    _psTouch();
+    _psTouch(this);
   }
 
   _validComment() {
@@ -3783,7 +3832,7 @@ class TallyListFreeDrinksCard extends LitElement {
   }
 
   async _submit() {
-    _psTouch();
+    _psTouch(this);
     if (!this._validComment() || this._getTotalCount() === 0) return;
     const extra = this._comment.trim();
     const comment = this._commentType
@@ -3840,7 +3889,7 @@ class TallyListFreeDrinksCard extends LitElement {
   }
 
   _reset() {
-    _psTouch();
+    _psTouch(this);
     this._fdResetAllCountersToZero();
     this._fdStopCountdown();
     this._fdCountdownLeft = 0;

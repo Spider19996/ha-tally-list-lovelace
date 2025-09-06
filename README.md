@@ -55,6 +55,7 @@ The **Remove drink** button subtracts drinks with a `tally_list.remove_drink` ca
 The card offers the following options in the UI:
 
 * **Lock time (ms)** – Duration the buttons stay disabled after pressing them. Default `400`.
+* **Session timeout (s)** – Time after login before automatic logout. Default `30`.
 * **Maximum width (px)** – Limit card width. Default `500`.
 * **Show remove menu** – Enable/disable the remove-drink dropdown.
 * **Show step selection** – Show buttons to select the step size (1, 3, 5, 10).
@@ -95,6 +96,7 @@ Options:
 
 * **show_prices** – Display drink prices (`true` by default).
 * **comment_presets** – Predefine comment prefixes. Each entry has a `label` and optional `require_comment`.
+* **session_timeout_seconds** – Time after login before automatic logout (`30` by default).
 * **free_drinks_timer_seconds** – Auto-reset timer in seconds (`0` to disable).
 * **free_drinks_per_item_limit** – Maximum free drinks per item (`0` to disable).
 * **free_drinks_total_limit** – Maximum free drinks overall (`0` to disable).

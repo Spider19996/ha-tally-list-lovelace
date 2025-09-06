@@ -55,6 +55,7 @@ data:
 Folgende Optionen stehen im UI zur Verfügung:
 
 * **Sperrzeit (ms)** – Wie lange die Buttons nach dem Drücken deaktiviert bleiben. Standard `400`.
+* **Session-Timeout (s)** – Zeit bis zum automatischen Logout nach dem Login. Standard `30`.
 * **Maximale Breite (px)** – Begrenzung der Kartenbreite. Standard `500`.
 * **Entfernen-Menü anzeigen** – Ein-/Ausblenden des Menüs zum Entfernen.
 * **Schrittweiten-Auswahl anzeigen** – Schaltflächen zur Auswahl der Schrittweite (1, 3, 5, 10) anzeigen.
@@ -94,6 +95,7 @@ Optionen:
 
 * **show_prices** – Preise anzeigen (`true` standardmäßig).
 * **comment_presets** – Vordefinierte Kommentarpräfixe. Jedes Element hat `label` und optional `require_comment`.
+* **session_timeout_seconds** – Zeit bis zum automatischen Logout nach dem Login (`30` standardmäßig).
 * **free_drinks_timer_seconds** – Auto-Reset-Timer in Sekunden (`0` = aus).
 * **free_drinks_per_item_limit** – Limit je Getränk (`0` = aus).
 * **free_drinks_total_limit** – Gesamtlimit (`0` = aus).
