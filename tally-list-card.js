@@ -3363,8 +3363,9 @@ class TallyListFreeDrinksCard extends LitElement {
   }
 
   get _activeUserId() {
-    if (this._isAdmin) return this.selectedUserId || this.hass?.user?.id || '';
-    return this.hass?.user?.id || '';
+    if (this._isAdmin)
+      return this.selectedUserId || this.sessionUserId || this.hass?.user?.id || '';
+    return this.sessionUserId || this.hass?.user?.id || '';
   }
 
   _gatherUsers() {
