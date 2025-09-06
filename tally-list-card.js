@@ -4389,8 +4389,16 @@ class TallySetPinCard extends LitElement {
   }
 
   updated(changedProps) {
-    if (changedProps.has('hass') && !this.config.users) {
-      this._autoUsers = this._gatherUsers();
+    if (changedProps.has('hass')) {
+      if (!this.config.users) {
+        this._autoUsers = this._gatherUsers();
+      }
+      if (this._isAdmin && !this.selectedUserId) {
+        const ownId = this.hass?.user?.id;
+        if (ownId) {
+          this.selectedUserId = ownId;
+        }
+      }
     }
   }
 
