@@ -3633,8 +3633,6 @@ class TallyListFreeDrinksCard extends LitElement {
     if (id && this.selectedUserId !== id) {
       this.selectedUserId = id;
       this.requestUpdate('selectedUserId');
-      this.pinBuffer = '';
-      _psNotify();
     }
   }
 
