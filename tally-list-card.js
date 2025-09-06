@@ -32,6 +32,7 @@ const PUBLIC_SESSION = {
   sessionUserId: null,
   sessionUserName: '',
   pinBuffer: '',
+  pinLocked: false,
   sessionExpiresAt: 0,
   countdownSec: 0,
   countdownTimer: null,
@@ -146,18 +147,23 @@ async function wsLogin(hass, userLabel, pinStr) {
 }
 
 function _psAddDigit(card, d) {
+  if (card.loginPending || card.pinLocked) return;
   if (card.pinBuffer.length >= 4) return;
   card.pinBuffer += String(d);
   _psNotify();
+  if (card.pinBuffer.length === 4 && card.selectedUser) {
+    _psTryLogin(card);
+  }
 }
 
 function _psBackspace(card) {
+  if (card.loginPending || card.pinLocked) return;
   card.pinBuffer = card.pinBuffer.slice(0, -1);
   _psNotify();
 }
 
-async function _psOk(card) {
-  if (card.loginPending) return;
+async function _psTryLogin(card) {
+  if (card.loginPending || card.pinLocked) return;
   const users = card.config.users || card._autoUsers || [];
   const uObj = users.find(
     (u) => u.user_id === card.selectedUser || u.name === card.selectedUser || u.slug === card.selectedUser
@@ -166,6 +172,7 @@ async function _psOk(card) {
   if (!uObj || !label || card.pinBuffer.length !== 4) return;
   card.loginPending = true;
   card.requestUpdate();
+  _psNotify();
   let ok;
   try {
     ok = await wsLogin(card.hass, label, card.pinBuffer);
@@ -178,8 +185,19 @@ async function _psOk(card) {
     if (ok === false) {
       _psToast(card, 'PIN ungültig');
       card.pinBuffer = '';
+      card.pinLocked = true;
+      card.requestUpdate();
+      _psNotify();
+      const delay = Number(card.config.pin_lock_ms ?? 5000);
+      setTimeout(() => {
+        card.pinLocked = false;
+        card.requestUpdate();
+        _psNotify();
+      }, delay);
+    } else {
+      card.requestUpdate();
+      _psNotify();
     }
-    card.requestUpdate();
     return;
   }
   card.sessionUserId = uObj.user_id || null;
@@ -188,6 +206,7 @@ async function _psOk(card) {
   card.pinBuffer = '';
   _psStartCountdown(card);
   card.requestUpdate();
+  _psNotify();
 }
 
 function renderCoverLogin(card) {
@@ -202,6 +221,9 @@ function renderCoverLogin(card) {
         onSelect: (id) => {
           card.selectedUser = id;
           _psNotify();
+          if (card.pinBuffer.length === 4) {
+            _psTryLogin(card);
+          }
         },
       })
     : _renderUserMenu(
@@ -213,9 +235,12 @@ function renderCoverLogin(card) {
         (id) => {
           card.selectedUser = id;
           _psNotify();
+          if (card.pinBuffer.length === 4) {
+            _psTryLogin(card);
+          }
         }
       );
-  const digits = [1, 2, 3, 4, 5, 6, 7, 8, 9, '⌫', 0, 'OK'];
+  const digits = [1, 2, 3, 4, 5, 6, 7, 8, 9, '⌫', 0];
   const pinMask = Array.from({ length: 4 }, (_, i) =>
     html`<span class="pin-dot ${card.pinBuffer.length > i ? 'filled' : ''}"></span>`
   );
@@ -223,15 +248,13 @@ function renderCoverLogin(card) {
     <div class="pin-display">${pinMask}</div>
     <div class="keypad">
       ${digits.map((d) =>
-        d === 'OK'
-          ? html`<button class="key action-btn ok" @click=${() => _psOk(card)} ?disabled=${
-              !card.selectedUser ||
-              card.pinBuffer.length !== 4 ||
-              card.loginPending
-            }>OK</button>`
-          : d === '⌫'
-          ? html`<button class="key action-btn del" @click=${() => _psBackspace(card)}>⌫</button>`
-          : html`<button class="key action-btn" @click=${() => _psAddDigit(card, d)}>${d}</button>`
+        d === '⌫'
+          ? html`<button class="key action-btn del" @click=${() => _psBackspace(card)} ?disabled=${
+              card.loginPending || card.pinLocked
+            }>⌫</button>`
+          : html`<button class="key action-btn" @click=${() => _psAddDigit(card, d)} ?disabled=${
+              card.loginPending || card.pinLocked
+            }>${d}</button>`
       )}
     </div></div></ha-card>`;
 }
@@ -258,6 +281,7 @@ const TL_STRINGS = {
     free_amount: 'Free amount',
     amount_due: 'Amount due',
     lock_ms: 'Lock duration (ms)',
+    pin_lock_ms: 'PIN lock duration (ms)',
     max_width: 'Maximum width (px)',
     free_drinks_timer_seconds: 'Free drinks timer (s)',
     free_drinks_per_item_limit: 'Free drinks per item limit',
@@ -322,6 +346,7 @@ const TL_STRINGS = {
     free_amount: 'Freibetrag',
     amount_due: 'Zu zahlen',
     lock_ms: 'Sperrzeit (ms)',
+    pin_lock_ms: 'PIN-Sperrzeit (ms)',
     max_width: 'Maximale Breite (px)',
     free_drinks_timer_seconds: 'Freigetränke-Timer (s)',
     free_drinks_per_item_limit: 'Limit je Getränk (0 = aus)',
@@ -667,6 +692,13 @@ class TallyListCard extends LitElement {
     PUBLIC_SESSION.pinBuffer = v;
   }
 
+  get pinLocked() {
+    return PUBLIC_SESSION.pinLocked;
+  }
+  set pinLocked(v) {
+    PUBLIC_SESSION.pinLocked = v;
+  }
+
   get countdownSec() {
     return PUBLIC_SESSION.countdownSec;
   }
@@ -696,6 +728,7 @@ class TallyListCard extends LitElement {
     };
     this.config = {
       lock_ms: 400,
+      pin_lock_ms: 5000,
       max_width: '500px',
       show_remove: true,
       only_self: false,
@@ -1361,6 +1394,7 @@ class TallyListCard extends LitElement {
   static getStubConfig() {
     return {
       lock_ms: 400,
+      pin_lock_ms: 5000,
       max_width: '500px',
       show_remove: true,
       show_step_select: true,
@@ -1434,10 +1468,6 @@ class TallyListCard extends LitElement {
     }
     .keypad .key.del {
       background: var(--error-color, #b71c1c);
-      color: #fff;
-    }
-    .keypad .key.ok {
-      background: var(--primary-color);
       color: #fff;
     }
     .user-badge {
@@ -1732,6 +1762,7 @@ class TallyListCardEditor extends LitElement {
     };
     this._config = {
       lock_ms: 400,
+      pin_lock_ms: 5000,
       max_width: '500px',
       free_drinks_timer_seconds: 0,
       free_drinks_per_item_limit: 0,
@@ -1756,6 +1787,7 @@ class TallyListCardEditor extends LitElement {
   render() {
     if (!this._config) return html``;
     const idLock = this._fid('lock-ms');
+    const idPinLock = this._fid('pin-lock-ms');
     const idWidth = this._fid('max-width');
     const idFdTimer = this._fid('fd-timer');
     const idFdPerItem = this._fid('fd-per-item');
@@ -1775,6 +1807,10 @@ class TallyListCardEditor extends LitElement {
       <div class="form">
         <label for="${idLock}">${this._t('lock_ms')}</label>
         <input id="${idLock}" name="lock_ms" type="number" .value=${this._config.lock_ms} @input=${this._lockChanged} />
+      </div>
+      <div class="form">
+        <label for="${idPinLock}">${this._t('pin_lock_ms')}</label>
+        <input id="${idPinLock}" name="pin_lock_ms" type="number" .value=${this._config.pin_lock_ms} @input=${this._pinLockChanged} />
       </div>
       <div class="form">
         <label for="${idWidth}">${this._t('max_width')}</label>
@@ -1862,6 +1898,18 @@ class TallyListCardEditor extends LitElement {
         <div class="version">${this._t('version')}: ${CARD_VERSION}</div>
       </details>
     `;
+  }
+
+  _pinLockChanged(ev) {
+    const value = Number(ev.target.value);
+    this._config = { ...this._config, pin_lock_ms: isNaN(value) ? 5000 : value };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
   }
 
   _lockChanged(ev) {
@@ -3269,6 +3317,13 @@ class TallyListFreeDrinksCard extends LitElement {
   }
   set pinBuffer(v) {
     PUBLIC_SESSION.pinBuffer = v;
+  }
+
+  get pinLocked() {
+    return PUBLIC_SESSION.pinLocked;
+  }
+  set pinLocked(v) {
+    PUBLIC_SESSION.pinLocked = v;
   }
 
   get countdownSec() {
