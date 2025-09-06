@@ -3422,6 +3422,27 @@ class TallyListFreeDrinksCard extends LitElement {
     PUBLIC_SESSION.pinLocked = v;
   }
 
+  get pinLockUntil() {
+    return PUBLIC_SESSION.pinLockUntil;
+  }
+  set pinLockUntil(v) {
+    PUBLIC_SESSION.pinLockUntil = v;
+  }
+
+  get pinLockRemainingMs() {
+    return PUBLIC_SESSION.pinLockRemainingMs;
+  }
+  set pinLockRemainingMs(v) {
+    PUBLIC_SESSION.pinLockRemainingMs = v;
+  }
+
+  get pinLockTimer() {
+    return PUBLIC_SESSION.pinLockTimer;
+  }
+  set pinLockTimer(v) {
+    PUBLIC_SESSION.pinLockTimer = v;
+  }
+
   get countdownSec() {
     return PUBLIC_SESSION.countdownSec;
   }
