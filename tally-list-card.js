@@ -47,10 +47,25 @@ async function _psInit(hass) {
   if (PUBLIC_SESSION._init) return;
   PUBLIC_SESSION._init = true;
   try {
+    const stored = window.localStorage.getItem('tally-list-public');
+    if (stored !== null) {
+      PUBLIC_SESSION.isPublic = stored === '1';
+      _psNotify();
+    }
+  } catch (_) {
+    // ignore storage errors
+  }
+  try {
     const r = await hass.callWS({ type: 'tally_list/is_public_device' });
-    PUBLIC_SESSION.isPublic = r?.is_public === true;
+    const val = r?.is_public === true;
+    PUBLIC_SESSION.isPublic = val;
+    try {
+      window.localStorage.setItem('tally-list-public', val ? '1' : '0');
+    } catch (_) {
+      // ignore storage errors
+    }
   } catch (e) {
-    PUBLIC_SESSION.isPublic = false;
+    // keep previous value on error
   }
   _psNotify();
 }
@@ -2075,6 +2090,7 @@ class TallyDueRankingCard extends LitElement {
   set hass(h) {
     const old = this._hass;
     this._hass = h;
+    _psInit(h);
     this.requestUpdate('hass', old);
   }
 
