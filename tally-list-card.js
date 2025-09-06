@@ -274,9 +274,12 @@ function renderCoverLogin(card) {
   return html`<ha-card class="cover-login"><div class="content">${userMenu}
     <div class="pin-display">${pinMask}
       ${card.pinLocked
-        ? html`<div class="pin-timer-overlay">${Math.ceil(
-            card.pinLockRemainingMs / 1000
-          )}</div>`
+        ? html`<div class="pin-timer-overlay">${translate(
+            card.hass,
+            card.config?.language,
+            TL_STRINGS,
+            'pin_locked'
+          )}: ${Math.ceil(card.pinLockRemainingMs / 1000)}s</div>`
         : ''}
     </div>
     <div class="keypad">
@@ -315,6 +318,7 @@ const TL_STRINGS = {
     amount_due: 'Amount due',
     lock_ms: 'Lock duration (ms)',
     pin_lock_ms: 'PIN lock duration (ms)',
+    pin_locked: 'PIN locked',
     max_width: 'Maximum width (px)',
     free_drinks_timer_seconds: 'Free drinks timer (s)',
     free_drinks_per_item_limit: 'Free drinks per item limit',
@@ -380,6 +384,7 @@ const TL_STRINGS = {
     amount_due: 'Zu zahlen',
     lock_ms: 'Sperrzeit (ms)',
     pin_lock_ms: 'PIN-Sperrzeit (ms)',
+    pin_locked: 'PIN gesperrt',
     max_width: 'Maximale Breite (px)',
     free_drinks_timer_seconds: 'Freigetränke-Timer (s)',
     free_drinks_per_item_limit: 'Limit je Getränk (0 = aus)',
