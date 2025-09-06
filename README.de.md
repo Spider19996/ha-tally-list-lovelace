@@ -95,6 +95,7 @@ Optionen:
 
 * **show_prices** – Preise anzeigen (`true` standardmäßig).
 * **comment_presets** – Vordefinierte Kommentarpräfixe. Jedes Element hat `label` und optional `require_comment`.
+* **session_timeout_seconds** – Zeit bis zum automatischen Logout nach dem Login (`30` standardmäßig).
 * **free_drinks_timer_seconds** – Auto-Reset-Timer in Sekunden (`0` = aus).
 * **free_drinks_per_item_limit** – Limit je Getränk (`0` = aus).
 * **free_drinks_total_limit** – Gesamtlimit (`0` = aus).

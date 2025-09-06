@@ -326,6 +326,7 @@ const TL_STRINGS = {
     amount_due: 'Amount due',
     lock_ms: 'Lock duration (ms)',
     pin_lock_ms: 'PIN lock duration (ms)',
+    session_timeout_seconds: 'Session timeout (s)',
     pin_locked: 'PIN locked',
     max_width: 'Maximum width (px)',
     free_drinks_timer_seconds: 'Free drinks timer (s)',
@@ -392,6 +393,7 @@ const TL_STRINGS = {
     amount_due: 'Zu zahlen',
     lock_ms: 'Sperrzeit (ms)',
     pin_lock_ms: 'PIN-Sperrzeit (ms)',
+    session_timeout_seconds: 'Session-Timeout (s)',
     pin_locked: 'PIN gesperrt',
     max_width: 'Maximale Breite (px)',
     free_drinks_timer_seconds: 'Freigetränke-Timer (s)',
@@ -1843,6 +1845,7 @@ class TallyListCardEditor extends LitElement {
     this._config = {
       lock_ms: 400,
       pin_lock_ms: 5000,
+      session_timeout_seconds: 30,
       max_width: '500px',
       free_drinks_timer_seconds: 0,
       free_drinks_per_item_limit: 0,
@@ -1868,6 +1871,7 @@ class TallyListCardEditor extends LitElement {
     if (!this._config) return html``;
     const idLock = this._fid('lock-ms');
     const idPinLock = this._fid('pin-lock-ms');
+    const idSessionTimeout = this._fid('session-timeout');
     const idWidth = this._fid('max-width');
     const idFdTimer = this._fid('fd-timer');
     const idFdPerItem = this._fid('fd-per-item');
@@ -1891,6 +1895,10 @@ class TallyListCardEditor extends LitElement {
       <div class="form">
         <label for="${idPinLock}">${this._t('pin_lock_ms')}</label>
         <input id="${idPinLock}" name="pin_lock_ms" type="number" .value=${this._config.pin_lock_ms} @input=${this._pinLockChanged} />
+      </div>
+      <div class="form">
+        <label for="${idSessionTimeout}">${this._t('session_timeout_seconds')}</label>
+        <input id="${idSessionTimeout}" name="session_timeout_seconds" type="number" .value=${this._config.session_timeout_seconds} @input=${this._sessionTimeoutChanged} />
       </div>
       <div class="form">
         <label for="${idWidth}">${this._t('max_width')}</label>
@@ -1995,6 +2003,21 @@ class TallyListCardEditor extends LitElement {
   _lockChanged(ev) {
     const value = Number(ev.target.value);
     this._config = { ...this._config, lock_ms: isNaN(value) ? 400 : value };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  _sessionTimeoutChanged(ev) {
+    const value = Number(ev.target.value);
+    this._config = {
+      ...this._config,
+      session_timeout_seconds: isNaN(value) ? 30 : value,
+    };
     this.dispatchEvent(
       new CustomEvent('config-changed', {
         detail: { config: this._config },
@@ -3017,6 +3040,7 @@ class TallyListFreeDrinksCardEditor extends LitElement {
       free_drinks_timer_seconds: 0,
       free_drinks_per_item_limit: 0,
       free_drinks_total_limit: 0,
+      session_timeout_seconds: 30,
       language: 'auto',
       user_selector: 'list',
       ...(config || {}),
@@ -3030,6 +3054,7 @@ class TallyListFreeDrinksCardEditor extends LitElement {
     if (!this._config) return html``;
     const idPrices = this._fid('prices');
     const idPresets = this._fid('presets');
+    const idSessionTimeout = this._fid('session-timeout');
     const idLanguage = this._fid('language');
     const idUserSelector = this._fid('user-selector');
     const idTabMode = this._fid('tab-mode');
@@ -3062,6 +3087,15 @@ class TallyListFreeDrinksCardEditor extends LitElement {
             .map((p) => `${p.label}${p.require_comment ? '*' : ''}`)
             .join('\n')}
         ></textarea>
+      </div>
+      <div class="form">
+        <label for="${idSessionTimeout}">${t(this.hass, this._config.language, 'session_timeout_seconds')}</label>
+        <input
+          id="${idSessionTimeout}"
+          type="number"
+          .value=${this._config.session_timeout_seconds}
+          @input=${this._sessionTimeoutChanged}
+        />
       </div>
       <div class="form">
         <label for="${idFdTimer}">${t(this.hass, this._config.language, 'free_drinks_timer_seconds')}</label>
@@ -3169,6 +3203,15 @@ class TallyListFreeDrinksCardEditor extends LitElement {
       require_comment: l.endsWith('*'),
     }));
     this._config = { ...this._config, comment_presets: presets };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _sessionTimeoutChanged(ev) {
+    const value = Number(ev.target.value);
+    this._config = {
+      ...this._config,
+      session_timeout_seconds: isNaN(value) ? 30 : value,
+    };
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
