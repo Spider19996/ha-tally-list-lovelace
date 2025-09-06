@@ -4272,3 +4272,300 @@ class TallyListFreeDrinksCard extends LitElement {
 
 customElements.define('tally-list-free-drinks-card', TallyListFreeDrinksCard);
 
+// ----- Set PIN Card Editor -----
+const PIN_EDITOR_STRINGS = {
+  en: { no_options: 'No options available' },
+  de: { no_options: 'Keine Optionen verfügbar' },
+};
+
+class TallySetPinCardEditor extends LitElement {
+  static properties = {
+    _config: {},
+  };
+
+  setConfig(config) {
+    this._config = { ...config };
+  }
+
+  render() {
+    return html`<div class="form">${translate(
+      this.hass,
+      this._config?.language,
+      PIN_EDITOR_STRINGS,
+      'no_options'
+    )}</div>`;
+  }
+}
+
+customElements.define('tally-set-pin-card-editor', TallySetPinCardEditor);
+
+// ----- Set PIN Card -----
+const PIN_STRINGS = {
+  en: {
+    card_name: 'Set PIN',
+    card_desc: 'Allow users to set their 4-digit PIN',
+    select_user: 'User',
+    new_pin: 'New PIN',
+    confirm_pin: 'Confirm PIN',
+    set_pin: 'Set PIN',
+    success: 'PIN updated',
+    mismatch: 'PINs do not match',
+    invalid: 'Enter 4 digits',
+    error: 'Failed to set PIN',
+    warning:
+      'Do not use an important PIN (e.g., your bank card PIN); its security cannot be guaranteed.',
+    ok: 'Got it',
+  },
+  de: {
+    card_name: 'PIN setzen',
+    card_desc: 'Ermöglicht Benutzern, ihre 4-stellige PIN zu setzen',
+    select_user: 'Benutzer',
+    new_pin: 'Neue PIN',
+    confirm_pin: 'PIN bestätigen',
+    set_pin: 'PIN setzen',
+    success: 'PIN aktualisiert',
+    mismatch: 'PINs stimmen nicht überein',
+    invalid: '4 Ziffern eingeben',
+    error: 'PIN konnte nicht gesetzt werden',
+    warning:
+      'Bitte keine wichtige PIN (z. B. die der Bankkarte) verwenden, da nicht gewährleistet werden kann, dass sie nicht gestohlen wird.',
+    ok: 'Verstanden',
+  },
+};
+
+window.customCards = window.customCards || [];
+const pinNavLang = detectLang();
+window.customCards.push({
+  type: 'tally-set-pin-card',
+  name: PIN_STRINGS[pinNavLang].card_name,
+  preview: true,
+  description: PIN_STRINGS[pinNavLang].card_desc,
+});
+
+class TallySetPinCard extends LitElement {
+  static properties = {
+    hass: {},
+    config: {},
+    selectedUserId: { type: String },
+    _pin1: { state: true },
+    _pin2: { state: true },
+    _status: { state: true },
+    _showWarn: { state: true },
+  };
+
+  constructor() {
+    super();
+    this.selectedUserId = '';
+    this._pin1 = '';
+    this._pin2 = '';
+    this._status = '';
+    this._showWarn = true;
+  }
+
+  setConfig(config) {
+    this.config = config || {};
+  }
+
+  _t(key) {
+    return translate(this.hass, this.config.language, PIN_STRINGS, key);
+  }
+
+  get _users() {
+    return this.config.users || [];
+  }
+
+  get _isAdmin() {
+    return this.hass?.user?.is_admin;
+  }
+
+  _handleSelect(ev) {
+    this.selectedUserId = ev.target.value;
+  }
+
+  _pinInput(ev) {
+    const { name, value } = ev.target;
+    this[name] = value.replace(/\D/g, '').slice(0, 4);
+  }
+
+  async _submit() {
+    if (this._pin1 !== this._pin2 || this._pin1.length !== 4) {
+      this._status = this._pin1 !== this._pin2 ? 'mismatch' : 'invalid';
+      return;
+    }
+    const users = this._users;
+    let label;
+    if (this._isAdmin) {
+      const u = users.find(
+        (u) =>
+          u.user_id === this.selectedUserId ||
+          u.name === this.selectedUserId ||
+          u.slug === this.selectedUserId
+      );
+      label = u?.name || u?.slug;
+    } else {
+      label = this.hass?.user?.name;
+    }
+    if (!label) {
+      this._status = 'invalid';
+      return;
+    }
+    try {
+      await this.hass.callWS({
+        type: 'tally_list/set_pin',
+        user: String(label),
+        pin: String(this._pin1),
+      });
+      this._status = 'success';
+      this._pin1 = '';
+      this._pin2 = '';
+    } catch (e) {
+      const code = e?.error?.code || e?.code;
+      this._status = code || 'error';
+    }
+  }
+
+  render() {
+    const users = this._users;
+    const isAdmin = this._isAdmin;
+    return html`
+      <ha-card>
+        ${this._showWarn
+          ? html`<div class="warn-overlay">
+              <div class="warn-box">
+                <p>${this._t('warning')}</p>
+                <button class="action-btn" @click=${() => (this._showWarn = false)}>
+                  ${this._t('ok')}
+                </button>
+              </div>
+            </div>`
+          : ''}
+        <div class="content">
+          ${isAdmin
+            ? html`<label class="form">
+                <span>${this._t('select_user')}</span>
+                <select @change=${this._handleSelect} .value=${this.selectedUserId}>
+                  <option value=""></option>
+                  ${users.map(
+                    (u) => html`<option value=${u.user_id}>${u.name}</option>`
+                  )}
+                </select>
+              </label>`
+            : ''}
+
+          <label class="form">
+            <span>${this._t('new_pin')}</span>
+            <input
+              name="_pin1"
+              type="password"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              .value=${this._pin1}
+              @input=${this._pinInput}
+              maxlength="4"
+            />
+          </label>
+
+          <label class="form">
+            <span>${this._t('confirm_pin')}</span>
+            <input
+              name="_pin2"
+              type="password"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              .value=${this._pin2}
+              @input=${this._pinInput}
+              maxlength="4"
+            />
+          </label>
+
+          ${this._status
+            ? html`<div class="status ${
+                this._status === 'success' ? 'ok' : 'err'
+              }">${this._t(this._status)}</div>`
+            : ''}
+
+          <button class="action-btn" @click=${this._submit}>
+            ${this._t('set_pin')}
+          </button>
+        </div>
+      </ha-card>
+    `;
+  }
+
+  static getConfigElement() {
+    return document.createElement('tally-set-pin-card-editor');
+  }
+
+  static getStubConfig() {
+    return {};
+  }
+
+  static styles = css`
+    .content {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    ha-card {
+      position: relative;
+    }
+    .warn-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      box-sizing: border-box;
+    }
+    .warn-box {
+      background: var(--card-background-color);
+      color: var(--primary-text-color);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      max-width: 300px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .form {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    input,
+    select {
+      padding: 8px;
+      border-radius: 12px;
+      border: 1px solid var(--ha-card-border-color, #e0e0e0);
+      background: var(--card-background-color);
+      color: var(--primary-text-color);
+    }
+    .action-btn {
+      height: 40px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      background: var(--primary-color);
+      color: var(--text-primary-color, #fff);
+    }
+    .status {
+      font-size: 0.9em;
+    }
+    .status.ok {
+      color: var(--success-color, #2e7d32);
+    }
+    .status.err {
+      color: var(--error-color);
+    }
+  `;
+}
+
+customElements.define('tally-set-pin-card', TallySetPinCard);
+
