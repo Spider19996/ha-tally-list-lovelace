@@ -290,7 +290,7 @@ function renderCoverLogin(card) {
             card.config?.language,
             TL_STRINGS,
             'pin_locked'
-          )},<br />${Math.ceil(card.pinLockRemainingMs / 1000)}s ${translate(
+          )}, ${Math.ceil(card.pinLockRemainingMs / 1000)}s ${translate(
             card.hass,
             card.config?.language,
             TL_STRINGS,
