@@ -285,14 +285,12 @@ function renderCoverLogin(card) {
     <div class="keypad">
       ${digits.map((d) =>
         d === '⟲'
-          ? html`<button class="key action-btn del" @pointerdown=${(ev) => {
-              ev.preventDefault();
-              _psBackspace(card);
-            }} ?disabled=${card.loginPending || card.pinLocked}>⟲</button>`
-          : html`<button class="key action-btn" @pointerdown=${(ev) => {
-              ev.preventDefault();
-              _psAddDigit(card, d);
-            }} ?disabled=${card.loginPending || card.pinLocked}>${d}</button>`
+          ? html`<button class="key action-btn del" @click=${() => _psBackspace(card)} ?disabled=${
+              card.loginPending || card.pinLocked
+            }>⟲</button>`
+          : html`<button class="key action-btn" @click=${() => _psAddDigit(card, d)} ?disabled=${
+              card.loginPending || card.pinLocked
+            }>${d}</button>`
       )}
     </div></div></ha-card>`;
 }
