@@ -164,6 +164,7 @@ async function wsLogin(hass, userLabel, pinStr) {
 
 function _psAddDigit(card, d) {
   if (card.loginPending || card.pinLocked) return;
+  if (!card.selectedUser) return;
   if (card.pinBuffer.length >= 4) return;
   card.pinBuffer += String(d);
   _psNotify();
@@ -174,6 +175,7 @@ function _psAddDigit(card, d) {
 
 function _psBackspace(card) {
   if (card.loginPending || card.pinLocked) return;
+  if (!card.selectedUser) return;
   card.pinBuffer = '';
   _psNotify();
 }
@@ -292,13 +294,13 @@ function renderCoverLogin(card) {
               ev.stopPropagation();
               ev.currentTarget.blur();
               _psBackspace(card);
-            }} ?disabled=${card.loginPending || card.pinLocked}>⟲</button>`
+            }} ?disabled=${card.loginPending || card.pinLocked || !card.selectedUser}>⟲</button>`
           : html`<button class="key action-btn" @pointerdown=${(ev) => {
               ev.preventDefault();
               ev.stopPropagation();
               ev.currentTarget.blur();
               _psAddDigit(card, d);
-            }} ?disabled=${card.loginPending || card.pinLocked}>${d}</button>`
+            }} ?disabled=${card.loginPending || card.pinLocked || !card.selectedUser}>${d}</button>`
       )}
     </div></div></ha-card>`;
 }
