@@ -2466,7 +2466,6 @@ class TallyDueRankingCard extends LitElement {
       max_entries: 0,
       hide_free: false,
       show_copy: true,
-      show_step_select: true,
     };
   }
   _gatherUsers() {
@@ -2756,7 +2755,6 @@ class TallyDueRankingCardEditor extends LitElement {
       max_entries: 0,
       hide_free: false,
       show_copy: true,
-      show_step_select: true,
       language: 'auto',
       ...config,
     };
@@ -2776,7 +2774,6 @@ class TallyDueRankingCardEditor extends LitElement {
     const idShowCopy = this._fid('show-copy');
     const idShowTotal = this._fid('show-total');
     const idHideFree = this._fid('hide-free');
-    const idShowStepSelect = this._fid('show-step-select');
     const idShowResetEveryone = this._fid('show-reset-everyone');
     const idLanguage = this._fid('language');
     return html`
@@ -2815,10 +2812,6 @@ class TallyDueRankingCardEditor extends LitElement {
       <div class="form">
         <input id="${idHideFree}" name="hide_free" type="checkbox" .checked=${this._config.hide_free} @change=${this._hideChanged} />
         <label for="${idHideFree}">${this._t('hide_free')}</label>
-      </div>
-      <div class="form">
-        <input id="${idShowStepSelect}" name="show_step_select" type="checkbox" .checked=${this._config.show_step_select !== false} @change=${this._stepSelectChanged} />
-        <label for="${idShowStepSelect}">${this._t('show_step_select')}</label>
       </div>
       <details class="debug">
         <summary>${this._t('debug')}</summary>
@@ -2880,11 +2873,6 @@ class TallyDueRankingCardEditor extends LitElement {
 
   _hideChanged(ev) {
     this._config = { ...this._config, hide_free: ev.target.checked };
-    fireEvent(this, 'config-changed', { config: this._config });
-  }
-
-  _stepSelectChanged(ev) {
-    this._config = { ...this._config, show_step_select: ev.target.checked };
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
