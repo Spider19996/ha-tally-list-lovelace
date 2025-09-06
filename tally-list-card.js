@@ -3011,6 +3011,7 @@ class TallyListFreeDrinksCardEditor extends LitElement {
     const grid = { columns: 0, ...(config?.grid || {}) };
     this._config = {
       show_prices: true,
+      pin_lock_ms: 5000,
       free_drinks_timer_seconds: 0,
       free_drinks_per_item_limit: 0,
       free_drinks_total_limit: 0,
@@ -3036,6 +3037,7 @@ class TallyListFreeDrinksCardEditor extends LitElement {
     const idFdTimer = this._fid('fd-timer');
     const idFdPerItem = this._fid('fd-per-item');
     const idFdTotal = this._fid('fd-total');
+    const idPinLock = this._fid('pin-lock-ms');
     return html`
       <div class="form">
         <input
@@ -3085,6 +3087,15 @@ class TallyListFreeDrinksCardEditor extends LitElement {
           type="number"
           .value=${this._config.free_drinks_total_limit}
           @input=${this._fdTotalChanged}
+        />
+      </div>
+      <div class="form">
+        <label for="${idPinLock}">${t(this.hass, this._config.language, 'pin_lock_ms')}</label>
+        <input
+          id="${idPinLock}"
+          type="number"
+          .value=${this._config.pin_lock_ms}
+          @input=${this._pinLockChanged}
         />
       </div>
       <div class="form">
@@ -3226,6 +3237,15 @@ class TallyListFreeDrinksCardEditor extends LitElement {
     this._config = {
       ...this._config,
       free_drinks_total_limit: isNaN(value) ? 0 : value,
+    };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _pinLockChanged(ev) {
+    const value = Number(ev.target.value);
+    this._config = {
+      ...this._config,
+      pin_lock_ms: isNaN(value) ? 5000 : value,
     };
     fireEvent(this, 'config-changed', { config: this._config });
   }
@@ -3437,6 +3457,7 @@ class TallyListFreeDrinksCard extends LitElement {
     const grid = { columns: 0, ...(config?.grid || {}) };
     this.config = {
       show_prices: true,
+      pin_lock_ms: 5000,
       language: 'auto',
       user_selector: 'list',
       ...(config || {}),
@@ -3444,6 +3465,7 @@ class TallyListFreeDrinksCard extends LitElement {
       tabs,
       grid,
     };
+    this.config.pin_lock_ms = Number(config?.pin_lock_ms ?? 5000);
     this.config.free_drinks_timer_seconds = Number(
       config?.free_drinks_timer_seconds ?? 0
     );
