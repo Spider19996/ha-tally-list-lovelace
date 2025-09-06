@@ -112,15 +112,3 @@ comment_presets:
     require_comment: false
 ```
 
-
-## PIN Set Card
-
-Allow users to set or reset their 4-digit PIN. Administrators can select any user and update the PIN for them. The card is available in the Lovelace card picker.
-When opened, a warning reminds users not to use important PINs such as their bank card PIN, since its security cannot be guaranteed.
-
-```yaml
-type: custom:tally-set-pin-card
-```
-
-The card uses the same user list as the main Tally List card and normally requires no additional configuration.
-
