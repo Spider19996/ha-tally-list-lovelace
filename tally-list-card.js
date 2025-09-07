@@ -402,10 +402,10 @@ const TL_STRINGS = {
     grid_columns: 'Grid columns (0 = auto)',
   },
   de: {
-    card_name: 'Strichliste Karte',
+    card_name: 'Strichliste Zähler',
     card_desc:
       'Zeigt Getränkezähler pro Benutzer mit schnellen Hinzufügen/Entfernen-Tasten.',
-    ranking_name: 'Strichliste Ranglistenkarte',
+    ranking_name: 'Strichliste Rangliste',
     ranking_desc: 'Zeigt eine Rangliste nach offenem Betrag pro Benutzer.',
     integration_missing:
       'Strichliste-Integration nicht gefunden. Bitte richte die Integration ein.',
@@ -3056,7 +3056,7 @@ const FD_STRINGS = {
   de: {
     show_prices: 'Preise anzeigen',
     version: 'Version',
-    card_name: 'Freigetränke Karte',
+    card_name: 'Strichliste Freigetränke',
     card_desc: 'Freigetränke mit Pflichtkommentar buchen.',
     comment: 'Kommentar',
     comment_error: 'Bitte mindestens 3 Zeichen eingeben',
@@ -4864,7 +4864,7 @@ const PIN_STRINGS = {
     ok: 'Got it',
   },
   de: {
-    card_name: 'PIN setzen',
+    card_name: 'Strichliste PIN setzen',
     card_desc: 'Ermöglicht Benutzern, ihre 4-stellige PIN zu setzen',
     select_user: 'Benutzer',
     new_pin: 'Neue PIN',

@@ -13,7 +13,7 @@ Eine Lovelace-Karte für Home Assistant, die Getränkezähler pro Nutzer anzeigt
 ### Über HACS
 1. Dieses Repository in HACS als **Custom Repository** (Kategorie **Lovelace**) hinzufügen.
 2. **Tally List Card** aus dem HACS‑Store installieren.
-3. HACS hält die Dateien aktuell. Die Freigetränke-Karte ist automatisch enthalten und benötigt keine zusätzliche Ressource.
+3. HACS hält die Dateien aktuell. Die Karte **Strichliste Freigetränke** ist automatisch enthalten und benötigt keine zusätzliche Ressource.
 
 ### Manuell
 1. `tally-list-card.js` in das `www`‑Verzeichnis von Home Assistant kopieren.
@@ -23,7 +23,7 @@ Eine Lovelace-Karte für Home Assistant, die Getränkezähler pro Nutzer anzeigt
   type: module
 ```
 
-Die Freigetränke-Karte wird automatisch geladen und benötigt keine separate Ressource.
+Die Karte **Strichliste Freigetränke** wird automatisch geladen und benötigt keine separate Ressource.
 
 ### In Lovelace einbinden
 Nach dem Hinzufügen der Ressource das Dashboard öffnen, **Karte hinzufügen** wählen und **Tally List Card** auswählen. Der Editor erlaubt die Konfiguration ohne YAML.
@@ -64,7 +64,7 @@ Folgende Optionen stehen im UI zur Verfügung:
 * **Sprache** – **Auto**, **Deutsch** oder **English** erzwingen.
 * **Version** – Zeigt die installierte Version an.
 
-## Betrag-Rangliste
+## Strichliste Rangliste
 
 Eine zweite Karte listet alle Nutzer nach offenem Betrag sortiert auf.
 
@@ -84,7 +84,7 @@ Optionen:
 * **show_copy** – Schaltfläche **Tabelle kopieren** anzeigen.
 * **shorten_user_names** – Namen in der Tabelle abkürzen.
 
-## Freigetränke-Karte
+## Strichliste Freigetränke
 
 Bucht Freigetränke mit Pflichtkommentar. Zähler werden lokal gepuffert, bis sie abgeschickt werden. Mit dem Reset-Button lassen sich alle Zähler zurücksetzen. Vor der PIN-Eingabe muss ein Nutzer gewählt werden.
 
@@ -115,7 +115,7 @@ comment_presets:
 ```
 
 
-## PIN-Karte
+## Strichliste PIN setzen
 
 Nutzer können ihre eigene 4-stellige PIN setzen oder zurücksetzen. Administratoren können für jeden Nutzer die PIN festlegen. Die Karte kann über den Lovelace-Karteneditor hinzugefügt werden.
 Beim Öffnen der Karte kann ein konfigurierbarer Hinweis anzeigen, keine wichtige PIN (z. B. die der Bankkarte) zu verwenden. Wird der Text leer gelassen, wird kein Hinweis gezeigt.
