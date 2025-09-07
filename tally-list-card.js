@@ -37,6 +37,46 @@ function formatWarning(text) {
     .replace(/\n/g, '<br>');
 }
 
+const EDITOR_STYLES = css`
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--divider-color);
+  }
+  .tabs button {
+    flex: 1;
+    padding: 8px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font: inherit;
+    border-bottom: 2px solid transparent;
+  }
+  .tabs button.active {
+    border-color: var(--primary-color);
+    font-weight: bold;
+  }
+  .form {
+    padding: 16px;
+  }
+  .form input[type='checkbox'] {
+    width: auto;
+    display: inline-block;
+    margin-right: 8px;
+  }
+  input:not([type='checkbox']), select, textarea {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  textarea {
+    min-height: 60px;
+  }
+  .version {
+    padding: 0 16px 16px;
+    text-align: center;
+    color: var(--secondary-text-color);
+  }
+`;
+
 // ---- Public Session Handling ----
 const PUBLIC_SESSION = {
   isPublic: false,
@@ -2168,37 +2208,7 @@ class TallyListCardEditor extends LitElement {
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
-  static styles = css`
-    .tabs {
-      display: flex;
-      border-bottom: 1px solid var(--divider-color);
-    }
-    .tabs button {
-      flex: 1;
-      padding: 8px;
-      background: none;
-      border: none;
-      cursor: pointer;
-      font: inherit;
-      border-bottom: 2px solid transparent;
-    }
-    .tabs button.active {
-      border-color: var(--primary-color);
-      font-weight: bold;
-    }
-    .form {
-      padding: 16px;
-    }
-    input {
-      width: 100%;
-      box-sizing: border-box;
-    }
-    .version {
-      padding: 0 16px 16px;
-      text-align: center;
-      color: var(--secondary-text-color);
-    }
-  `;
+  static styles = EDITOR_STYLES;
 }
 
 
@@ -2805,11 +2815,13 @@ customElements.define('tally-due-ranking-card', TallyDueRankingCard);
 class TallyDueRankingCardEditor extends LitElement {
   static properties = {
     _config: {},
+    _tab: { type: String },
   };
 
   constructor() {
     super();
     this._uid = crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
+    this._tab = 'general';
   }
 
   _fid(key) {
@@ -2851,62 +2863,68 @@ class TallyDueRankingCardEditor extends LitElement {
     const idShowResetEveryone = this._fid('show-reset-everyone');
     const idLanguage = this._fid('language');
     return html`
-      <div class="form">
-        <label for="${idWidth}">${this._t('max_width')}</label>
-        <input id="${idWidth}" name="max_width" type="number" .value=${(this._config.max_width ?? '').replace(/px$/, '')} @input=${this._widthChanged} />
-      </div>
-      <div class="form">
-        <label for="${idMaxEntries}">${this._t('max_entries')}</label>
-        <input id="${idMaxEntries}" name="max_entries" type="number" .value=${this._config.max_entries ?? 0} @input=${this._maxChanged} />
-      </div>
-      <div class="form">
-        <label for="${idSort}">${this._t('sort')}</label>
-        <select id="${idSort}" name="sort_by" @change=${this._sortChanged}>
-          <option value="due_desc" ?selected=${this._config.sort_by === 'due_desc'}>${this._t('sort_due_desc')}</option>
-          <option value="due_asc" ?selected=${this._config.sort_by === 'due_asc'}>${this._t('sort_due_asc')}</option>
-          <option value="name" ?selected=${this._config.sort_by === 'name'}>${this._t('sort_name')}</option>
-        </select>
-      </div>
-      <div class="form">
-        <input id="${idSortMenu}" name="sort_menu" type="checkbox" .checked=${this._config.sort_menu} @change=${this._menuChanged} />
-        <label for="${idSortMenu}">${this._t('sort_menu_show')}</label>
-      </div>
-      <div class="form">
-        <input id="${idShowReset}" name="show_reset" type="checkbox" .checked=${this._config.show_reset} @change=${this._resetChanged} />
-        <label for="${idShowReset}">${this._t('show_reset')}</label>
-      </div>
-      <div class="form">
-        <input id="${idShowCopy}" name="show_copy" type="checkbox" .checked=${this._config.show_copy} @change=${this._copyChanged} />
-        <label for="${idShowCopy}">${this._t('show_copy')}</label>
-      </div>
-      <div class="form">
-        <input id="${idShowTotal}" name="show_total" type="checkbox" .checked=${this._config.show_total} @change=${this._totalChanged} />
-        <label for="${idShowTotal}">${this._t('show_total')}</label>
-      </div>
-      <div class="form">
-        <input id="${idHideFree}" name="hide_free" type="checkbox" .checked=${this._config.hide_free} @change=${this._hideChanged} />
-        <label for="${idHideFree}">${this._t('hide_free')}</label>
-      </div>
-      <div class="form">
-        <input id="${idShortNames}" name="shorten_user_names" type="checkbox" .checked=${this._config.shorten_user_names} @change=${this._shortNamesChanged} />
-        <label for="${idShortNames}">${this._t('shorten_user_names')}</label>
-      </div>
-      <details class="debug">
-        <summary>${this._t('debug')}</summary>
-        <div class="form">
-          <input id="${idShowResetEveryone}" name="show_reset_everyone" type="checkbox" .checked=${this._config.show_reset_everyone} @change=${this._debugResetChanged} />
-          <label for="${idShowResetEveryone}">${this._t('show_reset_everyone')}</label>
-        </div>
-        <div class="form">
-          <label for="${idLanguage}">${this._t('language')}</label>
-          <select id="${idLanguage}" name="language" @change=${this._languageChanged}>
-            <option value="auto" ?selected=${this._config.language === 'auto'}>${this._t('auto')}</option>
-            <option value="de" ?selected=${this._config.language === 'de'}>${this._t('german')}</option>
-            <option value="en" ?selected=${this._config.language === 'en'}>${this._t('english')}</option>
-          </select>
-        </div>
-        <div class="version">${this._t('version')}: ${CARD_VERSION}</div>
-      </details>
+      <nav class="tabs">
+        <button class=${this._tab === 'general' ? 'active' : ''} data-tab="general" @click=${this._selectTab}>${this._t('tab_general')}</button>
+        <button class=${this._tab === 'advanced' ? 'active' : ''} data-tab="advanced" @click=${this._selectTab}>${this._t('tab_advanced')}</button>
+      </nav>
+      ${this._tab === 'general'
+        ? html`
+            <div class="form">
+              <label for="${idWidth}">${this._t('max_width')}</label>
+              <input id="${idWidth}" name="max_width" type="number" .value=${(this._config.max_width ?? '').replace(/px$/, '')} @input=${this._widthChanged} />
+            </div>
+            <div class="form">
+              <label for="${idMaxEntries}">${this._t('max_entries')}</label>
+              <input id="${idMaxEntries}" name="max_entries" type="number" .value=${this._config.max_entries ?? 0} @input=${this._maxChanged} />
+            </div>
+            <div class="form">
+              <label for="${idSort}">${this._t('sort')}</label>
+              <select id="${idSort}" name="sort_by" @change=${this._sortChanged}>
+                <option value="due_desc" ?selected=${this._config.sort_by === 'due_desc'}>${this._t('sort_due_desc')}</option>
+                <option value="due_asc" ?selected=${this._config.sort_by === 'due_asc'}>${this._t('sort_due_asc')}</option>
+                <option value="name" ?selected=${this._config.sort_by === 'name'}>${this._t('sort_name')}</option>
+              </select>
+            </div>
+            <div class="form">
+              <input id="${idSortMenu}" name="sort_menu" type="checkbox" .checked=${this._config.sort_menu} @change=${this._menuChanged} />
+              <label for="${idSortMenu}">${this._t('sort_menu_show')}</label>
+            </div>
+            <div class="form">
+              <input id="${idShowReset}" name="show_reset" type="checkbox" .checked=${this._config.show_reset} @change=${this._resetChanged} />
+              <label for="${idShowReset}">${this._t('show_reset')}</label>
+            </div>
+            <div class="form">
+              <input id="${idShowCopy}" name="show_copy" type="checkbox" .checked=${this._config.show_copy} @change=${this._copyChanged} />
+              <label for="${idShowCopy}">${this._t('show_copy')}</label>
+            </div>
+            <div class="form">
+              <input id="${idShowTotal}" name="show_total" type="checkbox" .checked=${this._config.show_total} @change=${this._totalChanged} />
+              <label for="${idShowTotal}">${this._t('show_total')}</label>
+            </div>
+            <div class="form">
+              <input id="${idHideFree}" name="hide_free" type="checkbox" .checked=${this._config.hide_free} @change=${this._hideChanged} />
+              <label for="${idHideFree}">${this._t('hide_free')}</label>
+            </div>
+            <div class="form">
+              <input id="${idShortNames}" name="shorten_user_names" type="checkbox" .checked=${this._config.shorten_user_names} @change=${this._shortNamesChanged} />
+              <label for="${idShortNames}">${this._t('shorten_user_names')}</label>
+            </div>
+          `
+        : html`
+            <div class="form">
+              <input id="${idShowResetEveryone}" name="show_reset_everyone" type="checkbox" .checked=${this._config.show_reset_everyone} @change=${this._debugResetChanged} />
+              <label for="${idShowResetEveryone}">${this._t('show_reset_everyone')}</label>
+            </div>
+            <div class="form">
+              <label for="${idLanguage}">${this._t('language')}</label>
+              <select id="${idLanguage}" name="language" @change=${this._languageChanged}>
+                <option value="auto" ?selected=${this._config.language === 'auto'}>${this._t('auto')}</option>
+                <option value="de" ?selected=${this._config.language === 'de'}>${this._t('german')}</option>
+                <option value="en" ?selected=${this._config.language === 'en'}>${this._t('english')}</option>
+              </select>
+            </div>
+            <div class="version">${this._t('version')}: ${CARD_VERSION}</div>
+          `}
     `;
   }
 
@@ -2969,7 +2987,11 @@ class TallyDueRankingCardEditor extends LitElement {
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
-  static styles = TallyListCardEditor.styles;
+  _selectTab(ev) {
+    this._tab = ev.target.dataset.tab;
+  }
+
+  static styles = EDITOR_STYLES;
 }
 
 customElements.define('tally-due-ranking-card-editor', TallyDueRankingCardEditor);
@@ -2997,6 +3019,9 @@ const FD_STRINGS = {
     auto: 'Auto',
     german: 'German',
     english: 'English',
+    tab_general: 'General',
+    tab_users: 'Users',
+    tab_advanced: 'Advanced',
   },
   de: {
     show_prices: 'Preise anzeigen',
@@ -3019,6 +3044,9 @@ const FD_STRINGS = {
     auto: 'Auto',
     german: 'Deutsch',
     english: 'Englisch',
+    tab_general: 'Allgemein',
+    tab_users: 'Nutzer',
+    tab_advanced: 'Erweitert',
   },
 };
 
