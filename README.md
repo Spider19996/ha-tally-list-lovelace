@@ -116,7 +116,7 @@ comment_presets:
 ## PIN Set Card
 
 Allow users to set or reset their 4-digit PIN. Administrators can select any user and update the PIN for them. The card is available in the Lovelace card picker.
-When opened, a warning reminds users not to use important PINs such as their bank card PIN, since its security cannot be guaranteed.
+When opened, a configurable warning can remind users not to use important PINs such as their bank card PIN. Leave the warning text empty to disable it.
 
 ```yaml
 type: custom:tally-set-pin-card
@@ -128,6 +128,7 @@ Options:
 
 * **lock_ms** – Lock duration in milliseconds after each PIN attempt (`5000` by default).
 * **user_selector** – User selection layout: `list`, `tabs`, or `grid` (`list` by default).
+* **pin_warning** – Warning text shown when opening the card. Set to an empty string to hide the warning (defaults to a caution about important PINs).
 
 It calls the `tally_list.set_pin` service to store the new code, e.g.:
 
