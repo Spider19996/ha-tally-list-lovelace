@@ -4589,14 +4589,14 @@ class TallySetPinCardEditor extends LitElement {
         />
       </div>
       <div class="form">
+        <input
+          id="${idShortNames}"
+          name="shorten_user_names"
+          type="checkbox"
+          .checked=${this._config.shorten_user_names}
+          @change=${this._shortNamesChanged}
+        />
         <label for="${idShortNames}">
-          <input
-            id="${idShortNames}"
-            name="shorten_user_names"
-            type="checkbox"
-            .checked=${this._config.shorten_user_names}
-            @change=${this._shortNamesChanged}
-          />
           ${translate(
             this.hass,
             this._config?.language,
@@ -4814,7 +4814,7 @@ class TallySetPinCardEditor extends LitElement {
     .form {
       padding: 16px;
     }
-    input,
+    input:not([type='checkbox']),
     select,
     textarea {
       width: 100%;
