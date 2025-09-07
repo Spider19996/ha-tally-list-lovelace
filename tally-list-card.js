@@ -401,6 +401,9 @@ const TL_STRINGS = {
     grouped_breaks: 'Grouped breaks',
     show_all_tab: 'Show "All" tab',
     grid_columns: 'Grid columns (0 = auto)',
+    tab_general: 'General',
+    tab_users: 'Users',
+    tab_advanced: 'Advanced',
   },
   de: {
     card_name: 'Strichliste Zähler',
@@ -471,6 +474,9 @@ const TL_STRINGS = {
     grouped_breaks: 'Gruppierte Bereiche',
     show_all_tab: 'Tab "Alle" anzeigen',
     grid_columns: 'Spalten (0 = automatisch)',
+    tab_general: 'Allgemein',
+    tab_users: 'Nutzer',
+    tab_advanced: 'Erweitert',
   },
 };
 
@@ -1912,15 +1918,12 @@ customElements.define('tally-list-card', TallyListCard);
 class TallyListCardEditor extends LitElement {
   static properties = {
     _config: {},
+    _tab: { type: String },
   };
 
   constructor() {
     super();
-    this._uid = crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
-  }
-
-  _fid(key) {
-    return `tally-${this._uid}-${key}`;
+    this._tab = 'general';
   }
 
   setConfig(config) {
@@ -1941,12 +1944,12 @@ class TallyListCardEditor extends LitElement {
       max_width: '500px',
       show_remove: true,
       only_self: false,
+      show_step_select: true,
       show_all_users: false,
       show_inactive_drinks: false,
       shorten_user_names: false,
       language: 'auto',
       user_selector: 'list',
-      show_step_select: true,
       ...config,
       tabs,
       grid,
@@ -1959,137 +1962,115 @@ class TallyListCardEditor extends LitElement {
 
   render() {
     if (!this._config) return html``;
-    const idLock = this._fid('lock-ms');
-    const idPinLock = this._fid('pin-lock-ms');
-    const idSessionTimeout = this._fid('session-timeout');
-    const idWidth = this._fid('max-width');
-    const idShowRemove = this._fid('show-remove');
-    const idShowStepSelect = this._fid('show-step-select');
-    const idOnlySelf = this._fid('only-self');
-    const idUserSelector = this._fid('user-selector');
-    const idTabMode = this._fid('tab-mode');
-    const idGroupedBreaks = this._fid('grouped-breaks');
-    const idShowAllTab = this._fid('show-all-tab');
-    const idGridColumns = this._fid('grid-columns');
-    const idShowAllUsers = this._fid('show-all-users');
-    const idShowInactive = this._fid('show-inactive');
-    const idShortNames = this._fid('short-names');
-    const idLanguage = this._fid('language');
     return html`
-      <div class="form">
-        <label for="${idLock}">${this._t('lock_ms')}</label>
-        <input id="${idLock}" name="lock_ms" type="number" .value=${this._config.lock_ms} @input=${this._lockChanged} />
-      </div>
-      <div class="form">
-        <label for="${idPinLock}">${this._t('pin_lock_ms')}</label>
-        <input id="${idPinLock}" name="pin_lock_ms" type="number" .value=${this._config.pin_lock_ms} @input=${this._pinLockChanged} />
-      </div>
-      <div class="form">
-        <label for="${idSessionTimeout}">${this._t('session_timeout_seconds')}</label>
-        <input id="${idSessionTimeout}" name="session_timeout_seconds" type="number" .value=${this._config.session_timeout_seconds} @input=${this._sessionTimeoutChanged} />
-      </div>
-      <div class="form">
-        <label for="${idWidth}">${this._t('max_width')}</label>
-        <input id="${idWidth}" name="max_width" type="number" .value=${(this._config.max_width ?? '').replace(/px$/, '')} @input=${this._widthChanged} />
-      </div>
-      <div class="form">
-        <input id="${idShowRemove}" name="show_remove" type="checkbox" .checked=${this._config.show_remove} @change=${this._removeChanged} />
-        <label for="${idShowRemove}">${this._t('show_remove_menu')}</label>
-      </div>
-      <div class="form">
-        <input id="${idShowStepSelect}" name="show_step_select" type="checkbox" .checked=${this._config.show_step_select !== false} @change=${this._stepSelectChanged} />
-        <label for="${idShowStepSelect}">${this._t('show_step_select')}</label>
-      </div>
-      <div class="form">
-        <input id="${idOnlySelf}" name="only_self" type="checkbox" .checked=${this._config.only_self} @change=${this._selfChanged} />
-        <label for="${idOnlySelf}">${this._t('only_self')}</label>
-      </div>
-      <div class="form">
-        <input id="${idShortNames}" name="shorten_user_names" type="checkbox" .checked=${this._config.shorten_user_names} @change=${this._shortNamesChanged} />
-        <label for="${idShortNames}">${this._t('shorten_user_names')}</label>
-      </div>
-      <div class="form">
-        <label for="${idUserSelector}">${this._t('user_selector')}</label>
-        <select id="${idUserSelector}" name="user_selector" @change=${this._userSelectorChanged}>
-          <option value="list" ?selected=${this._config.user_selector === 'list'}>${this._t('user_selector_list')}</option>
-          <option value="tabs" ?selected=${this._config.user_selector === 'tabs'}>${this._t('user_selector_tabs')}</option>
-          <option value="grid" ?selected=${this._config.user_selector === 'grid'}>${this._t('user_selector_grid')}</option>
-        </select>
-      </div>
-      ${['tabs', 'grid'].includes(this._config.user_selector)
+      <nav class="tabs">
+        <button class=${this._tab === 'general' ? 'active' : ''} data-tab="general" @click=${this._selectTab}>${this._t('tab_general')}</button>
+        <button class=${this._tab === 'users' ? 'active' : ''} data-tab="users" @click=${this._selectTab}>${this._t('tab_users')}</button>
+        <button class=${this._tab === 'advanced' ? 'active' : ''} data-tab="advanced" @click=${this._selectTab}>${this._t('tab_advanced')}</button>
+      </nav>
+      ${this._tab === 'general'
         ? html`
-            ${this._config.user_selector === 'tabs'
+            <div class="form">
+              <label>${this._t('lock_ms')}</label>
+              <input type="number" .value=${this._config.lock_ms} @input=${this._lockChanged} />
+            </div>
+            <div class="form">
+              <label>${this._t('pin_lock_ms')}</label>
+              <input type="number" .value=${this._config.pin_lock_ms} @input=${this._pinLockChanged} />
+            </div>
+            <div class="form">
+              <label>${this._t('session_timeout_seconds')}</label>
+              <input type="number" .value=${this._config.session_timeout_seconds} @input=${this._sessionTimeoutChanged} />
+            </div>
+            <div class="form">
+              <label>${this._t('max_width')}</label>
+              <input type="number" .value=${(this._config.max_width ?? '').replace(/px$/, '')} @input=${this._widthChanged} />
+            </div>
+            <div class="form">
+              <label><input type="checkbox" .checked=${this._config.show_remove} @change=${this._removeChanged} /> ${this._t('show_remove_menu')}</label>
+            </div>
+            <div class="form">
+              <label><input type="checkbox" .checked=${this._config.show_step_select !== false} @change=${this._stepSelectChanged} /> ${this._t('show_step_select')}</label>
+            </div>
+            <div class="form">
+              <label><input type="checkbox" .checked=${this._config.only_self} @change=${this._selfChanged} /> ${this._t('only_self')}</label>
+            </div>
+            <div class="form">
+              <label><input type="checkbox" .checked=${this._config.shorten_user_names} @change=${this._shortNamesChanged} /> ${this._t('shorten_user_names')}</label>
+            </div>
+          `
+        : this._tab === 'users'
+        ? html`
+            <div class="form">
+              <label>${this._t('user_selector')}</label>
+              <select @change=${this._userSelectorChanged}>
+                <option value="list" ?selected=${this._config.user_selector === 'list'}>${this._t('user_selector_list')}</option>
+                <option value="tabs" ?selected=${this._config.user_selector === 'tabs'}>${this._t('user_selector_tabs')}</option>
+                <option value="grid" ?selected=${this._config.user_selector === 'grid'}>${this._t('user_selector_grid')}</option>
+              </select>
+            </div>
+            ${['tabs', 'grid'].includes(this._config.user_selector)
               ? html`
-                  <div class="form">
-                    <label for="${idTabMode}">${this._t('tab_mode')}</label>
-                    <select id="${idTabMode}" name="tab_mode" @change=${this._tabModeChanged}>
-                      <option value="per-letter" ?selected=${this._config.tabs.mode === 'per-letter'}>${this._t('per_letter')}</option>
-                      <option value="grouped" ?selected=${this._config.tabs.mode === 'grouped'}>${this._t('grouped')}</option>
-                    </select>
-                  </div>
-                  ${this._config.tabs.mode === 'grouped'
-                    ? html`<div class="form">
-                        <label for="${idGroupedBreaks}">${this._t('grouped_breaks')}</label>
-                        <input id="${idGroupedBreaks}" name="grouped_breaks" type="text" .value=${this._config.tabs.grouped_breaks.join(',')} @input=${this._groupedBreaksChanged} />
-                      </div>`
+                  ${this._config.user_selector === 'tabs'
+                    ? html`
+                        <div class="form">
+                          <label>${this._t('tab_mode')}</label>
+                          <select @change=${this._tabModeChanged}>
+                            <option value="per-letter" ?selected=${this._config.tabs.mode === 'per-letter'}>${this._t('per_letter')}</option>
+                            <option value="grouped" ?selected=${this._config.tabs.mode === 'grouped'}>${this._t('grouped')}</option>
+                          </select>
+                        </div>
+                        ${this._config.tabs.mode === 'grouped'
+                          ? html`<div class="form">
+                              <label>${this._t('grouped_breaks')}</label>
+                              <input type="text" .value=${this._config.tabs.grouped_breaks.join(',')} @input=${this._groupedBreaksChanged} />
+                            </div>`
+                          : ''}
+                        <div class="form">
+                          <label><input type="checkbox" .checked=${this._config.tabs.show_all_tab} @change=${this._showAllTabChanged} /> ${this._t('show_all_tab')}</label>
+                        </div>
+                      `
                     : ''}
                   <div class="form">
-                    <input id="${idShowAllTab}" name="show_all_tab" type="checkbox" .checked=${this._config.tabs.show_all_tab} @change=${this._showAllTabChanged} />
-                    <label for="${idShowAllTab}">${this._t('show_all_tab')}</label>
+                    <label>${this._t('grid_columns')}</label>
+                    <input type="text" .value=${this._config.grid.columns} @input=${this._gridColumnsChanged} />
                   </div>
                 `
               : ''}
-            <div class="form">
-              <label for="${idGridColumns}">${this._t('grid_columns')}</label>
-              <input id="${idGridColumns}" name="grid_columns" type="text" .value=${this._config.grid.columns} @input=${this._gridColumnsChanged} />
-            </div>
           `
-        : ''}
-      <details class="debug">
-        <summary>${this._t('debug')}</summary>
-        <div class="form">
-          <input id="${idShowAllUsers}" name="show_all_users" type="checkbox" .checked=${this._config.show_all_users} @change=${this._debugAllChanged} />
-          <label for="${idShowAllUsers}">${this._t('show_all_users')}</label>
-        </div>
-        <div class="form">
-          <input id="${idShowInactive}" name="show_inactive_drinks" type="checkbox" .checked=${this._config.show_inactive_drinks} @change=${this._debugInactiveChanged} />
-          <label for="${idShowInactive}">${this._t('show_inactive_drinks')}</label>
-        </div>
-        <div class="form">
-          <label for="${idLanguage}">${this._t('language')}</label>
-          <select id="${idLanguage}" name="language" @change=${this._languageChanged}>
-            <option value="auto" ?selected=${this._config.language === 'auto'}>${this._t('auto')}</option>
-            <option value="de" ?selected=${this._config.language === 'de'}>${this._t('german')}</option>
-            <option value="en" ?selected=${this._config.language === 'en'}>${this._t('english')}</option>
-          </select>
-        </div>
-        <div class="version">${this._t('version')}: ${CARD_VERSION}</div>
-      </details>
+        : html`
+            <div class="form">
+              <label><input type="checkbox" .checked=${this._config.show_all_users} @change=${this._debugAllChanged} /> ${this._t('show_all_users')}</label>
+            </div>
+            <div class="form">
+              <label><input type="checkbox" .checked=${this._config.show_inactive_drinks} @change=${this._debugInactiveChanged} /> ${this._t('show_inactive_drinks')}</label>
+            </div>
+            <div class="form">
+              <label>${this._t('language')}</label>
+              <select @change=${this._languageChanged}>
+                <option value="auto" ?selected=${this._config.language === 'auto'}>${this._t('auto')}</option>
+                <option value="de" ?selected=${this._config.language === 'de'}>${this._t('german')}</option>
+                <option value="en" ?selected=${this._config.language === 'en'}>${this._t('english')}</option>
+              </select>
+            </div>
+            <div class="version">${this._t('version')}: ${CARD_VERSION}</div>
+          `}
     `;
   }
 
+  _selectTab(ev) {
+    this._tab = ev.target.dataset.tab;
+  }
   _pinLockChanged(ev) {
     const value = Number(ev.target.value);
     this._config = { ...this._config, pin_lock_ms: isNaN(value) ? 5000 : value };
-    this.dispatchEvent(
-      new CustomEvent('config-changed', {
-        detail: { config: this._config },
-        bubbles: true,
-        composed: true,
-      })
-    );
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 
   _lockChanged(ev) {
     const value = Number(ev.target.value);
     this._config = { ...this._config, lock_ms: isNaN(value) ? 400 : value };
-    this.dispatchEvent(
-      new CustomEvent('config-changed', {
-        detail: { config: this._config },
-        bubbles: true,
-        composed: true,
-      })
-    );
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 
   _sessionTimeoutChanged(ev) {
@@ -2098,108 +2079,54 @@ class TallyListCardEditor extends LitElement {
       ...this._config,
       session_timeout_seconds: isNaN(value) ? 30 : value,
     };
-    this.dispatchEvent(
-      new CustomEvent('config-changed', {
-        detail: { config: this._config },
-        bubbles: true,
-        composed: true,
-      })
-    );
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 
   _widthChanged(ev) {
     const raw = ev.target.value.trim();
     const width = raw ? `${raw}px` : '';
     this._config = { ...this._config, max_width: width };
-    this.dispatchEvent(
-      new CustomEvent('config-changed', {
-        detail: { config: this._config },
-        bubbles: true,
-        composed: true,
-      })
-    );
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 
   _removeChanged(ev) {
     this._config = { ...this._config, show_remove: ev.target.checked };
-    this.dispatchEvent(
-      new CustomEvent('config-changed', {
-        detail: { config: this._config },
-        bubbles: true,
-        composed: true,
-      })
-    );
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 
   _stepSelectChanged(ev) {
     this._config = { ...this._config, show_step_select: ev.target.checked };
-    this.dispatchEvent(
-      new CustomEvent('config-changed', {
-        detail: { config: this._config },
-        bubbles: true,
-        composed: true,
-      })
-    );
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 
   _selfChanged(ev) {
     this._config = { ...this._config, only_self: ev.target.checked };
-    this.dispatchEvent(
-      new CustomEvent('config-changed', {
-        detail: { config: this._config },
-        bubbles: true,
-        composed: true,
-      })
-    );
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 
   _shortNamesChanged(ev) {
     this._config = { ...this._config, shorten_user_names: ev.target.checked };
-    this.dispatchEvent(
-      new CustomEvent('config-changed', {
-        detail: { config: this._config },
-        bubbles: true,
-        composed: true,
-      })
-    );
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 
   _debugAllChanged(ev) {
     this._config = { ...this._config, show_all_users: ev.target.checked };
-    this.dispatchEvent(
-      new CustomEvent('config-changed', {
-        detail: { config: this._config },
-        bubbles: true,
-        composed: true,
-      })
-    );
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 
   _debugInactiveChanged(ev) {
     this._config = { ...this._config, show_inactive_drinks: ev.target.checked };
-    this.dispatchEvent(
-      new CustomEvent('config-changed', {
-        detail: { config: this._config },
-        bubbles: true,
-        composed: true,
-      })
-    );
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 
   _languageChanged(ev) {
     this._config = { ...this._config, language: ev.target.value };
-    this.dispatchEvent(
-      new CustomEvent('config-changed', {
-        detail: { config: this._config },
-        bubbles: true,
-        composed: true,
-      })
-    );
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 
   _userSelectorChanged(ev) {
     this._config = { ...this._config, user_selector: ev.target.value };
-    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 
   _tabModeChanged(ev) {
@@ -2207,7 +2134,7 @@ class TallyListCardEditor extends LitElement {
       ...this._config,
       tabs: { ...this._config.tabs, mode: ev.target.value },
     };
-    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 
   _groupedBreaksChanged(ev) {
@@ -2219,7 +2146,7 @@ class TallyListCardEditor extends LitElement {
       ...this._config,
       tabs: { ...this._config.tabs, grouped_breaks: arr },
     };
-    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 
   _showAllTabChanged(ev) {
@@ -2227,7 +2154,7 @@ class TallyListCardEditor extends LitElement {
       ...this._config,
       tabs: { ...this._config.tabs, show_all_tab: ev.target.checked },
     };
-    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 
   _gridColumnsChanged(ev) {
@@ -2238,25 +2165,33 @@ class TallyListCardEditor extends LitElement {
       ...this._config,
       grid: { ...this._config.grid, columns },
     };
-    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 
   static styles = css`
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--divider-color);
+    }
+    .tabs button {
+      flex: 1;
+      padding: 8px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font: inherit;
+      border-bottom: 2px solid transparent;
+    }
+    .tabs button.active {
+      border-color: var(--primary-color);
+      font-weight: bold;
+    }
     .form {
       padding: 16px;
     }
-    input[type='number'],
-    input[type='text'] {
+    input {
       width: 100%;
       box-sizing: border-box;
-    }
-    details.debug {
-      padding: 0 16px 16px;
-    }
-    details.debug summary {
-      cursor: pointer;
-      font-weight: bold;
-      outline: none;
     }
     .version {
       padding: 0 16px 16px;
@@ -2266,8 +2201,9 @@ class TallyListCardEditor extends LitElement {
   `;
 }
 
-customElements.define('tally-list-card-editor', TallyListCardEditor);
 
+
+customElements.define('tally-list-card-editor', TallyListCardEditor);
 class TallyDueRankingCard extends LitElement {
   static properties = {
     hass: {},
