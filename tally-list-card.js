@@ -4300,6 +4300,12 @@ const PIN_EDITOR_STRINGS = {
     user_selector_list: 'List',
     user_selector_tabs: 'Tabs',
     user_selector_grid: 'Grid',
+    tab_mode: 'Tab mode',
+    per_letter: 'Per letter',
+    grouped: 'Grouped',
+    grouped_breaks: 'Grouped breaks',
+    show_all_tab: 'Show "All" tab',
+    grid_columns: 'Grid columns (0 = auto)',
   },
   de: {
     lock_ms: 'Sperrzeit (ms)',
@@ -4307,6 +4313,12 @@ const PIN_EDITOR_STRINGS = {
     user_selector_list: 'Liste',
     user_selector_tabs: 'Tabs',
     user_selector_grid: 'Grid',
+    tab_mode: 'Tab-Modus',
+    per_letter: 'Pro Buchstabe',
+    grouped: 'Gruppiert',
+    grouped_breaks: 'Gruppierte Bereiche',
+    show_all_tab: 'Tab "Alle" anzeigen',
+    grid_columns: 'Spalten (0 = automatisch)',
   },
 };
 
@@ -4325,10 +4337,19 @@ class TallySetPinCardEditor extends LitElement {
   }
 
   setConfig(config) {
+    const tabs = {
+      mode: 'per-letter',
+      grouped_breaks: ['A–E', 'F–J', 'K–O', 'P–T', 'U–Z'],
+      show_all_tab: true,
+      ...(config?.tabs || {}),
+    };
+    const grid = { columns: 0, ...(config?.grid || {}) };
     this._config = {
       lock_ms: 5000,
       user_selector: 'list',
       ...(config || {}),
+      tabs,
+      grid,
     };
   }
 
@@ -4347,9 +4368,50 @@ class TallySetPinCardEditor extends LitElement {
     );
   }
 
+  _tabModeChanged(ev) {
+    const tabs = { ...this._config.tabs, mode: ev.target.value };
+    this._config = { ...this._config, tabs };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', { detail: { config: this._config } })
+    );
+  }
+
+  _groupedBreaksChanged(ev) {
+    const arr = ev.target.value
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s);
+    const tabs = { ...this._config.tabs, grouped_breaks: arr };
+    this._config = { ...this._config, tabs };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', { detail: { config: this._config } })
+    );
+  }
+
+  _showAllTabChanged(ev) {
+    const tabs = { ...this._config.tabs, show_all_tab: ev.target.checked };
+    this._config = { ...this._config, tabs };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', { detail: { config: this._config } })
+    );
+  }
+
+  _gridColumnsChanged(ev) {
+    const val = Number(ev.target.value);
+    const grid = { ...this._config.grid, columns: isNaN(val) ? 0 : val };
+    this._config = { ...this._config, grid };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', { detail: { config: this._config } })
+    );
+  }
+
   render() {
     const idLock = this._fid('lock-ms');
     const idUserSelector = this._fid('user-selector');
+    const idTabMode = this._fid('tab-mode');
+    const idGroupedBreaks = this._fid('grouped-breaks');
+    const idShowAllTab = this._fid('show-all-tab');
+    const idGridColumns = this._fid('grid-columns');
     return html`
       <div class="form">
         <label for="${idLock}">${translate(
@@ -4410,8 +4472,108 @@ class TallySetPinCardEditor extends LitElement {
           >
         </select>
       </div>
+      ${['tabs', 'grid'].includes(this._config.user_selector)
+        ? html`
+            ${this._config.user_selector === 'tabs'
+              ? html`
+                  <div class="form">
+                    <label for="${idTabMode}">${translate(
+                      this.hass,
+                      this._config?.language,
+                      PIN_EDITOR_STRINGS,
+                      'tab_mode'
+                    )}</label>
+                    <select
+                      id="${idTabMode}"
+                      name="tab_mode"
+                      @change=${this._tabModeChanged}
+                    >
+                      <option
+                        value="per-letter"
+                        ?selected=${this._config.tabs.mode === 'per-letter'}
+                        >${translate(
+                          this.hass,
+                          this._config?.language,
+                          PIN_EDITOR_STRINGS,
+                          'per_letter'
+                        )}</option
+                      >
+                      <option
+                        value="grouped"
+                        ?selected=${this._config.tabs.mode === 'grouped'}
+                        >${translate(
+                          this.hass,
+                          this._config?.language,
+                          PIN_EDITOR_STRINGS,
+                          'grouped'
+                        )}</option
+                      >
+                    </select>
+                  </div>
+                  ${this._config.tabs.mode === 'grouped'
+                    ? html`<div class="form">
+                        <label for="${idGroupedBreaks}">${translate(
+                          this.hass,
+                          this._config?.language,
+                          PIN_EDITOR_STRINGS,
+                          'grouped_breaks'
+                        )}</label>
+                        <input
+                          id="${idGroupedBreaks}"
+                          name="grouped_breaks"
+                          type="text"
+                          .value=${this._config.tabs.grouped_breaks.join(',')}
+                          @input=${this._groupedBreaksChanged}
+                        />
+                      </div>`
+                    : ''}
+                  <div class="form">
+                    <input
+                      id="${idShowAllTab}"
+                      name="show_all_tab"
+                      type="checkbox"
+                      .checked=${this._config.tabs.show_all_tab}
+                      @change=${this._showAllTabChanged}
+                    />
+                    <label for="${idShowAllTab}">${translate(
+                      this.hass,
+                      this._config?.language,
+                      PIN_EDITOR_STRINGS,
+                      'show_all_tab'
+                    )}</label>
+                  </div>
+                `
+              : ''}
+            <div class="form">
+              <label for="${idGridColumns}">${translate(
+                this.hass,
+                this._config?.language,
+                PIN_EDITOR_STRINGS,
+                'grid_columns'
+              )}</label>
+              <input
+                id="${idGridColumns}"
+                name="grid_columns"
+                type="text"
+                .value=${this._config.grid.columns}
+                @input=${this._gridColumnsChanged}
+              />
+            </div>
+          `
+        : ''}
     `;
   }
+
+  static styles = css`
+    .form {
+      padding: 16px;
+    }
+    input,
+    select {
+      width: 100%;
+      box-sizing: border-box;
+    }
+  `;
 }
 
 customElements.define('tally-set-pin-card-editor', TallySetPinCardEditor);
