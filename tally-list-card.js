@@ -4589,19 +4589,21 @@ class TallySetPinCardEditor extends LitElement {
         />
       </div>
       <div class="form">
-        <input
-          id="${idShortNames}"
-          name="shorten_user_names"
-          type="checkbox"
-          .checked=${this._config.shorten_user_names}
-          @change=${this._shortNamesChanged}
-        />
-        <label for="${idShortNames}">${translate(
-          this.hass,
-          this._config?.language,
-          PIN_EDITOR_STRINGS,
-          'shorten_user_names'
-        )}</label>
+        <label>
+          <input
+            id="${idShortNames}"
+            name="shorten_user_names"
+            type="checkbox"
+            .checked=${this._config.shorten_user_names}
+            @change=${this._shortNamesChanged}
+          />
+          ${translate(
+            this.hass,
+            this._config?.language,
+            PIN_EDITOR_STRINGS,
+            'shorten_user_names'
+          )}
+        </label>
       </div>
       <div class="form">
         <label for="${idWarning}">${translate(
