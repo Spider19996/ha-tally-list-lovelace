@@ -124,6 +124,10 @@ type: custom:tally-set-pin-card
 
 The card uses the same user list as the main Tally List card and normally requires no additional configuration.
 
+Options:
+
+* **lock_ms** – Lock duration in milliseconds after setting a new PIN (`5000` by default).
+
 It calls the `tally_list.set_pin` service to store the new code, e.g.:
 
 ```yaml
