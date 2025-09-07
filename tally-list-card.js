@@ -4631,7 +4631,7 @@ class TallySetPinCard extends LitElement {
           </div>
           <div class="pin-display">${pinMask}
             ${this._locked
-              ? html`<div class="pin-timer-overlay">${this._t(
+              ? html`<div class="pin-timer-overlay ${this._status || 'success'}">${this._t(
                     this._status || 'success'
                   )}<br />${Math.ceil(this._lockRemainingMs / 1000)}s</div>`
               : ''}
@@ -4774,6 +4774,12 @@ class TallySetPinCard extends LitElement {
       flex-direction: column;
       background: var(--card-background-color, #fff);
       z-index: 1;
+    }
+    .pin-timer-overlay.success {
+      color: var(--success-color, #2e7d32);
+    }
+    .pin-timer-overlay.mismatch {
+      color: var(--error-color, #d9534f);
     }
     .keypad {
       display: grid;
