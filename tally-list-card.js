@@ -4293,8 +4293,8 @@ customElements.define('tally-list-free-drinks-card', TallyListFreeDrinksCard);
 
 // ----- Set PIN Card Editor -----
 const PIN_EDITOR_STRINGS = {
-  en: { no_options: 'No options available' },
-  de: { no_options: 'Keine Optionen verfügbar' },
+  en: { lock_ms: 'Lock duration (ms)' },
+  de: { lock_ms: 'Sperrzeit (ms)' },
 };
 
 class TallySetPinCardEditor extends LitElement {
@@ -4302,17 +4302,47 @@ class TallySetPinCardEditor extends LitElement {
     _config: {},
   };
 
+  constructor() {
+    super();
+    this._uid = crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
+  }
+
+  _fid(key) {
+    return `tally-${this._uid}-${key}`;
+  }
+
   setConfig(config) {
-    this._config = { ...config };
+    this._config = {
+      lock_ms: 5000,
+      ...(config || {}),
+    };
+  }
+
+  _lockChanged(ev) {
+    const value = Number(ev.target.value);
+    this._config = { ...this._config, lock_ms: isNaN(value) ? 5000 : value };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', { detail: { config: this._config } })
+    );
   }
 
   render() {
-    return html`<div class="form">${translate(
-      this.hass,
-      this._config?.language,
-      PIN_EDITOR_STRINGS,
-      'no_options'
-    )}</div>`;
+    const idLock = this._fid('lock-ms');
+    return html`<div class="form">
+      <label for="${idLock}">${translate(
+        this.hass,
+        this._config?.language,
+        PIN_EDITOR_STRINGS,
+        'lock_ms'
+      )}</label>
+      <input
+        id="${idLock}"
+        name="lock_ms"
+        type="number"
+        .value=${this._config.lock_ms}
+        @input=${this._lockChanged}
+      />
+    </div>`;
   }
 }
 
@@ -4373,6 +4403,7 @@ class TallySetPinCard extends LitElement {
     _autoUsers: { state: true },
     _buffer: { state: true },
     _stage: { state: true },
+    _locked: { state: true },
   };
 
   constructor() {
@@ -4385,10 +4416,14 @@ class TallySetPinCard extends LitElement {
     this._autoUsers = [];
     this._buffer = '';
     this._stage = 1; // 1: enter new PIN, 2: confirm PIN
+    this._locked = false;
   }
 
   setConfig(config) {
-    this.config = config || {};
+    this.config = {
+      lock_ms: 5000,
+      ...(config || {}),
+    };
   }
 
   _t(key) {
@@ -4442,6 +4477,7 @@ class TallySetPinCard extends LitElement {
   }
 
   _addDigit(d) {
+    if (this._locked) return;
     if (this._buffer.length >= 4) return;
     this._buffer += String(d);
     if (this._buffer.length === 4) {
@@ -4458,6 +4494,7 @@ class TallySetPinCard extends LitElement {
   }
 
   _backspace() {
+    if (this._locked) return;
     if (this._buffer) {
       this._buffer = '';
     } else if (this._stage === 2) {
@@ -4498,6 +4535,12 @@ class TallySetPinCard extends LitElement {
       this._pin1 = '';
       this._pin2 = '';
       this._stage = 1;
+      this._locked = true;
+      const delay = Number(this.config.lock_ms ?? 5000);
+      setTimeout(() => {
+        this._locked = false;
+        this.requestUpdate();
+      }, delay);
     } catch (e) {
       const code = e?.error?.code || e?.code;
       this._status = code || 'error';
@@ -4528,7 +4571,11 @@ class TallySetPinCard extends LitElement {
           ${isAdmin
             ? html`<label class="form">
                 <span>${this._t('select_user')}</span>
-                <select @change=${this._handleSelect} .value=${this.selectedUserId}>
+                <select
+                  @change=${this._handleSelect}
+                  .value=${this.selectedUserId}
+                  ?disabled=${this._locked}
+                >
                   <option value=""></option>
                   ${users.map(
                     (u) => html`<option value=${u.user_id}>${u.name}</option>`
@@ -4544,18 +4591,26 @@ class TallySetPinCard extends LitElement {
           <div class="keypad">
             ${digits.map((d) =>
               d === '⟲'
-                ? html`<button class="key action-btn del" @pointerdown=${(ev) => {
-                    ev.preventDefault();
-                    ev.stopPropagation();
-                    ev.currentTarget.blur();
+                ? html`<button
+                    class="key action-btn del"
+                    @pointerdown=${(ev) => {
+                      ev.preventDefault();
+                      ev.stopPropagation();
+                      ev.currentTarget.blur();
                     this._backspace();
-                  }}>⟲</button>`
-                : html`<button class="key action-btn" @pointerdown=${(ev) => {
-                    ev.preventDefault();
-                    ev.stopPropagation();
-                    ev.currentTarget.blur();
+                  }}
+                    ?disabled=${this._locked}
+                  >⟲</button>`
+                : html`<button
+                    class="key action-btn"
+                    @pointerdown=${(ev) => {
+                      ev.preventDefault();
+                      ev.stopPropagation();
+                      ev.currentTarget.blur();
                     this._addDigit(d);
-                  }}>${d}</button>`
+                  }}
+                    ?disabled=${this._locked}
+                  >${d}</button>`
             )}
           </div>
 
