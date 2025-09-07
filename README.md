@@ -127,6 +127,7 @@ The card uses the same user list as the main Tally List card and normally requir
 Options:
 
 * **lock_ms** – Lock duration in milliseconds after each PIN attempt (`5000` by default).
+* **user_selector** – User selection layout: `list`, `tabs`, or `grid` (`list` by default).
 
 It calls the `tally_list.set_pin` service to store the new code, e.g.:
 

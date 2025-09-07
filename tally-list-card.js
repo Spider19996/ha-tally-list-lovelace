@@ -4294,8 +4294,20 @@ customElements.define('tally-list-free-drinks-card', TallyListFreeDrinksCard);
 
 // ----- Set PIN Card Editor -----
 const PIN_EDITOR_STRINGS = {
-  en: { lock_ms: 'Lock duration (ms)' },
-  de: { lock_ms: 'Sperrzeit (ms)' },
+  en: {
+    lock_ms: 'Lock duration (ms)',
+    user_selector: 'User selector',
+    user_selector_list: 'List',
+    user_selector_tabs: 'Tabs',
+    user_selector_grid: 'Grid',
+  },
+  de: {
+    lock_ms: 'Sperrzeit (ms)',
+    user_selector: 'Nutzerauswahl',
+    user_selector_list: 'Liste',
+    user_selector_tabs: 'Tabs',
+    user_selector_grid: 'Grid',
+  },
 };
 
 class TallySetPinCardEditor extends LitElement {
@@ -4315,6 +4327,7 @@ class TallySetPinCardEditor extends LitElement {
   setConfig(config) {
     this._config = {
       lock_ms: 5000,
+      user_selector: 'list',
       ...(config || {}),
     };
   }
@@ -4327,23 +4340,77 @@ class TallySetPinCardEditor extends LitElement {
     );
   }
 
+  _userSelectorChanged(ev) {
+    this._config = { ...this._config, user_selector: ev.target.value };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', { detail: { config: this._config } })
+    );
+  }
+
   render() {
     const idLock = this._fid('lock-ms');
-    return html`<div class="form">
-      <label for="${idLock}">${translate(
-        this.hass,
-        this._config?.language,
-        PIN_EDITOR_STRINGS,
-        'lock_ms'
-      )}</label>
-      <input
-        id="${idLock}"
-        name="lock_ms"
-        type="number"
-        .value=${this._config.lock_ms}
-        @input=${this._lockChanged}
-      />
-    </div>`;
+    const idUserSelector = this._fid('user-selector');
+    return html`
+      <div class="form">
+        <label for="${idLock}">${translate(
+          this.hass,
+          this._config?.language,
+          PIN_EDITOR_STRINGS,
+          'lock_ms'
+        )}</label>
+        <input
+          id="${idLock}"
+          name="lock_ms"
+          type="number"
+          .value=${this._config.lock_ms}
+          @input=${this._lockChanged}
+        />
+      </div>
+      <div class="form">
+        <label for="${idUserSelector}">${translate(
+          this.hass,
+          this._config?.language,
+          PIN_EDITOR_STRINGS,
+          'user_selector'
+        )}</label>
+        <select
+          id="${idUserSelector}"
+          name="user_selector"
+          @change=${this._userSelectorChanged}
+        >
+          <option
+            value="list"
+            ?selected=${this._config.user_selector === 'list'}
+            >${translate(
+              this.hass,
+              this._config?.language,
+              PIN_EDITOR_STRINGS,
+              'user_selector_list'
+            )}</option
+          >
+          <option
+            value="tabs"
+            ?selected=${this._config.user_selector === 'tabs'}
+            >${translate(
+              this.hass,
+              this._config?.language,
+              PIN_EDITOR_STRINGS,
+              'user_selector_tabs'
+            )}</option
+          >
+          <option
+            value="grid"
+            ?selected=${this._config.user_selector === 'grid'}
+            >${translate(
+              this.hass,
+              this._config?.language,
+              PIN_EDITOR_STRINGS,
+              'user_selector_grid'
+            )}</option
+          >
+        </select>
+      </div>
+    `;
   }
 }
 
@@ -4411,6 +4478,7 @@ class TallySetPinCard extends LitElement {
 
   constructor() {
     super();
+    this._uid = crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
     this.selectedUserId = '';
     this._pin1 = '';
     this._pin2 = '';
@@ -4423,13 +4491,32 @@ class TallySetPinCard extends LitElement {
     this._lockUntil = 0;
     this._lockRemainingMs = 0;
     this._lockTimer = null;
+    this._buckets = new Map();
+    this._tabs = [];
+    this._visibleUsers = [];
+    this._currentTab = 'all';
+    this._sortedUsers = [];
+    this._usersKey = '';
   }
 
   setConfig(config) {
+    const tabs = {
+      mode: 'per-letter',
+      grouped_breaks: ['A–E', 'F–J', 'K–O', 'P–T', 'U–Z'],
+      show_all_tab: true,
+      ...(config?.tabs || {}),
+    };
+    const grid = {
+      columns: 0,
+      ...(config?.grid || {}),
+    };
     this.config = {
       lock_ms: 5000,
+      user_selector: 'list',
       ...(config || {}),
     };
+    this.config.tabs = tabs;
+    this.config.grid = grid;
   }
 
   _t(key) {
@@ -4444,8 +4531,14 @@ class TallySetPinCard extends LitElement {
     return this.hass?.user?.is_admin;
   }
 
-  _handleSelect(ev) {
-    this.selectedUserId = ev.target.value;
+  _fid(key) {
+    return `tally-${this._uid}-${key}`;
+  }
+
+  _handleSelect(id) {
+    if (!this._locked) {
+      this.selectedUserId = id;
+    }
   }
 
   updated(changedProps) {
@@ -4593,6 +4686,18 @@ class TallySetPinCard extends LitElement {
   render() {
     const users = this._users;
     const isAdmin = this._isAdmin;
+    const mode = this.config.user_selector || 'list';
+    const userMenu = isAdmin
+      ? _renderUserMenu(
+          this,
+          users,
+          this.selectedUserId,
+          mode,
+          true,
+          (id) => this._handleSelect(id),
+          (u) => u.user_id
+        )
+      : null;
     const digits = [1, 2, 3, 4, 5, 6, 7, 8, 9, '⟲', 0];
     const pinMask = Array.from({ length: 4 }, (_, i) =>
       html`<span class="pin-dot ${this._buffer.length > i ? 'filled' : ''}"></span>`
@@ -4610,22 +4715,7 @@ class TallySetPinCard extends LitElement {
             </div>`
           : ''}
         <div class="content">
-          ${isAdmin
-            ? html`<label class="form">
-                <span>${this._t('select_user')}</span>
-                <select
-                  @change=${this._handleSelect}
-                  .value=${this.selectedUserId}
-                  ?disabled=${this._locked}
-                >
-                  <option value=""></option>
-                  ${users.map(
-                    (u) => html`<option value=${u.user_id}>${u.name}</option>`
-                  )}
-                </select>
-              </label>`
-            : ''}
-
+          ${isAdmin ? userMenu : ''}
           <div class="pin-label">
             ${this._t(this._stage === 1 ? 'new_pin' : 'confirm_pin')}
           </div>
@@ -4719,17 +4809,104 @@ class TallySetPinCard extends LitElement {
       background: var(--btn-danger, var(--error-color, #d9534f));
       color: #fff;
     }
-    .form {
+    .user-select {
+      text-align: left;
       display: flex;
-      flex-direction: column;
-      gap: 4px;
+      justify-content: flex-start;
+      align-items: center;
+      gap: 8px;
     }
-    select {
-      padding: 8px;
+    .user-actions {
+      border: 1px solid var(--ha-card-border-color, var(--divider-color));
+      border-radius: 14px;
+      background: var(--ha-card-background, #1e1e1e);
+      overflow: hidden;
+    }
+    .alpha-tabs {
+      border-bottom: 1px solid var(--ha-card-border-color, var(--divider-color));
+    }
+    .tabs {
+      display: flex;
+      overflow-x: auto;
+    }
+    .tab {
+      flex: 0 0 auto;
+      padding: 0 12px;
+      height: 44px;
+      background: #2b2b2b;
+      color: #ddd;
+      border: none;
+      border-right: 1px solid var(--ha-card-border-color, var(--divider-color));
+      border-bottom: 1px solid var(--ha-card-border-color, var(--divider-color));
+      font-size: 14px;
+    }
+    .tab:first-child {
+      border-top-left-radius: 14px;
+    }
+    .tab:last-child {
+      border-top-right-radius: 14px;
+      border-right: none;
+    }
+    .alpha-tabs .tab.active {
+      background: var(--success-color, #2e7d32);
+      color: #fff;
+      border-bottom: none;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+    .user-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 12px 16px;
+      margin-top: -1px;
+      border-top: 1px solid var(--ha-card-border-color, var(--divider-color));
+    }
+    .user-chip {
+      position: relative;
       border-radius: 12px;
-      border: 1px solid var(--ha-card-border-color, #e0e0e0);
-      background: var(--card-background-color);
-      color: var(--primary-text-color);
+      background: #2b2b2b;
+      color: #ddd;
+      border: none;
+      padding: 0 12px;
+      height: 32px;
+    }
+    .user-chip.active {
+      background: var(--success-color, #2e7d32);
+      color: #fff;
+    }
+    .user-chip.inactive {
+      background: #2b2b2b;
+      color: #ddd;
+    }
+    .user-chip::before {
+      display: none;
+    }
+    .tab:focus,
+    .action-btn:focus,
+    .user-chip:focus {
+      outline: 2px solid rgba(255, 255, 255, 0.25);
+    }
+    .tab:hover,
+    .tab:focus,
+    .action-btn:hover,
+    .action-btn:focus,
+    .user-chip:hover,
+    .user-chip:focus {
+      filter: brightness(1.1);
+    }
+    .user-select select {
+      padding: 0 12px;
+      min-width: 120px;
+      font-size: 14px;
+      height: 44px;
+      line-height: 44px;
+      box-sizing: border-box;
+      border-radius: 12px;
+      border: 1px solid var(--ha-card-border-color);
+      background: var(--btn-neutral, #2b2b2b);
+      color: var(--primary-text-color, #fff);
+      appearance: none;
     }
     .action-btn {
       height: 40px;
