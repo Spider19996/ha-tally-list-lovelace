@@ -4679,6 +4679,7 @@ class TallySetPinCard extends LitElement {
       justify-content: center;
       padding: 16px;
       box-sizing: border-box;
+      z-index: 2;
     }
     .warn-box {
       background: var(--card-background-color);
