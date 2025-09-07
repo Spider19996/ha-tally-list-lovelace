@@ -30,9 +30,6 @@ const TL_STRINGS = {
     grouped_breaks: 'Grouped breaks',
     show_all_tab: 'Show "All" tab',
     grid_columns: 'Grid columns (0 = auto)',
-    tab_general: 'General',
-    tab_users: 'Users',
-    tab_advanced: 'Advanced',
   },
   de: {
     lock_ms: 'Sperrzeit (ms)',
@@ -61,9 +58,6 @@ const TL_STRINGS = {
     grouped_breaks: 'Gruppierte Bereiche',
     show_all_tab: 'Tab "Alle" anzeigen',
     grid_columns: 'Spalten (0 = automatisch)',
-    tab_general: 'Allgemein',
-    tab_users: 'Nutzer',
-    tab_advanced: 'Erweitert',
   },
 };
 
@@ -74,13 +68,7 @@ function t(hass, override, key) {
 class TallyListCardEditor extends LitElement {
   static properties = {
     _config: {},
-    _tab: { type: String },
   };
-
-  constructor() {
-    super();
-    this._tab = 'general';
-  }
 
   setConfig(config) {
     const tabs = {
@@ -119,104 +107,125 @@ class TallyListCardEditor extends LitElement {
   render() {
     if (!this._config) return html``;
     return html`
-      <nav class="tabs">
-        <button class=${this._tab === 'general' ? 'active' : ''} data-tab="general" @click=${this._selectTab}>${this._t('tab_general')}</button>
-        <button class=${this._tab === 'users' ? 'active' : ''} data-tab="users" @click=${this._selectTab}>${this._t('tab_users')}</button>
-        <button class=${this._tab === 'advanced' ? 'active' : ''} data-tab="advanced" @click=${this._selectTab}>${this._t('tab_advanced')}</button>
-      </nav>
-      ${this._tab === 'general'
+      <div class="form">
+        <label>${this._t('lock_ms')}</label>
+        <input
+          type="number"
+          .value=${this._config.lock_ms}
+          @input=${this._lockChanged}
+        />
+      </div>
+      <div class="form">
+        <label>${this._t('pin_lock_ms')}</label>
+        <input
+          type="number"
+          .value=${this._config.pin_lock_ms}
+          @input=${this._pinLockChanged}
+        />
+      </div>
+      <div class="form">
+        <label>${this._t('session_timeout_seconds')}</label>
+        <input
+          type="number"
+          .value=${this._config.session_timeout_seconds}
+          @input=${this._sessionTimeoutChanged}
+        />
+      </div>
+      <div class="form">
+        <label>${this._t('max_width')}</label>
+        <input
+          type="number"
+          .value=${(this._config.max_width ?? '').replace(/px$/, '')}
+          @input=${this._widthChanged}
+        />
+      </div>
+      <div class="form">
+        <label>
+          <input type="checkbox" .checked=${this._config.show_remove} @change=${this._removeChanged} />
+          ${this._t('show_remove_menu')}
+        </label>
+      </div>
+      <div class="form">
+        <label>
+          <input type="checkbox" .checked=${this._config.show_step_select !== false} @change=${this._stepSelectChanged} />
+          ${this._t('show_step_select')}
+        </label>
+      </div>
+      <div class="form">
+        <label>
+          <input type="checkbox" .checked=${this._config.only_self} @change=${this._selfChanged} />
+          ${this._t('only_self')}
+        </label>
+      </div>
+      <div class="form">
+        <label>
+          <input type="checkbox" .checked=${this._config.shorten_user_names} @change=${this._shortNamesChanged} />
+          ${this._t('shorten_user_names')}
+        </label>
+      </div>
+      <div class="form">
+        <label>${this._t('user_selector')}</label>
+        <select @change=${this._userSelectorChanged}>
+          <option value="list" ?selected=${this._config.user_selector === 'list'}>${this._t('user_selector_list')}</option>
+          <option value="tabs" ?selected=${this._config.user_selector === 'tabs'}>${this._t('user_selector_tabs')}</option>
+          <option value="grid" ?selected=${this._config.user_selector === 'grid'}>${this._t('user_selector_grid')}</option>
+        </select>
+      </div>
+      ${['tabs', 'grid'].includes(this._config.user_selector)
         ? html`
-            <div class="form">
-              <label>${this._t('lock_ms')}</label>
-              <input type="number" .value=${this._config.lock_ms} @input=${this._lockChanged} />
-            </div>
-            <div class="form">
-              <label>${this._t('pin_lock_ms')}</label>
-              <input type="number" .value=${this._config.pin_lock_ms} @input=${this._pinLockChanged} />
-            </div>
-            <div class="form">
-              <label>${this._t('session_timeout_seconds')}</label>
-              <input type="number" .value=${this._config.session_timeout_seconds} @input=${this._sessionTimeoutChanged} />
-            </div>
-            <div class="form">
-              <label>${this._t('max_width')}</label>
-              <input type="number" .value=${(this._config.max_width ?? '').replace(/px$/, '')} @input=${this._widthChanged} />
-            </div>
-            <div class="form">
-              <label><input type="checkbox" .checked=${this._config.show_remove} @change=${this._removeChanged} /> ${this._t('show_remove_menu')}</label>
-            </div>
-            <div class="form">
-              <label><input type="checkbox" .checked=${this._config.show_step_select !== false} @change=${this._stepSelectChanged} /> ${this._t('show_step_select')}</label>
-            </div>
-            <div class="form">
-              <label><input type="checkbox" .checked=${this._config.only_self} @change=${this._selfChanged} /> ${this._t('only_self')}</label>
-            </div>
-            <div class="form">
-              <label><input type="checkbox" .checked=${this._config.shorten_user_names} @change=${this._shortNamesChanged} /> ${this._t('shorten_user_names')}</label>
-            </div>
-          `
-        : this._tab === 'users'
-        ? html`
-            <div class="form">
-              <label>${this._t('user_selector')}</label>
-              <select @change=${this._userSelectorChanged}>
-                <option value="list" ?selected=${this._config.user_selector === 'list'}>${this._t('user_selector_list')}</option>
-                <option value="tabs" ?selected=${this._config.user_selector === 'tabs'}>${this._t('user_selector_tabs')}</option>
-                <option value="grid" ?selected=${this._config.user_selector === 'grid'}>${this._t('user_selector_grid')}</option>
-              </select>
-            </div>
-            ${['tabs', 'grid'].includes(this._config.user_selector)
+            ${this._config.user_selector === 'tabs'
               ? html`
-                  ${this._config.user_selector === 'tabs'
-                    ? html`
-                        <div class="form">
-                          <label>${this._t('tab_mode')}</label>
-                          <select @change=${this._tabModeChanged}>
-                            <option value="per-letter" ?selected=${this._config.tabs.mode === 'per-letter'}>${this._t('per_letter')}</option>
-                            <option value="grouped" ?selected=${this._config.tabs.mode === 'grouped'}>${this._t('grouped')}</option>
-                          </select>
-                        </div>
-                        ${this._config.tabs.mode === 'grouped'
-                          ? html`<div class="form">
-                              <label>${this._t('grouped_breaks')}</label>
-                              <input type="text" .value=${this._config.tabs.grouped_breaks.join(',')} @input=${this._groupedBreaksChanged} />
-                            </div>`
-                          : ''}
-                        <div class="form">
-                          <label><input type="checkbox" .checked=${this._config.tabs.show_all_tab} @change=${this._showAllTabChanged} /> ${this._t('show_all_tab')}</label>
-                        </div>
-                      `
+                  <div class="form">
+                    <label>${this._t('tab_mode')}</label>
+                    <select @change=${this._tabModeChanged}>
+                      <option value="per-letter" ?selected=${this._config.tabs.mode === 'per-letter'}>${this._t('per_letter')}</option>
+                      <option value="grouped" ?selected=${this._config.tabs.mode === 'grouped'}>${this._t('grouped')}</option>
+                    </select>
+                  </div>
+                  ${this._config.tabs.mode === 'grouped'
+                    ? html`<div class="form">
+                        <label>${this._t('grouped_breaks')}</label>
+                        <input type="text" .value=${this._config.tabs.grouped_breaks.join(',')} @input=${this._groupedBreaksChanged} />
+                      </div>`
                     : ''}
                   <div class="form">
-                    <label>${this._t('grid_columns')}</label>
-                    <input type="text" .value=${this._config.grid.columns} @input=${this._gridColumnsChanged} />
+                    <label><input type="checkbox" .checked=${this._config.tabs.show_all_tab} @change=${this._showAllTabChanged} /> ${this._t('show_all_tab')}</label>
                   </div>
                 `
               : ''}
+            <div class="form">
+              <label>${this._t('grid_columns')}</label>
+              <input type="text" .value=${this._config.grid.columns} @input=${this._gridColumnsChanged} />
+            </div>
           `
-        : html`
-            <div class="form">
-              <label><input type="checkbox" .checked=${this._config.show_all_users} @change=${this._debugAllChanged} /> ${this._t('show_all_users')}</label>
-            </div>
-            <div class="form">
-              <label><input type="checkbox" .checked=${this._config.show_inactive_drinks} @change=${this._debugInactiveChanged} /> ${this._t('show_inactive_drinks')}</label>
-            </div>
-            <div class="form">
-              <label>${this._t('language')}</label>
-              <select @change=${this._languageChanged}>
-                <option value="auto" ?selected=${this._config.language === 'auto'}>${this._t('auto')}</option>
-                <option value="de" ?selected=${this._config.language === 'de'}>${this._t('german')}</option>
-                <option value="en" ?selected=${this._config.language === 'en'}>${this._t('english')}</option>
-              </select>
-            </div>
-            <div class="version">${this._t('version')}: ${CARD_VERSION}</div>
-          `}
+        : ''}
+      <details class="debug">
+        <summary>${this._t('debug')}</summary>
+        <div class="form">
+          <label>
+            <input type="checkbox" .checked=${this._config.show_all_users} @change=${this._debugAllChanged} />
+            ${this._t('show_all_users')}
+          </label>
+        </div>
+        <div class="form">
+          <label>
+            <input type="checkbox" .checked=${this._config.show_inactive_drinks} @change=${this._debugInactiveChanged} />
+            ${this._t('show_inactive_drinks')}
+          </label>
+        </div>
+        <div class="form">
+          <label>${this._t('language')}</label>
+          <select @change=${this._languageChanged}>
+            <option value="auto" ?selected=${this._config.language === 'auto'}>${this._t('auto')}</option>
+            <option value="de" ?selected=${this._config.language === 'de'}>${this._t('german')}</option>
+            <option value="en" ?selected=${this._config.language === 'en'}>${this._t('english')}</option>
+          </select>
+        </div>
+        <div class="version">${this._t('version')}: ${CARD_VERSION}</div>
+      </details>
     `;
   }
 
-  _selectTab(ev) {
-    this._tab = ev.target.dataset.tab;
-  }
   _pinLockChanged(ev) {
     const value = Number(ev.target.value);
     this._config = { ...this._config, pin_lock_ms: isNaN(value) ? 5000 : value };
@@ -325,29 +334,20 @@ class TallyListCardEditor extends LitElement {
   }
 
   static styles = css`
-    .tabs {
-      display: flex;
-      border-bottom: 1px solid var(--divider-color);
-    }
-    .tabs button {
-      flex: 1;
-      padding: 8px;
-      background: none;
-      border: none;
-      cursor: pointer;
-      font: inherit;
-      border-bottom: 2px solid transparent;
-    }
-    .tabs button.active {
-      border-color: var(--primary-color);
-      font-weight: bold;
-    }
     .form {
       padding: 16px;
     }
     input {
       width: 100%;
       box-sizing: border-box;
+    }
+    details.debug {
+      padding: 0 16px 16px;
+    }
+    details.debug summary {
+      cursor: pointer;
+      font-weight: bold;
+      outline: none;
     }
     .version {
       padding: 0 16px 16px;
