@@ -381,6 +381,7 @@ const TL_STRINGS = {
     hide_free: 'Hide people without amount',
     show_step_select: 'Show step selection',
     copy_table: 'Copy table',
+    copied: 'Copied!',
     reset_all: 'Reset all tallies',
     show_reset_everyone: 'Show reset button for everyone',
     max_entries: 'Maximum entries (0 = all)',
@@ -450,6 +451,7 @@ const TL_STRINGS = {
     hide_free: 'Personen ohne Betrag ausblenden',
     show_step_select: 'Schrittweiten-Auswahl anzeigen',
     copy_table: 'Tabelle kopieren',
+    copied: 'Kopiert!',
     reset_all: 'Alle Striche zurücksetzen',
     show_reset_everyone: 'Für jeden Reset-Button anzeigen',
     max_entries: 'Maximale Einträge (0 = alle)',
@@ -2274,12 +2276,14 @@ class TallyDueRankingCard extends LitElement {
     _currency: { state: true },
     _sortBy: { state: true },
     _tallyAdmins: { state: true },
+    _copyDisabled: { state: true },
   };
 
   _tallyAdmins = [];
   _hass = null;
   _deps = new Set();
   _fmtCache = new Map();
+  _copyBtnWidth = 0;
 
   constructor() {
     super();
@@ -2292,6 +2296,7 @@ class TallyDueRankingCard extends LitElement {
     }
     this._bootstrapped = true;
     this._loading = false;
+    this._copyDisabled = false;
   }
 
   _fid(key) {
@@ -2388,6 +2393,10 @@ class TallyDueRankingCard extends LitElement {
     .ranking-card .btn:active {
       filter: brightness(0.9);
       transform: scale(0.97);
+    }
+    .ranking-card .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
   `;
 
@@ -2508,7 +2517,9 @@ class TallyDueRankingCard extends LitElement {
       : '';
     const buttons = [];
     if (this.config.show_copy !== false) {
-      buttons.push(html`<button class="btn btn--neutral" @click=${this._copyRanking}>${this._t('copy_table')}</button>`);
+      buttons.push(html`<button class="btn btn--neutral" @click=${this._copyRanking} ?disabled=${this._copyDisabled}>${
+        this._copyDisabled ? this._t('copied') : this._t('copy_table')
+      }</button>`);
     }
     if ((isAdmin || this.config.show_reset_everyone) && this.config.show_reset !== false) {
       buttons.push(html`<button class="btn btn--danger" @click=${this._resetAllTallies}>${this._t('reset_all')}</button>`);
@@ -2806,14 +2817,11 @@ class TallyDueRankingCard extends LitElement {
       lines.push(`${this._t('total')}: ${this._formatPrice(total)} ${this._currency}`);
     }
     const text = lines.join('\n');
-    const notify = () => {
-      this.dispatchEvent(
-        new CustomEvent('hass-notification', {
-          detail: { message: this._t('copy_success') },
-          bubbles: true,
-          composed: true,
-        })
-      );
+    const onCopy = () => {
+      this._copyDisabled = true;
+      setTimeout(() => {
+        this._copyDisabled = false;
+      }, 3000);
     };
     const legacyCopy = () => {
       const textarea = document.createElement('textarea');
@@ -2823,13 +2831,13 @@ class TallyDueRankingCard extends LitElement {
       textarea.focus();
       textarea.select();
       try {
-        if (document.execCommand('copy')) notify();
+        if (document.execCommand('copy')) onCopy();
       } finally {
         document.body.removeChild(textarea);
       }
     };
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(notify).catch(legacyCopy);
+      navigator.clipboard.writeText(text).then(onCopy).catch(legacyCopy);
     } else {
       legacyCopy();
     }
@@ -3671,6 +3679,11 @@ class TallyListFreeDrinksCard extends LitElement {
 
   firstUpdated() {
     if (!this.selectedUserId) this.selectedUserId = this.hass?.user?.id || '';
+    const copyBtn = this.renderRoot?.querySelector('.button-row .btn--neutral');
+    if (copyBtn) {
+      this._copyBtnWidth = copyBtn.offsetWidth;
+      copyBtn.style.width = `${this._copyBtnWidth}px`;
+    }
   }
 
   disconnectedCallback() {
