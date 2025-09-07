@@ -13,6 +13,7 @@ const TL_STRINGS = {
     show_step_select: 'Show step selection',
     show_all_users: 'Show all users',
     show_inactive_drinks: 'Show inactive drinks',
+    shorten_user_names: 'Shorten user names',
     debug: 'Debug',
     language: 'Language',
     auto: 'Auto',
@@ -40,6 +41,7 @@ const TL_STRINGS = {
     show_step_select: 'Schrittweiten-Auswahl anzeigen',
     show_all_users: 'Alle Nutzer anzeigen',
     show_inactive_drinks: 'Inaktive Getränke anzeigen',
+    shorten_user_names: 'Namen kürzen',
     debug: 'Debug',
     language: 'Sprache',
     auto: 'Auto',
@@ -89,6 +91,7 @@ class TallyListCardEditor extends LitElement {
       show_step_select: true,
       show_all_users: false,
       show_inactive_drinks: false,
+      shorten_user_names: false,
       language: 'auto',
       user_selector: 'list',
       ...config,
@@ -152,6 +155,12 @@ class TallyListCardEditor extends LitElement {
         <label>
           <input type="checkbox" .checked=${this._config.only_self} @change=${this._selfChanged} />
           ${this._t('only_self')}
+        </label>
+      </div>
+      <div class="form">
+        <label>
+          <input type="checkbox" .checked=${this._config.shorten_user_names} @change=${this._shortNamesChanged} />
+          ${this._t('shorten_user_names')}
         </label>
       </div>
       <div class="form">
@@ -257,6 +266,11 @@ class TallyListCardEditor extends LitElement {
 
   _selfChanged(ev) {
     this._config = { ...this._config, only_self: ev.target.checked };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _shortNamesChanged(ev) {
+    this._config = { ...this._config, shorten_user_names: ev.target.checked };
     fireEvent(this, 'config-changed', { config: this._config });
   }
 

@@ -60,6 +60,7 @@ The card offers the following options in the UI:
 * **Show remove menu** – Enable/disable the remove-drink dropdown.
 * **Show step selection** – Show buttons to select the step size (1, 3, 5, 10).
 * **Only show self** – Limit selection to the logged‑in user even for admins.
+* **Shorten user names** – Abbreviate names in the selector while keeping them unique.
 * **User selector** – Choose between **list**, **tabs**, or **grid** for selecting users.
 * **Language** – Force **Auto**, **Deutsch**, or **English**.
 * **Version** – Display the installed version.
@@ -82,6 +83,7 @@ Options:
 * **max_entries** – Limit how many users are shown (`0` = no limit).
 * **hide_free** – Hide users who owe nothing.
 * **show_copy** – Show the "Tabelle kopieren" button.
+* **shorten_user_names** – Abbreviate user names in the table.
 
 ## Free Drinks Card
 
@@ -100,6 +102,7 @@ Options:
 * **free_drinks_timer_seconds** – Auto-reset timer in seconds (`0` to disable).
 * **free_drinks_per_item_limit** – Maximum free drinks per item (`0` to disable).
 * **free_drinks_total_limit** – Maximum free drinks overall (`0` to disable).
+* **shorten_user_names** – Abbreviate user names in the selector.
 
 Example:
 
@@ -128,6 +131,7 @@ Options:
 
 * **lock_ms** – Lock duration in milliseconds after each PIN attempt (`5000` by default).
 * **user_selector** – User selection layout: `list`, `tabs`, or `grid` (`list` by default).
+* **shorten_user_names** – Abbreviate user names in the selector.
 * **pin_warning** – Warning text shown when opening the card. Supports line breaks and simple Markdown for _italic_, **bold**, and __underline__. Set to an empty string to hide the warning. Default: "**Do not use an important PIN (e.g., your bank card PIN).** PINs are stored encrypted, but there is no guarantee they will not fall into the wrong hands."
 
 It calls the `tally_list.set_pin` service to store the new code, e.g.:
