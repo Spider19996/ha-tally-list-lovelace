@@ -2283,6 +2283,7 @@ class TallyDueRankingCard extends LitElement {
   _hass = null;
   _deps = new Set();
   _fmtCache = new Map();
+  _copyBtnWidth = 0;
 
   constructor() {
     super();
@@ -3678,6 +3679,11 @@ class TallyListFreeDrinksCard extends LitElement {
 
   firstUpdated() {
     if (!this.selectedUserId) this.selectedUserId = this.hass?.user?.id || '';
+    const copyBtn = this.renderRoot?.querySelector('.button-row .btn--neutral');
+    if (copyBtn) {
+      this._copyBtnWidth = copyBtn.offsetWidth;
+      copyBtn.style.width = `${this._copyBtnWidth}px`;
+    }
   }
 
   disconnectedCallback() {
