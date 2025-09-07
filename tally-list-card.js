@@ -4723,7 +4723,7 @@ const PIN_STRINGS = {
     invalid: 'Enter 4 digits',
     error: 'Failed to set PIN',
     warning:
-      'Do not use an important PIN (e.g., your bank card PIN); its security cannot be guaranteed.',
+      '**Do not use an important PIN (e.g., your bank card PIN).**\n\nPINs are stored encrypted, but there is no guarantee they will not fall into the wrong hands.',
     ok: 'Got it',
   },
   de: {
@@ -4738,7 +4738,7 @@ const PIN_STRINGS = {
     invalid: '4 Ziffern eingeben',
     error: 'PIN konnte nicht gesetzt werden',
     warning:
-      'Bitte keine wichtige PIN (z. B. die der Bankkarte) verwenden, da nicht gewährleistet werden kann, dass sie nicht gestohlen wird.',
+      '**Bitte keine wichtige PIN (z. B. die der Bankkarte) verwenden.**\n\nPINs werden zwar verschlüsselt gespeichert, dennoch kann nicht garantiert werden, dass sie nicht in falsche Hände gerät.',
     ok: 'Verstanden',
   },
 };
