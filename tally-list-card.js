@@ -4306,6 +4306,7 @@ const PIN_EDITOR_STRINGS = {
     grouped_breaks: 'Grouped breaks',
     show_all_tab: 'Show "All" tab',
     grid_columns: 'Grid columns (0 = auto)',
+    warning_text: 'Warning message (empty to disable)',
     debug: 'Debug',
     language: 'Language',
     auto: 'Auto',
@@ -4325,6 +4326,7 @@ const PIN_EDITOR_STRINGS = {
     grouped_breaks: 'Gruppierte Bereiche',
     show_all_tab: 'Tab "Alle" anzeigen',
     grid_columns: 'Spalten (0 = automatisch)',
+    warning_text: 'Warnhinweis (leer lassen zum Deaktivieren)',
     debug: 'Debug',
     language: 'Sprache',
     auto: 'Auto',
@@ -4364,6 +4366,14 @@ class TallySetPinCardEditor extends LitElement {
       tabs,
       grid,
     };
+    if (this._config.pin_warning === undefined) {
+      this._config.pin_warning = translate(
+        this.hass,
+        this._config?.language,
+        PIN_STRINGS,
+        'warning'
+      );
+    }
   }
 
   _lockChanged(ev) {
@@ -4418,6 +4428,13 @@ class TallySetPinCardEditor extends LitElement {
     );
   }
 
+  _warningChanged(ev) {
+    this._config = { ...this._config, pin_warning: ev.target.value };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', { detail: { config: this._config } })
+    );
+  }
+
   render() {
     const idLock = this._fid('lock-ms');
     const idUserSelector = this._fid('user-selector');
@@ -4425,6 +4442,7 @@ class TallySetPinCardEditor extends LitElement {
     const idGroupedBreaks = this._fid('grouped-breaks');
     const idShowAllTab = this._fid('show-all-tab');
     const idGridColumns = this._fid('grid-columns');
+    const idWarning = this._fid('pin-warning');
     const idLanguage = this._fid('language');
     return html`
       <div class="form">
@@ -4440,6 +4458,21 @@ class TallySetPinCardEditor extends LitElement {
           type="number"
           .value=${this._config.lock_ms}
           @input=${this._lockChanged}
+        />
+      </div>
+      <div class="form">
+        <label for="${idWarning}">${translate(
+          this.hass,
+          this._config?.language,
+          PIN_EDITOR_STRINGS,
+          'warning_text'
+        )}</label>
+        <input
+          id="${idWarning}"
+          name="pin_warning"
+          type="text"
+          .value=${this._config.pin_warning}
+          @input=${this._warningChanged}
         />
       </div>
       <div class="form">
@@ -4762,10 +4795,17 @@ class TallySetPinCard extends LitElement {
     };
     this.config.tabs = tabs;
     this.config.grid = grid;
+    this._showWarn = this._warningText !== '';
   }
 
   _t(key) {
     return translate(this.hass, this.config.language, PIN_STRINGS, key);
+  }
+
+  get _warningText() {
+    return typeof this.config?.pin_warning === 'string'
+      ? this.config.pin_warning
+      : this._t('warning');
   }
 
   get _users() {
@@ -4950,14 +4990,16 @@ class TallySetPinCard extends LitElement {
     return html`
       <ha-card>
         ${this._showWarn
-          ? html`<div class="warn-overlay">
-              <div class="warn-box">
-                <p>${this._t('warning')}</p>
-                <button class="action-btn" @click=${() => (this._showWarn = false)}>
-                  ${this._t('ok')}
-                </button>
-              </div>
-            </div>`
+          ? this._warningText
+            ? html`<div class="warn-overlay">
+                <div class="warn-box">
+                  <p>${this._warningText}</p>
+                  <button class="action-btn" @click=${() => (this._showWarn = false)}>
+                    ${this._t('ok')}
+                  </button>
+                </div>
+              </div>`
+            : ''
           : ''}
         <div class="content">
           ${isAdmin ? userMenu : ''}
