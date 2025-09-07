@@ -127,7 +127,7 @@ Optionen:
 
 * **Sperrzeit (ms)** – Wartezeit nach jeder PIN-Eingabe (auch bei Fehlern) (`5000` Standard).
 * **user_selector** – Layout der Nutzerauswahl: `list`, `tabs` oder `grid` (`list` standardmäßig).
-* **pin_warning** – Warntext beim Öffnen der Karte. Unterstützt Zeilenumbrüche und einfache Markdown-Formatierung für _kursiv_, **fett** und __unterstrichen__. Leerer Text blendet den Hinweis aus (Standard warnt vor wichtigen PINs).
+* **pin_warning** – Warntext beim Öffnen der Karte. Unterstützt Zeilenumbrüche und einfache Markdown-Formatierung für _kursiv_, **fett** und __unterstrichen__. Leerer Text blendet den Hinweis aus. Standardtext: "**Bitte keine wichtige PIN (z. B. die der Bankkarte) verwenden.** PINs werden zwar verschlüsselt gespeichert, dennoch kann nicht garantiert werden, dass sie nicht in falsche Hände gerät."
 
 Zum Speichern der neuen PIN wird der Service `tally_list.set_pin` aufgerufen, z. B.:
 

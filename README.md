@@ -128,7 +128,7 @@ Options:
 
 * **lock_ms** – Lock duration in milliseconds after each PIN attempt (`5000` by default).
 * **user_selector** – User selection layout: `list`, `tabs`, or `grid` (`list` by default).
-* **pin_warning** – Warning text shown when opening the card. Supports line breaks and simple Markdown for _italic_, **bold**, and __underline__. Set to an empty string to hide the warning (defaults to a caution about important PINs).
+* **pin_warning** – Warning text shown when opening the card. Supports line breaks and simple Markdown for _italic_, **bold**, and __underline__. Set to an empty string to hide the warning. Default: "**Do not use an important PIN (e.g., your bank card PIN).** PINs are stored encrypted, but there is no guarantee they will not fall into the wrong hands."
 
 It calls the `tally_list.set_pin` service to store the new code, e.g.:
 
