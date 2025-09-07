@@ -4359,6 +4359,7 @@ const PIN_STRINGS = {
     confirm_pin: 'Confirm PIN',
     set_pin: 'Set PIN',
     success: 'PIN updated',
+    mismatch: 'PINs do not match',
     invalid: 'Enter 4 digits',
     error: 'Failed to set PIN',
     warning:
@@ -4373,6 +4374,7 @@ const PIN_STRINGS = {
     confirm_pin: 'PIN bestätigen',
     set_pin: 'PIN setzen',
     success: 'PIN aktualisiert',
+    mismatch: 'PINs stimmen nicht überein',
     invalid: '4 Ziffern eingeben',
     error: 'PIN konnte nicht gesetzt werden',
     warning:
@@ -4510,7 +4512,7 @@ class TallySetPinCard extends LitElement {
 
   async _submit() {
     if (this._pin1 !== this._pin2 || this._pin1.length !== 4) {
-      this._status = this._pin1 !== this._pin2 ? '' : 'invalid';
+      this._status = this._pin1 !== this._pin2 ? 'mismatch' : 'invalid';
       this._pin1 = '';
       this._pin2 = '';
       this._buffer = '';
