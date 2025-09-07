@@ -317,7 +317,7 @@ function renderCoverLogin(card) {
     </div></div></ha-card>`;
 }
 
-const CARD_VERSION = '06.09.2025';
+const CARD_VERSION = '07.09.2025';
 
 const TL_STRINGS = {
   en: {
@@ -4591,6 +4591,9 @@ class TallySetPinCard extends LitElement {
       display: flex;
       flex-direction: column;
       gap: 12px;
+    }
+    .warn-box .action-btn {
+      background: red;
     }
     .form {
       display: flex;
