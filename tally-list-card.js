@@ -4306,6 +4306,12 @@ const PIN_EDITOR_STRINGS = {
     grouped_breaks: 'Grouped breaks',
     show_all_tab: 'Show "All" tab',
     grid_columns: 'Grid columns (0 = auto)',
+    debug: 'Debug',
+    language: 'Language',
+    auto: 'Auto',
+    german: 'German',
+    english: 'English',
+    version: 'Version',
   },
   de: {
     lock_ms: 'Sperrzeit (ms)',
@@ -4319,6 +4325,12 @@ const PIN_EDITOR_STRINGS = {
     grouped_breaks: 'Gruppierte Bereiche',
     show_all_tab: 'Tab "Alle" anzeigen',
     grid_columns: 'Spalten (0 = automatisch)',
+    debug: 'Debug',
+    language: 'Sprache',
+    auto: 'Auto',
+    german: 'Deutsch',
+    english: 'Englisch',
+    version: 'Version',
   },
 };
 
@@ -4347,6 +4359,7 @@ class TallySetPinCardEditor extends LitElement {
     this._config = {
       lock_ms: 5000,
       user_selector: 'list',
+      language: 'auto',
       ...(config || {}),
       tabs,
       grid,
@@ -4412,6 +4425,7 @@ class TallySetPinCardEditor extends LitElement {
     const idGroupedBreaks = this._fid('grouped-breaks');
     const idShowAllTab = this._fid('show-all-tab');
     const idGridColumns = this._fid('grid-columns');
+    const idLanguage = this._fid('language');
     return html`
       <div class="form">
         <label for="${idLock}">${translate(
@@ -4561,7 +4575,62 @@ class TallySetPinCardEditor extends LitElement {
             </div>
           `
         : ''}
+      <details class="debug">
+        <summary>${translate(
+          this.hass,
+          this._config?.language,
+          PIN_EDITOR_STRINGS,
+          'debug'
+        )}</summary>
+        <div class="form">
+          <label for="${idLanguage}">${translate(
+            this.hass,
+            this._config?.language,
+            PIN_EDITOR_STRINGS,
+            'language'
+          )}</label>
+          <select id="${idLanguage}" @change=${this._languageChanged}>
+            <option value="auto" ?selected=${this._config.language === 'auto'}
+              >${translate(
+                this.hass,
+                this._config?.language,
+                PIN_EDITOR_STRINGS,
+                'auto'
+              )}</option
+            >
+            <option value="de" ?selected=${this._config.language === 'de'}
+              >${translate(
+                this.hass,
+                this._config?.language,
+                PIN_EDITOR_STRINGS,
+                'german'
+              )}</option
+            >
+            <option value="en" ?selected=${this._config.language === 'en'}
+              >${translate(
+                this.hass,
+                this._config?.language,
+                PIN_EDITOR_STRINGS,
+                'english'
+              )}</option
+            >
+          </select>
+        </div>
+        <div class="version">${translate(
+          this.hass,
+          this._config?.language,
+          PIN_EDITOR_STRINGS,
+          'version'
+        )}: ${CARD_VERSION}</div>
+      </details>
     `;
+  }
+
+  _languageChanged(ev) {
+    this._config = { ...this._config, language: ev.target.value };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', { detail: { config: this._config } })
+    );
   }
 
   static styles = css`
@@ -4572,6 +4641,19 @@ class TallySetPinCardEditor extends LitElement {
     select {
       width: 100%;
       box-sizing: border-box;
+    }
+    details.debug {
+      padding: 0 16px 16px;
+    }
+    details.debug summary {
+      cursor: pointer;
+      font-weight: bold;
+      outline: none;
+    }
+    .version {
+      padding: 0 16px 16px;
+      text-align: center;
+      color: var(--secondary-text-color);
     }
   `;
 }
@@ -4675,6 +4757,7 @@ class TallySetPinCard extends LitElement {
     this.config = {
       lock_ms: 5000,
       user_selector: 'list',
+      language: 'auto',
       ...(config || {}),
     };
     this.config.tabs = tabs;
