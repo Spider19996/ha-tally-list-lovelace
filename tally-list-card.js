@@ -4868,6 +4868,7 @@ const PIN_STRINGS = {
     mismatch: 'PINs do not match',
     invalid: 'Enter 4 digits',
     error: 'Failed to set PIN',
+    user_not_found: 'User not found',
     warning:
       '**Do not use an important PIN (e.g., your bank card PIN).**\n\nPINs are stored encrypted, but there is no guarantee they will not fall into the wrong hands.',
     ok: 'Got it',
@@ -4883,6 +4884,7 @@ const PIN_STRINGS = {
     mismatch: 'PINs stimmen nicht überein',
     invalid: '4 Ziffern eingeben',
     error: 'PIN konnte nicht gesetzt werden',
+    user_not_found: 'Benutzer nicht gefunden',
     warning:
       '**Bitte keine wichtige PIN (z. B. die der Bankkarte) verwenden.**\n\nPINs werden zwar verschlüsselt gespeichert, dennoch kann nicht garantiert werden, dass sie nicht in falsche Hände gerät.',
     ok: 'Verstanden',
@@ -5090,7 +5092,18 @@ class TallySetPinCard extends LitElement {
       );
       label = u?.name || u?.slug;
     } else {
-      label = this.hass?.user?.name;
+      const current = this.hass?.user;
+      const u = users.find(
+        (u) =>
+          u.user_id === current?.id ||
+          u.name === current?.name ||
+          u.slug === current?.name
+      );
+      if (!u) {
+        this._status = 'user_not_found';
+        return;
+      }
+      label = u.name || u.slug;
     }
     if (!label) {
       this._status = 'invalid';
@@ -5135,6 +5148,15 @@ class TallySetPinCard extends LitElement {
     const users = this._users;
     const isAdmin = this._isAdmin;
     const mode = this.config.user_selector || 'list';
+    const current = this.hass?.user;
+    const userFound =
+      isAdmin ||
+      users.some(
+        (u) =>
+          u.user_id === current?.id ||
+          u.name === current?.name ||
+          u.slug === current?.name
+      );
     const userMenu = isAdmin
       ? _renderUserMenu(
           this,
@@ -5167,41 +5189,47 @@ class TallySetPinCard extends LitElement {
           : ''}
         <div class="content">
           ${isAdmin ? userMenu : ''}
-          <div class="pin-label">
-            ${this._t(this._stage === 1 ? 'new_pin' : 'confirm_pin')}
-          </div>
-          <div class="pin-display">${pinMask}
-            ${this._locked
-              ? html`<div class="pin-timer-overlay ${this._status || 'success'}">${this._t(
-                    this._status || 'success'
-                  )}<br />${Math.ceil(this._lockRemainingMs / 1000)}s</div>`
-              : ''}
-          </div>
-          <div class="keypad">
-            ${digits.map((d) =>
-              d === '⟲'
-                ? html`<button
-                    class="key action-btn del"
-                    @pointerdown=${(ev) => {
-                      ev.preventDefault();
-                      ev.stopPropagation();
-                      ev.currentTarget.blur();
-                    this._backspace();
-                  }}
-                    ?disabled=${this._locked}
-                  >⟲</button>`
-                : html`<button
-                    class="key action-btn"
-                    @pointerdown=${(ev) => {
-                      ev.preventDefault();
-                      ev.stopPropagation();
-                      ev.currentTarget.blur();
-                    this._addDigit(d);
-                  }}
-                    ?disabled=${this._locked}
-                  >${d}</button>`
-            )}
-          </div>
+          ${userFound
+            ? html`
+                <div class="pin-label">
+                  ${this._t(this._stage === 1 ? 'new_pin' : 'confirm_pin')}
+                </div>
+                <div class="pin-display">${pinMask}
+                  ${this._locked
+                    ? html`<div class="pin-timer-overlay ${
+                        this._status || 'success'
+                      }">${this._t(this._status || 'success')}<br />${Math.ceil(
+                        this._lockRemainingMs / 1000
+                      )}s</div>`
+                    : ''}
+                </div>
+                <div class="keypad">
+                  ${digits.map((d) =>
+                    d === '⟲'
+                      ? html`<button
+                          class="key action-btn del"
+                          @pointerdown=${(ev) => {
+                            ev.preventDefault();
+                            ev.stopPropagation();
+                            ev.currentTarget.blur();
+                            this._backspace();
+                          }}
+                          ?disabled=${this._locked}
+                        >⟲</button>`
+                      : html`<button
+                          class="key action-btn"
+                          @pointerdown=${(ev) => {
+                            ev.preventDefault();
+                            ev.stopPropagation();
+                            ev.currentTarget.blur();
+                            this._addDigit(d);
+                          }}
+                          ?disabled=${this._locked}
+                        >${d}</button>`
+                  )}
+                </div>
+              `
+            : html`<div class="user-not-found">${this._t('user_not_found')}</div>`}
         </div>
       </ha-card>
     `;
@@ -5370,6 +5398,11 @@ class TallySetPinCard extends LitElement {
     .pin-label {
       text-align: center;
       font-weight: 600;
+    }
+    .user-not-found {
+      text-align: center;
+      font-style: italic;
+      margin: 16px 0;
     }
     .pin-display {
       display: flex;
