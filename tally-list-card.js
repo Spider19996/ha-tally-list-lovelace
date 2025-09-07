@@ -4404,6 +4404,8 @@ class TallySetPinCard extends LitElement {
     _buffer: { state: true },
     _stage: { state: true },
     _locked: { state: true },
+    _lockUntil: { state: true },
+    _lockRemainingMs: { state: true },
   };
 
   constructor() {
@@ -4417,6 +4419,9 @@ class TallySetPinCard extends LitElement {
     this._buffer = '';
     this._stage = 1; // 1: enter new PIN, 2: confirm PIN
     this._locked = false;
+    this._lockUntil = 0;
+    this._lockRemainingMs = 0;
+    this._lockTimer = null;
   }
 
   setConfig(config) {
@@ -4531,16 +4536,29 @@ class TallySetPinCard extends LitElement {
         user: String(label),
         pin: String(this._pin1),
       });
-      this._status = 'success';
+      this._status = '';
       this._pin1 = '';
       this._pin2 = '';
       this._stage = 1;
       this._locked = true;
       const delay = Number(this.config.lock_ms ?? 5000);
-      setTimeout(() => {
-        this._locked = false;
+      this._lockUntil = Date.now() + delay;
+      this._lockRemainingMs = delay;
+      if (this._lockTimer) {
+        clearInterval(this._lockTimer);
+      }
+      this._lockTimer = setInterval(() => {
+        const remain = this._lockUntil - Date.now();
+        if (remain <= 0) {
+          clearInterval(this._lockTimer);
+          this._lockTimer = null;
+          this._locked = false;
+          this._lockRemainingMs = 0;
+        } else {
+          this._lockRemainingMs = remain;
+        }
         this.requestUpdate();
-      }, delay);
+      }, 100);
     } catch (e) {
       const code = e?.error?.code || e?.code;
       this._status = code || 'error';
@@ -4587,7 +4605,13 @@ class TallySetPinCard extends LitElement {
           <div class="pin-label">
             ${this._t(this._stage === 1 ? 'new_pin' : 'confirm_pin')}
           </div>
-          <div class="pin-display">${pinMask}</div>
+          <div class="pin-display">${pinMask}
+            ${this._locked
+              ? html`<div class="pin-timer-overlay">${this._t('success')}<br />${Math.ceil(
+                    this._lockRemainingMs / 1000
+                  )}s</div>`
+              : ''}
+          </div>
           <div class="keypad">
             ${digits.map((d) =>
               d === '⟲'
@@ -4707,6 +4731,7 @@ class TallySetPinCard extends LitElement {
       align-items: center;
       justify-content: center;
       margin: 8px 0;
+      position: relative;
     }
     .pin-dot {
       width: 24px;
@@ -4717,6 +4742,18 @@ class TallySetPinCard extends LitElement {
     }
     .pin-dot.filled {
       background-color: currentColor;
+    }
+    .pin-timer-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      background: var(--card-background-color, #fff);
     }
     .keypad {
       display: grid;
