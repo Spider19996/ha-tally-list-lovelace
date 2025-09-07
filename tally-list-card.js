@@ -5425,6 +5425,10 @@ class TallySetPinCard extends LitElement {
       background: var(--error-color, #b71c1c);
       color: #fff;
     }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
   `;
 }
 
