@@ -2714,7 +2714,8 @@ class TallyDueRankingCard extends LitElement {
       const total = ranking.reduce((sum, r) => sum + r.due, 0);
       lines.push(`${this._t('total')}: ${this._formatPrice(total)} ${this._currency}`);
     }
-    navigator.clipboard.writeText(lines.join('\n')).then(() => {
+    const text = lines.join('\n');
+    const notify = () => {
       this.dispatchEvent(
         new CustomEvent('hass-notification', {
           detail: { message: this._t('copy_success') },
@@ -2722,7 +2723,25 @@ class TallyDueRankingCard extends LitElement {
           composed: true,
         })
       );
-    });
+    };
+    const legacyCopy = () => {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('style', 'position: fixed; top: -1000px;');
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      try {
+        if (document.execCommand('copy')) notify();
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(notify).catch(legacyCopy);
+    } else {
+      legacyCopy();
+    }
   }
 
   _resetAllTallies() {
