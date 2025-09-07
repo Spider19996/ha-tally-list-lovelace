@@ -58,12 +58,17 @@ const EDITOR_STYLES = css`
   .form {
     padding: 16px;
   }
-  .form input[type='checkbox'] {
-    width: auto;
-    display: inline-block;
-    margin-right: 8px;
+  .form label.switch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
-  input:not([type='checkbox']), select, textarea {
+  .form ha-switch {
+    margin-left: 8px;
+  }
+  input,
+  select,
+  textarea {
     width: 100%;
     box-sizing: border-box;
   }
@@ -2027,16 +2032,28 @@ class TallyListCardEditor extends LitElement {
               <input type="number" .value=${(this._config.max_width ?? '').replace(/px$/, '')} @input=${this._widthChanged} />
             </div>
             <div class="form">
-              <label><input type="checkbox" .checked=${this._config.show_remove} @change=${this._removeChanged} /> ${this._t('show_remove_menu')}</label>
+              <label class="switch">
+                ${this._t('show_remove_menu')}
+                <ha-switch .checked=${this._config.show_remove} @change=${this._removeChanged}></ha-switch>
+              </label>
             </div>
             <div class="form">
-              <label><input type="checkbox" .checked=${this._config.show_step_select !== false} @change=${this._stepSelectChanged} /> ${this._t('show_step_select')}</label>
+              <label class="switch">
+                ${this._t('show_step_select')}
+                <ha-switch .checked=${this._config.show_step_select !== false} @change=${this._stepSelectChanged}></ha-switch>
+              </label>
             </div>
             <div class="form">
-              <label><input type="checkbox" .checked=${this._config.only_self} @change=${this._selfChanged} /> ${this._t('only_self')}</label>
+              <label class="switch">
+                ${this._t('only_self')}
+                <ha-switch .checked=${this._config.only_self} @change=${this._selfChanged}></ha-switch>
+              </label>
             </div>
             <div class="form">
-              <label><input type="checkbox" .checked=${this._config.shorten_user_names} @change=${this._shortNamesChanged} /> ${this._t('shorten_user_names')}</label>
+              <label class="switch">
+                ${this._t('shorten_user_names')}
+                <ha-switch .checked=${this._config.shorten_user_names} @change=${this._shortNamesChanged}></ha-switch>
+              </label>
             </div>
           `
         : this._tab === 'users'
@@ -2067,7 +2084,10 @@ class TallyListCardEditor extends LitElement {
                             </div>`
                           : ''}
                         <div class="form">
-                          <label><input type="checkbox" .checked=${this._config.tabs.show_all_tab} @change=${this._showAllTabChanged} /> ${this._t('show_all_tab')}</label>
+                          <label class="switch">
+                            ${this._t('show_all_tab')}
+                            <ha-switch .checked=${this._config.tabs.show_all_tab} @change=${this._showAllTabChanged}></ha-switch>
+                          </label>
                         </div>
                       `
                     : ''}
@@ -2080,10 +2100,16 @@ class TallyListCardEditor extends LitElement {
           `
         : html`
             <div class="form">
-              <label><input type="checkbox" .checked=${this._config.show_all_users} @change=${this._debugAllChanged} /> ${this._t('show_all_users')}</label>
+              <label class="switch">
+                ${this._t('show_all_users')}
+                <ha-switch .checked=${this._config.show_all_users} @change=${this._debugAllChanged}></ha-switch>
+              </label>
             </div>
             <div class="form">
-              <label><input type="checkbox" .checked=${this._config.show_inactive_drinks} @change=${this._debugInactiveChanged} /> ${this._t('show_inactive_drinks')}</label>
+              <label class="switch">
+                ${this._t('show_inactive_drinks')}
+                <ha-switch .checked=${this._config.show_inactive_drinks} @change=${this._debugInactiveChanged}></ha-switch>
+              </label>
             </div>
             <div class="form">
               <label>${this._t('language')}</label>
@@ -2854,13 +2880,6 @@ class TallyDueRankingCardEditor extends LitElement {
     const idWidth = this._fid('max-width');
     const idMaxEntries = this._fid('max-entries');
     const idSort = this._fid('sort');
-    const idSortMenu = this._fid('sort-menu');
-    const idShowReset = this._fid('show-reset');
-    const idShowCopy = this._fid('show-copy');
-    const idShowTotal = this._fid('show-total');
-    const idHideFree = this._fid('hide-free');
-    const idShortNames = this._fid('short-names');
-    const idShowResetEveryone = this._fid('show-reset-everyone');
     const idLanguage = this._fid('language');
     return html`
       <nav class="tabs">
@@ -2886,34 +2905,48 @@ class TallyDueRankingCardEditor extends LitElement {
               </select>
             </div>
             <div class="form">
-              <input id="${idSortMenu}" name="sort_menu" type="checkbox" .checked=${this._config.sort_menu} @change=${this._menuChanged} />
-              <label for="${idSortMenu}">${this._t('sort_menu_show')}</label>
+              <label class="switch">
+                ${this._t('sort_menu_show')}
+                <ha-switch .checked=${this._config.sort_menu} @change=${this._menuChanged}></ha-switch>
+              </label>
             </div>
             <div class="form">
-              <input id="${idShowReset}" name="show_reset" type="checkbox" .checked=${this._config.show_reset} @change=${this._resetChanged} />
-              <label for="${idShowReset}">${this._t('show_reset')}</label>
+              <label class="switch">
+                ${this._t('show_reset')}
+                <ha-switch .checked=${this._config.show_reset} @change=${this._resetChanged}></ha-switch>
+              </label>
             </div>
             <div class="form">
-              <input id="${idShowCopy}" name="show_copy" type="checkbox" .checked=${this._config.show_copy} @change=${this._copyChanged} />
-              <label for="${idShowCopy}">${this._t('show_copy')}</label>
+              <label class="switch">
+                ${this._t('show_copy')}
+                <ha-switch .checked=${this._config.show_copy} @change=${this._copyChanged}></ha-switch>
+              </label>
             </div>
             <div class="form">
-              <input id="${idShowTotal}" name="show_total" type="checkbox" .checked=${this._config.show_total} @change=${this._totalChanged} />
-              <label for="${idShowTotal}">${this._t('show_total')}</label>
+              <label class="switch">
+                ${this._t('show_total')}
+                <ha-switch .checked=${this._config.show_total} @change=${this._totalChanged}></ha-switch>
+              </label>
             </div>
             <div class="form">
-              <input id="${idHideFree}" name="hide_free" type="checkbox" .checked=${this._config.hide_free} @change=${this._hideChanged} />
-              <label for="${idHideFree}">${this._t('hide_free')}</label>
+              <label class="switch">
+                ${this._t('hide_free')}
+                <ha-switch .checked=${this._config.hide_free} @change=${this._hideChanged}></ha-switch>
+              </label>
             </div>
             <div class="form">
-              <input id="${idShortNames}" name="shorten_user_names" type="checkbox" .checked=${this._config.shorten_user_names} @change=${this._shortNamesChanged} />
-              <label for="${idShortNames}">${this._t('shorten_user_names')}</label>
+              <label class="switch">
+                ${this._t('shorten_user_names')}
+                <ha-switch .checked=${this._config.shorten_user_names} @change=${this._shortNamesChanged}></ha-switch>
+              </label>
             </div>
           `
         : html`
             <div class="form">
-              <input id="${idShowResetEveryone}" name="show_reset_everyone" type="checkbox" .checked=${this._config.show_reset_everyone} @change=${this._debugResetChanged} />
-              <label for="${idShowResetEveryone}">${this._t('show_reset_everyone')}</label>
+              <label class="switch">
+                ${this._t('show_reset_everyone')}
+                <ha-switch .checked=${this._config.show_reset_everyone} @change=${this._debugResetChanged}></ha-switch>
+              </label>
             </div>
             <div class="form">
               <label for="${idLanguage}">${this._t('language')}</label>
@@ -3114,7 +3147,6 @@ class TallyListFreeDrinksCardEditor extends LitElement {
 
   render() {
     if (!this._config) return html``;
-    const idPrices = this._fid('prices');
     const idPresets = this._fid('presets');
     const idSessionTimeout = this._fid('session-timeout');
     const idPinLock = this._fid('pin-lock-ms');
@@ -3122,12 +3154,10 @@ class TallyListFreeDrinksCardEditor extends LitElement {
     const idUserSelector = this._fid('user-selector');
     const idTabMode = this._fid('tab-mode');
     const idGroupedBreaks = this._fid('grouped-breaks');
-    const idShowAllTab = this._fid('show-all-tab');
     const idGridColumns = this._fid('grid-columns');
     const idFdTimer = this._fid('fd-timer');
     const idFdPerItem = this._fid('fd-per-item');
     const idFdTotal = this._fid('fd-total');
-    const idShortNames = this._fid('short-names');
     return html`
       <nav class="tabs">
         <button class=${this._tab === 'general' ? 'active' : ''} data-tab="general" @click=${this._selectTab}>${fdT(this.hass, this._config.language, 'tab_general')}</button>
@@ -3137,8 +3167,10 @@ class TallyListFreeDrinksCardEditor extends LitElement {
       ${this._tab === 'general'
         ? html`
             <div class="form">
-              <input id="${idPrices}" type="checkbox" .checked=${this._config.show_prices !== false} @change=${this._pricesChanged} />
-              <label for="${idPrices}">${fdT(this.hass, this._config.language, 'show_prices')}</label>
+              <label class="switch">
+                ${fdT(this.hass, this._config.language, 'show_prices')}
+                <ha-switch .checked=${this._config.show_prices !== false} @change=${this._pricesChanged}></ha-switch>
+              </label>
             </div>
             <div class="form">
               <label for="${idPresets}">${fdT(this.hass, this._config.language, 'comment_types')}</label>
@@ -3170,8 +3202,10 @@ class TallyListFreeDrinksCardEditor extends LitElement {
         : this._tab === 'users'
         ? html`
             <div class="form">
-              <input id="${idShortNames}" type="checkbox" .checked=${this._config.shorten_user_names} @change=${this._shortNamesChanged} />
-              <label for="${idShortNames}">${t(this.hass, this._config.language, 'shorten_user_names')}</label>
+              <label class="switch">
+                ${t(this.hass, this._config.language, 'shorten_user_names')}
+                <ha-switch .checked=${this._config.shorten_user_names} @change=${this._shortNamesChanged}></ha-switch>
+              </label>
             </div>
             <div class="form">
               <label for="${idUserSelector}">${t(this.hass, this._config.language, 'user_selector')}</label>
@@ -3199,8 +3233,10 @@ class TallyListFreeDrinksCardEditor extends LitElement {
                             </div>`
                           : ''}
                         <div class="form">
-                          <input id="${idShowAllTab}" type="checkbox" .checked=${this._config.tabs.show_all_tab} @change=${this._showAllTabChanged} />
-                          <label for="${idShowAllTab}">${t(this.hass, this._config.language, 'show_all_tab')}</label>
+                          <label class="switch">
+                            ${t(this.hass, this._config.language, 'show_all_tab')}
+                            <ha-switch .checked=${this._config.tabs.show_all_tab} @change=${this._showAllTabChanged}></ha-switch>
+                          </label>
                         </div>
                       `
                     : ''}
@@ -4488,11 +4524,9 @@ class TallySetPinCardEditor extends LitElement {
 
   render() {
     const idLock = this._fid('lock-ms');
-    const idShortNames = this._fid('short-names');
     const idUserSelector = this._fid('user-selector');
     const idTabMode = this._fid('tab-mode');
     const idGroupedBreaks = this._fid('grouped-breaks');
-    const idShowAllTab = this._fid('show-all-tab');
     const idGridColumns = this._fid('grid-columns');
     const idWarning = this._fid('pin-warning');
     const idLanguage = this._fid('language');
@@ -4522,8 +4556,10 @@ class TallySetPinCardEditor extends LitElement {
         : this._tab === 'users'
         ? html`
             <div class="form">
-              <input id="${idShortNames}" name="shorten_user_names" type="checkbox" .checked=${this._config.shorten_user_names} @change=${this._shortNamesChanged} />
-              <label for="${idShortNames}">${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'shorten_user_names')}</label>
+              <label class="switch">
+                ${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'shorten_user_names')}
+                <ha-switch .checked=${this._config.shorten_user_names} @change=${this._shortNamesChanged}></ha-switch>
+              </label>
             </div>
             <div class="form">
               <label for="${idUserSelector}">${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'user_selector')}</label>
@@ -4551,8 +4587,10 @@ class TallySetPinCardEditor extends LitElement {
                             </div>`
                           : ''}
                         <div class="form">
-                          <input id="${idShowAllTab}" name="show_all_tab" type="checkbox" .checked=${this._config.tabs.show_all_tab} @change=${this._showAllTabChanged} />
-                          <label for="${idShowAllTab}">${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'show_all_tab')}</label>
+                          <label class="switch">
+                            ${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'show_all_tab')}
+                            <ha-switch .checked=${this._config.tabs.show_all_tab} @change=${this._showAllTabChanged}></ha-switch>
+                          </label>
                         </div>
                       `
                     : ''}
