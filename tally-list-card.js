@@ -1616,6 +1616,7 @@ class TallyListCard extends LitElement {
       justify-content: center;
       z-index: 1;
       background: var(--card-background-color, #fff);
+      color: var(--error-color, #d9534f);
       text-align: center;
     }
     .pin-dot {
