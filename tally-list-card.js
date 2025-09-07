@@ -4814,6 +4814,11 @@ class TallySetPinCardEditor extends LitElement {
     .form {
       padding: 16px;
     }
+    .form input[type='checkbox'] {
+      width: auto;
+      display: inline-block;
+      margin-right: 8px;
+    }
     input:not([type='checkbox']),
     select,
     textarea {
