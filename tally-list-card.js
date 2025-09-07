@@ -1542,6 +1542,7 @@ class TallyListCard extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
+      z-index: 1;
       background: var(--card-background-color, #fff);
     }
     .pin-dot {
@@ -4754,6 +4755,7 @@ class TallySetPinCard extends LitElement {
       justify-content: center;
       flex-direction: column;
       background: var(--card-background-color, #fff);
+      z-index: 1;
     }
     .keypad {
       display: grid;
