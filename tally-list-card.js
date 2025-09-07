@@ -364,6 +364,7 @@ const TL_STRINGS = {
     only_self: 'Only show own user even for admins',
     show_all_users: 'Show all users',
     show_inactive_drinks: 'Show inactive drinks',
+    shorten_user_names: 'Shorten user names',
     debug: 'Debug',
     language: 'Language',
     auto: 'Auto',
@@ -432,6 +433,7 @@ const TL_STRINGS = {
     only_self: 'Trotz Admin nur eigenen Nutzer anzeigen',
     show_all_users: 'Alle Nutzer anzeigen',
     show_inactive_drinks: 'Inaktive Getränke anzeigen',
+    shorten_user_names: 'Namen kürzen',
     debug: 'Debug',
     language: 'Sprache',
     auto: 'Auto',
@@ -483,6 +485,44 @@ function relevantStatesChanged(newHass, oldHass, entities) {
 }
 
 // ----- Shared User Menu Helpers -----
+function _computeShortNames(users) {
+  const groups = new Map();
+  users.forEach((u) => {
+    const full = u.name || u.slug || '';
+    const parts = full.trim().split(/\s+/);
+    const first = parts.shift() || '';
+    const rest = parts.join(' ');
+    const slug = u.slug || '';
+    const src = (rest + slug).replace(/[^A-Za-z0-9]/g, '');
+    const entry = { u, first, src };
+    if (!groups.has(first)) groups.set(first, []);
+    groups.get(first).push(entry);
+  });
+  const map = new Map();
+  groups.forEach((list) => {
+    if (list.length === 1) {
+      map.set(list[0].u, list[0].first);
+    } else {
+      let len = 1;
+      while (true) {
+        const used = new Set();
+        let unique = true;
+        list.forEach((item) => {
+          const extra = item.src.slice(0, len);
+          const dot = len < item.src.length;
+          item.short = extra ? `${item.first} ${extra}${dot ? '.' : ''}` : item.first;
+          if (used.has(item.short)) unique = false;
+          used.add(item.short);
+        });
+        if (unique) break;
+        len++;
+      }
+      list.forEach((item) => map.set(item.u, item.short));
+    }
+  });
+  return map;
+}
+
 function _umBucketizeUsers(users, cfg) {
   const misc = [];
   if (cfg.mode === 'grouped') {
@@ -556,7 +596,12 @@ function _umEnsureBuckets(card, users) {
   const uid = card.hass.user?.id;
   const slugs = card._currentPersonSlugs ? card._currentPersonSlugs() : [];
   const own = users.find((u) => u.user_id === uid || slugs.includes(u.slug));
-  const key = users.map((u) => u.name || u.slug).join('|') + '|' + (own ? own.name || own.slug : '');
+  const key =
+    users.map((u) => u.name || u.slug).join('|') +
+    '|' +
+    (own ? own.name || own.slug : '') +
+    '|' +
+    (card.config.shorten_user_names ? '1' : '0');
   if (key === card._usersKey) return;
   const collator = new Intl.Collator(locale, { sensitivity: 'base', numeric: true });
   let sorted = [...users].sort((a, b) => collator.compare(a.name || a.slug, b.name || b.slug));
@@ -566,6 +611,7 @@ function _umEnsureBuckets(card, users) {
   card._usersKey = key;
   card._sortedUsers = sorted;
   card._ownUser = own;
+  card._shortNames = card.config.shorten_user_names ? _computeShortNames(sorted) : null;
   _umUpdateBuckets(card, sorted, locale);
 }
 
@@ -598,7 +644,10 @@ function _umRenderChips(card, list, selected, onSelect, getVal = (u) => u.name |
     list,
     (u) => u.user_id || u.slug,
     (u) => {
-      const name = u.name || u.slug;
+      const name =
+        card.config.shorten_user_names && card._shortNames
+          ? card._shortNames.get(u)
+          : u.name || u.slug;
       const val = getVal(u);
       const cls = `user-chip ${val === selected ? 'active' : 'inactive'}`;
       return html`<button class="${cls}" role="tab" aria-selected=${val === selected} @click=${() => onSelect(val)} @keydown=${(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(val)}>${name}</button>`;
@@ -611,7 +660,9 @@ function _renderUserMenu(card, users, selectedId, layout, isAdmin, onSelect, get
   _umEnsureBuckets(card, users);
   if (!isAdmin) {
     const own = users.find((u) => valFn(u) === selectedId) || users[0];
-    const name = own?.name || own?.slug || '';
+    const name = card.config.shorten_user_names && card._shortNames
+      ? card._shortNames.get(own)
+      : own?.name || own?.slug || '';
     return html`<div class="user-label">${name}</div>`;
   }
   if (layout === 'grid') {
@@ -627,7 +678,12 @@ function _renderUserMenu(card, users, selectedId, layout, isAdmin, onSelect, get
   return html`<div class="user-select"><label for="${idUser}">${t(card.hass, card.config.language, 'name')}: </label><select id="${idUser}" @change=${(e) => onSelect(e.target.value)}>${repeat(
     card._sortedUsers,
     (u) => u.user_id || u.slug,
-    (u) => html`<option value="${valFn(u)}" ?selected=${valFn(u) === selectedId}>${u.name}</option>`
+    (u) => {
+      const name = card.config.shorten_user_names && card._shortNames
+        ? card._shortNames.get(u)
+        : u.name;
+      return html`<option value="${valFn(u)}" ?selected=${valFn(u) === selectedId}>${name}</option>`;
+    }
   )}</select></div>`;
 }
 
@@ -833,6 +889,7 @@ class TallyListCard extends LitElement {
       only_self: false,
       show_all_users: false,
       show_inactive_drinks: false,
+      shorten_user_names: false,
       language: 'auto',
       user_selector: 'list',
       show_step_select: true,
@@ -1882,6 +1939,7 @@ class TallyListCardEditor extends LitElement {
       only_self: false,
       show_all_users: false,
       show_inactive_drinks: false,
+      shorten_user_names: false,
       language: 'auto',
       user_selector: 'list',
       show_step_select: true,
@@ -1911,6 +1969,7 @@ class TallyListCardEditor extends LitElement {
     const idGridColumns = this._fid('grid-columns');
     const idShowAllUsers = this._fid('show-all-users');
     const idShowInactive = this._fid('show-inactive');
+    const idShortNames = this._fid('short-names');
     const idLanguage = this._fid('language');
     return html`
       <div class="form">
@@ -1940,6 +1999,10 @@ class TallyListCardEditor extends LitElement {
       <div class="form">
         <input id="${idOnlySelf}" name="only_self" type="checkbox" .checked=${this._config.only_self} @change=${this._selfChanged} />
         <label for="${idOnlySelf}">${this._t('only_self')}</label>
+      </div>
+      <div class="form">
+        <input id="${idShortNames}" name="shorten_user_names" type="checkbox" .checked=${this._config.shorten_user_names} @change=${this._shortNamesChanged} />
+        <label for="${idShortNames}">${this._t('shorten_user_names')}</label>
       </div>
       <div class="form">
         <label for="${idUserSelector}">${this._t('user_selector')}</label>
@@ -2077,6 +2140,17 @@ class TallyListCardEditor extends LitElement {
 
   _selfChanged(ev) {
     this._config = { ...this._config, only_self: ev.target.checked };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  _shortNamesChanged(ev) {
+    this._config = { ...this._config, shorten_user_names: ev.target.checked };
     this.dispatchEvent(
       new CustomEvent('config-changed', {
         detail: { config: this._config },
@@ -2330,6 +2404,7 @@ class TallyDueRankingCard extends LitElement {
       max_entries: 0,
       hide_free: false,
       show_copy: true,
+      shorten_user_names: false,
       language: 'auto',
       ...config,
     };
@@ -2377,6 +2452,7 @@ class TallyDueRankingCard extends LitElement {
     }
     const prices = this.config.prices || this._autoPrices || {};
     const freeAmount = Number(this.config.free_amount ?? this._freeAmount ?? 0);
+    const shortMap = this.config.shorten_user_names ? _computeShortNames(users) : null;
     let ranking = users.map(u => {
       let total = 0;
       for (const [drink, entity] of Object.entries(u.drinks)) {
@@ -2392,7 +2468,7 @@ class TallyDueRankingCard extends LitElement {
       } else {
         due = Math.max(total - freeAmount, 0);
       }
-      return { name: u.name || u.slug, due };
+      return { name: shortMap?.get(u) || u.name || u.slug, due };
     });
     if (this.config.hide_free) {
       ranking = ranking.filter(r => r.due > 0);
@@ -2688,6 +2764,7 @@ class TallyDueRankingCard extends LitElement {
     if (users.length === 0 && !isPublicDevice) return;
     const prices = this.config.prices || this._autoPrices || {};
     const freeAmount = Number(this.config.free_amount ?? this._freeAmount ?? 0);
+    const shortMap = this.config.shorten_user_names ? _computeShortNames(users) : null;
     let ranking = users.map(u => {
       let total = 0;
       for (const [drink, entity] of Object.entries(u.drinks)) {
@@ -2703,7 +2780,7 @@ class TallyDueRankingCard extends LitElement {
       } else {
         due = Math.max(total - freeAmount, 0);
       }
-      return { name: u.name || u.slug, due };
+      return { name: shortMap?.get(u) || u.name || u.slug, due };
     });
     if (this.config.hide_free) {
       ranking = ranking.filter(r => r.due > 0);
@@ -2805,6 +2882,7 @@ class TallyDueRankingCardEditor extends LitElement {
       max_entries: 0,
       hide_free: false,
       show_copy: true,
+      shorten_user_names: false,
       language: 'auto',
       ...config,
     };
@@ -2824,6 +2902,7 @@ class TallyDueRankingCardEditor extends LitElement {
     const idShowCopy = this._fid('show-copy');
     const idShowTotal = this._fid('show-total');
     const idHideFree = this._fid('hide-free');
+    const idShortNames = this._fid('short-names');
     const idShowResetEveryone = this._fid('show-reset-everyone');
     const idLanguage = this._fid('language');
     return html`
@@ -2862,6 +2941,10 @@ class TallyDueRankingCardEditor extends LitElement {
       <div class="form">
         <input id="${idHideFree}" name="hide_free" type="checkbox" .checked=${this._config.hide_free} @change=${this._hideChanged} />
         <label for="${idHideFree}">${this._t('hide_free')}</label>
+      </div>
+      <div class="form">
+        <input id="${idShortNames}" name="shorten_user_names" type="checkbox" .checked=${this._config.shorten_user_names} @change=${this._shortNamesChanged} />
+        <label for="${idShortNames}">${this._t('shorten_user_names')}</label>
       </div>
       <details class="debug">
         <summary>${this._t('debug')}</summary>
@@ -2923,6 +3006,11 @@ class TallyDueRankingCardEditor extends LitElement {
 
   _hideChanged(ev) {
     this._config = { ...this._config, hide_free: ev.target.checked };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _shortNamesChanged(ev) {
+    this._config = { ...this._config, shorten_user_names: ev.target.checked };
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
@@ -3037,6 +3125,7 @@ class TallyListFreeDrinksCardEditor extends LitElement {
       pin_lock_ms: 5000,
       language: 'auto',
       user_selector: 'list',
+      shorten_user_names: false,
       ...(config || {}),
       comment_presets: presets,
       tabs,
@@ -3059,6 +3148,7 @@ class TallyListFreeDrinksCardEditor extends LitElement {
     const idFdTimer = this._fid('fd-timer');
     const idFdPerItem = this._fid('fd-per-item');
     const idFdTotal = this._fid('fd-total');
+    const idShortNames = this._fid('short-names');
     return html`
       <div class="form">
         <input
@@ -3127,6 +3217,15 @@ class TallyListFreeDrinksCardEditor extends LitElement {
           .value=${this._config.free_drinks_total_limit}
           @input=${this._fdTotalChanged}
         />
+      </div>
+      <div class="form">
+        <input
+          id="${idShortNames}"
+          type="checkbox"
+          .checked=${this._config.shorten_user_names}
+          @change=${this._shortNamesChanged}
+        />
+        <label for="${idShortNames}">${t(this.hass, this._config.language, 'shorten_user_names')}</label>
       </div>
       <div class="form">
         <label for="${idUserSelector}">${t(this.hass, this._config.language, 'user_selector')}</label>
@@ -3286,6 +3385,11 @@ class TallyListFreeDrinksCardEditor extends LitElement {
       ...this._config,
       free_drinks_total_limit: isNaN(value) ? 0 : value,
     };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _shortNamesChanged(ev) {
+    this._config = { ...this._config, shorten_user_names: ev.target.checked };
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
@@ -4319,6 +4423,7 @@ const PIN_EDITOR_STRINGS = {
     grouped_breaks: 'Grouped breaks',
     show_all_tab: 'Show "All" tab',
     grid_columns: 'Grid columns (0 = auto)',
+    shorten_user_names: 'Shorten user names',
     warning_text: 'Warning message (empty to disable)',
     debug: 'Debug',
     language: 'Language',
@@ -4339,6 +4444,7 @@ const PIN_EDITOR_STRINGS = {
     grouped_breaks: 'Gruppierte Bereiche',
     show_all_tab: 'Tab "Alle" anzeigen',
     grid_columns: 'Spalten (0 = automatisch)',
+    shorten_user_names: 'Namen kürzen',
     warning_text: 'Warnhinweis (leer lassen zum Deaktivieren)',
     debug: 'Debug',
     language: 'Sprache',
@@ -4375,6 +4481,7 @@ class TallySetPinCardEditor extends LitElement {
       lock_ms: 5000,
       user_selector: 'list',
       language: 'auto',
+      shorten_user_names: false,
       ...(config || {}),
       tabs,
       grid,
@@ -4392,6 +4499,13 @@ class TallySetPinCardEditor extends LitElement {
   _lockChanged(ev) {
     const value = Number(ev.target.value);
     this._config = { ...this._config, lock_ms: isNaN(value) ? 5000 : value };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', { detail: { config: this._config } })
+    );
+  }
+
+  _shortNamesChanged(ev) {
+    this._config = { ...this._config, shorten_user_names: ev.target.checked };
     this.dispatchEvent(
       new CustomEvent('config-changed', { detail: { config: this._config } })
     );
@@ -4450,6 +4564,7 @@ class TallySetPinCardEditor extends LitElement {
 
   render() {
     const idLock = this._fid('lock-ms');
+    const idShortNames = this._fid('short-names');
     const idUserSelector = this._fid('user-selector');
     const idTabMode = this._fid('tab-mode');
     const idGroupedBreaks = this._fid('grouped-breaks');
@@ -4472,6 +4587,21 @@ class TallySetPinCardEditor extends LitElement {
           .value=${this._config.lock_ms}
           @input=${this._lockChanged}
         />
+      </div>
+      <div class="form">
+        <input
+          id="${idShortNames}"
+          name="shorten_user_names"
+          type="checkbox"
+          .checked=${this._config.shorten_user_names}
+          @change=${this._shortNamesChanged}
+        />
+        <label for="${idShortNames}">${translate(
+          this.hass,
+          this._config?.language,
+          PIN_EDITOR_STRINGS,
+          'shorten_user_names'
+        )}</label>
       </div>
       <div class="form">
         <label for="${idWarning}">${translate(
@@ -4807,6 +4937,7 @@ class TallySetPinCard extends LitElement {
       lock_ms: 5000,
       user_selector: 'list',
       language: 'auto',
+      shorten_user_names: false,
       ...(config || {}),
     };
     this.config.tabs = tabs;
