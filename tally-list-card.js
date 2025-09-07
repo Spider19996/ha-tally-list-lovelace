@@ -5175,7 +5175,7 @@ class TallySetPinCard extends LitElement {
     const warningHtml = formatWarning(this._warningText);
     return html`
       <ha-card>
-        ${this._showWarn
+        ${this._showWarn && userFound
           ? this._warningText
             ? html`<div class="warn-overlay">
                 <div class="warn-box">
