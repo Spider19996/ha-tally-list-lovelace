@@ -2402,7 +2402,11 @@ class TallyDueRankingCard extends LitElement {
     }
   `;
 
-  async firstUpdated() {}
+  firstUpdated() {
+    if (!this.selectedUserId) {
+      this.selectedUserId = this.hass?.user?.id || '';
+    }
+  }
 
   setConfig(config) {
     this.config = {
@@ -3682,8 +3686,9 @@ class TallyListFreeDrinksCard extends LitElement {
     return 3;
   }
 
-  firstUpdated() {
-    if (!this.selectedUserId) this.selectedUserId = this.hass?.user?.id || '';
+  updated(changed) {
+    super.updated?.(changed);
+    if (this._copyBtnWidth) return;
     const copyBtn = this.renderRoot?.querySelector('.button-row .btn--neutral');
     if (copyBtn) {
       const normalWidth = copyBtn.offsetWidth;
