@@ -125,7 +125,7 @@ Die Karte verwendet die gleiche Benutzerliste wie die Hauptkarte und benötigt n
 
 Optionen:
 
-* **Sperrzeit (ms)** – Wartezeit nach dem Setzen einer neuen PIN (`5000` Standard).
+* **Sperrzeit (ms)** – Wartezeit nach jeder PIN-Eingabe (auch bei Fehlern) (`5000` Standard).
 
 Zum Speichern der neuen PIN wird der Service `tally_list.set_pin` aufgerufen, z. B.:
 

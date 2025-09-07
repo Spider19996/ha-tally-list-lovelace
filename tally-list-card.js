@@ -4513,6 +4513,29 @@ class TallySetPinCard extends LitElement {
   async _submit() {
     if (this._pin1 !== this._pin2 || this._pin1.length !== 4) {
       this._status = this._pin1 !== this._pin2 ? 'mismatch' : 'invalid';
+      this._pin1 = '';
+      this._pin2 = '';
+      this._buffer = '';
+      this._stage = 1;
+      this._locked = true;
+      const delay = Number(this.config.lock_ms ?? 5000);
+      this._lockUntil = Date.now() + delay;
+      this._lockRemainingMs = delay;
+      if (this._lockTimer) {
+        clearInterval(this._lockTimer);
+      }
+      this._lockTimer = setInterval(() => {
+        const remain = this._lockUntil - Date.now();
+        if (remain <= 0) {
+          clearInterval(this._lockTimer);
+          this._lockTimer = null;
+          this._locked = false;
+          this._lockRemainingMs = 0;
+        } else {
+          this._lockRemainingMs = remain;
+        }
+        this.requestUpdate();
+      }, 100);
       return;
     }
     const users = this._users;
@@ -4608,9 +4631,9 @@ class TallySetPinCard extends LitElement {
           </div>
           <div class="pin-display">${pinMask}
             ${this._locked
-              ? html`<div class="pin-timer-overlay">${this._t('success')}<br />${Math.ceil(
-                    this._lockRemainingMs / 1000
-                  )}s</div>`
+              ? html`<div class="pin-timer-overlay">${this._t(
+                    this._status || 'success'
+                  )}<br />${Math.ceil(this._lockRemainingMs / 1000)}s</div>`
               : ''}
           </div>
           <div class="keypad">
