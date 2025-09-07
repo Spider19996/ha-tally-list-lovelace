@@ -2373,6 +2373,7 @@ class TallyDueRankingCard extends LitElement {
       margin-top: 8px;
     }
     .ranking-card .btn {
+      box-sizing: border-box;
       height: var(--row-h);
       border-radius: 12px;
       padding: 0 16px;
@@ -3685,7 +3686,15 @@ class TallyListFreeDrinksCard extends LitElement {
     if (!this.selectedUserId) this.selectedUserId = this.hass?.user?.id || '';
     const copyBtn = this.renderRoot?.querySelector('.button-row .btn--neutral');
     if (copyBtn) {
-      this._copyBtnWidth = copyBtn.offsetWidth;
+      const normalWidth = copyBtn.offsetWidth;
+      const tmp = copyBtn.cloneNode(true);
+      tmp.textContent = this._t('copied');
+      tmp.style.position = 'absolute';
+      tmp.style.visibility = 'hidden';
+      this.renderRoot.appendChild(tmp);
+      const copiedWidth = tmp.offsetWidth;
+      tmp.remove();
+      this._copyBtnWidth = Math.max(normalWidth, copiedWidth);
     }
   }
 
