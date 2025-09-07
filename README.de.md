@@ -126,6 +126,7 @@ Die Karte verwendet die gleiche Benutzerliste wie die Hauptkarte und benötigt n
 Optionen:
 
 * **Sperrzeit (ms)** – Wartezeit nach jeder PIN-Eingabe (auch bei Fehlern) (`5000` Standard).
+* **user_selector** – Layout der Nutzerauswahl: `list`, `tabs` oder `grid` (`list` standardmäßig).
 
 Zum Speichern der neuen PIN wird der Service `tally_list.set_pin` aufgerufen, z. B.:
 
