@@ -24,6 +24,19 @@ export function fireEvent(node, type, detail = {}, options = {}) {
   );
 }
 
+function formatWarning(text) {
+  const escape = (str) =>
+    str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  return escape(text)
+    .replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/__([\s\S]+?)__/g, '<u>$1</u>')
+    .replace(/_([\s\S]+?)_/g, '<em>$1</em>')
+    .replace(/\n/g, '<br>');
+}
+
 // ---- Public Session Handling ----
 const PUBLIC_SESSION = {
   isPublic: false,
@@ -4467,13 +4480,12 @@ class TallySetPinCardEditor extends LitElement {
           PIN_EDITOR_STRINGS,
           'warning_text'
         )}</label>
-        <input
+        <textarea
           id="${idWarning}"
           name="pin_warning"
-          type="text"
           .value=${this._config.pin_warning}
           @input=${this._warningChanged}
-        />
+        ></textarea>
       </div>
       <div class="form">
         <label for="${idUserSelector}">${translate(
@@ -4671,9 +4683,13 @@ class TallySetPinCardEditor extends LitElement {
       padding: 16px;
     }
     input,
-    select {
+    select,
+    textarea {
       width: 100%;
       box-sizing: border-box;
+    }
+    textarea {
+      min-height: 60px;
     }
     details.debug {
       padding: 0 16px 16px;
@@ -4987,13 +5003,14 @@ class TallySetPinCard extends LitElement {
     const pinMask = Array.from({ length: 4 }, (_, i) =>
       html`<span class="pin-dot ${this._buffer.length > i ? 'filled' : ''}"></span>`
     );
+    const warningHtml = formatWarning(this._warningText);
     return html`
       <ha-card>
         ${this._showWarn
           ? this._warningText
             ? html`<div class="warn-overlay">
                 <div class="warn-box">
-                  <p>${this._warningText}</p>
+                  <p .innerHTML=${warningHtml}></p>
                   <button class="action-btn" @click=${() => (this._showWarn = false)}>
                     ${this._t('ok')}
                   </button>
