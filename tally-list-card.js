@@ -3078,7 +3078,13 @@ function parseCommentPresets(raw) {
 class TallyListFreeDrinksCardEditor extends LitElement {
   static properties = {
     _config: {},
+    _tab: { type: String },
   };
+
+  constructor() {
+    super();
+    this._tab = 'general';
+  }
 
   setConfig(config) {
     const presets = parseCommentPresets(config?.comment_presets);
@@ -3123,145 +3129,104 @@ class TallyListFreeDrinksCardEditor extends LitElement {
     const idFdTotal = this._fid('fd-total');
     const idShortNames = this._fid('short-names');
     return html`
-      <div class="form">
-        <input
-          id="${idPrices}"
-          type="checkbox"
-          .checked=${this._config.show_prices !== false}
-          @change=${this._pricesChanged}
-        />
-        <label for="${idPrices}">${fdT(this.hass, this._config.language, 'show_prices')}</label>
-      </div>
-      <div class="form">
-        <label for="${idPresets}">${fdT(
-          this.hass,
-          this._config.language,
-          'comment_types'
-        )}</label>
-        <textarea
-          id="${idPresets}"
-          @change=${this._presetsChanged}
-          .value=${(this._config.comment_presets || [])
-            .map((p) => `${p.label}${p.require_comment ? '*' : ''}`)
-            .join('\n')}
-        ></textarea>
-      </div>
-      <div class="form">
-        <label for="${idSessionTimeout}">${t(this.hass, this._config.language, 'session_timeout_seconds')}</label>
-        <input
-          id="${idSessionTimeout}"
-          type="number"
-          .value=${this._config.session_timeout_seconds}
-          @input=${this._sessionTimeoutChanged}
-        />
-      </div>
-      <div class="form">
-        <label for="${idPinLock}">${t(this.hass, this._config.language, 'pin_lock_ms')}</label>
-        <input
-          id="${idPinLock}"
-          type="number"
-          .value=${this._config.pin_lock_ms}
-          @input=${this._pinLockChanged}
-        />
-      </div>
-      <div class="form">
-        <label for="${idFdTimer}">${t(this.hass, this._config.language, 'free_drinks_timer_seconds')}</label>
-        <input
-          id="${idFdTimer}"
-          type="number"
-          .value=${this._config.free_drinks_timer_seconds}
-          @input=${this._fdTimerChanged}
-        />
-      </div>
-      <div class="form">
-        <label for="${idFdPerItem}">${t(this.hass, this._config.language, 'free_drinks_per_item_limit')}</label>
-        <input
-          id="${idFdPerItem}"
-          type="number"
-          .value=${this._config.free_drinks_per_item_limit}
-          @input=${this._fdPerItemChanged}
-        />
-      </div>
-      <div class="form">
-        <label for="${idFdTotal}">${t(this.hass, this._config.language, 'free_drinks_total_limit')}</label>
-        <input
-          id="${idFdTotal}"
-          type="number"
-          .value=${this._config.free_drinks_total_limit}
-          @input=${this._fdTotalChanged}
-        />
-      </div>
-      <div class="form">
-        <input
-          id="${idShortNames}"
-          type="checkbox"
-          .checked=${this._config.shorten_user_names}
-          @change=${this._shortNamesChanged}
-        />
-        <label for="${idShortNames}">${t(this.hass, this._config.language, 'shorten_user_names')}</label>
-      </div>
-      <div class="form">
-        <label for="${idUserSelector}">${t(this.hass, this._config.language, 'user_selector')}</label>
-        <select id="${idUserSelector}" @change=${this._userSelectorChanged}>
-          <option value="list" ?selected=${this._config.user_selector === 'list'}>${t(this.hass, this._config.language, 'user_selector_list')}</option>
-          <option value="tabs" ?selected=${this._config.user_selector === 'tabs'}>${t(this.hass, this._config.language, 'user_selector_tabs')}</option>
-          <option value="grid" ?selected=${this._config.user_selector === 'grid'}>${t(this.hass, this._config.language, 'user_selector_grid')}</option>
-        </select>
-      </div>
-      ${['tabs', 'grid'].includes(this._config.user_selector)
+      <nav class="tabs">
+        <button class=${this._tab === 'general' ? 'active' : ''} data-tab="general" @click=${this._selectTab}>${fdT(this.hass, this._config.language, 'tab_general')}</button>
+        <button class=${this._tab === 'users' ? 'active' : ''} data-tab="users" @click=${this._selectTab}>${fdT(this.hass, this._config.language, 'tab_users')}</button>
+        <button class=${this._tab === 'advanced' ? 'active' : ''} data-tab="advanced" @click=${this._selectTab}>${fdT(this.hass, this._config.language, 'tab_advanced')}</button>
+      </nav>
+      ${this._tab === 'general'
         ? html`
-            ${this._config.user_selector === 'tabs'
+            <div class="form">
+              <input id="${idPrices}" type="checkbox" .checked=${this._config.show_prices !== false} @change=${this._pricesChanged} />
+              <label for="${idPrices}">${fdT(this.hass, this._config.language, 'show_prices')}</label>
+            </div>
+            <div class="form">
+              <label for="${idPresets}">${fdT(this.hass, this._config.language, 'comment_types')}</label>
+              <textarea id="${idPresets}" @change=${this._presetsChanged} .value=${(this._config.comment_presets || [])
+                .map((p) => `${p.label}${p.require_comment ? '*' : ''}`)
+                .join('\n')}></textarea>
+            </div>
+            <div class="form">
+              <label for="${idFdTimer}">${t(this.hass, this._config.language, 'free_drinks_timer_seconds')}</label>
+              <input id="${idFdTimer}" type="number" .value=${this._config.free_drinks_timer_seconds} @input=${this._fdTimerChanged} />
+            </div>
+            <div class="form">
+              <label for="${idFdPerItem}">${t(this.hass, this._config.language, 'free_drinks_per_item_limit')}</label>
+              <input id="${idFdPerItem}" type="number" .value=${this._config.free_drinks_per_item_limit} @input=${this._fdPerItemChanged} />
+            </div>
+            <div class="form">
+              <label for="${idFdTotal}">${t(this.hass, this._config.language, 'free_drinks_total_limit')}</label>
+              <input id="${idFdTotal}" type="number" .value=${this._config.free_drinks_total_limit} @input=${this._fdTotalChanged} />
+            </div>
+            <div class="form">
+              <label for="${idSessionTimeout}">${t(this.hass, this._config.language, 'session_timeout_seconds')}</label>
+              <input id="${idSessionTimeout}" type="number" .value=${this._config.session_timeout_seconds} @input=${this._sessionTimeoutChanged} />
+            </div>
+            <div class="form">
+              <label for="${idPinLock}">${t(this.hass, this._config.language, 'pin_lock_ms')}</label>
+              <input id="${idPinLock}" type="number" .value=${this._config.pin_lock_ms} @input=${this._pinLockChanged} />
+            </div>
+          `
+        : this._tab === 'users'
+        ? html`
+            <div class="form">
+              <input id="${idShortNames}" type="checkbox" .checked=${this._config.shorten_user_names} @change=${this._shortNamesChanged} />
+              <label for="${idShortNames}">${t(this.hass, this._config.language, 'shorten_user_names')}</label>
+            </div>
+            <div class="form">
+              <label for="${idUserSelector}">${t(this.hass, this._config.language, 'user_selector')}</label>
+              <select id="${idUserSelector}" @change=${this._userSelectorChanged}>
+                <option value="list" ?selected=${this._config.user_selector === 'list'}>${t(this.hass, this._config.language, 'user_selector_list')}</option>
+                <option value="tabs" ?selected=${this._config.user_selector === 'tabs'}>${t(this.hass, this._config.language, 'user_selector_tabs')}</option>
+                <option value="grid" ?selected=${this._config.user_selector === 'grid'}>${t(this.hass, this._config.language, 'user_selector_grid')}</option>
+              </select>
+            </div>
+            ${['tabs', 'grid'].includes(this._config.user_selector)
               ? html`
-                  <div class="form">
-                    <label for="${idTabMode}">${t(this.hass, this._config.language, 'tab_mode')}</label>
-                    <select id="${idTabMode}" @change=${this._tabModeChanged}>
-                      <option value="per-letter" ?selected=${this._config.tabs.mode === 'per-letter'}>${t(this.hass, this._config.language, 'per_letter')}</option>
-                      <option value="grouped" ?selected=${this._config.tabs.mode === 'grouped'}>${t(this.hass, this._config.language, 'grouped')}</option>
-                    </select>
-                  </div>
-                  ${this._config.tabs.mode === 'grouped'
-                    ? html`<div class="form">
-                        <label for="${idGroupedBreaks}">${t(this.hass, this._config.language, 'grouped_breaks')}</label>
-                        <input id="${idGroupedBreaks}" type="text" .value=${this._config.tabs.grouped_breaks.join(',')} @input=${this._groupedBreaksChanged} />
-                      </div>`
+                  ${this._config.user_selector === 'tabs'
+                    ? html`
+                        <div class="form">
+                          <label for="${idTabMode}">${t(this.hass, this._config.language, 'tab_mode')}</label>
+                          <select id="${idTabMode}" @change=${this._tabModeChanged}>
+                            <option value="per-letter" ?selected=${this._config.tabs.mode === 'per-letter'}>${t(this.hass, this._config.language, 'per_letter')}</option>
+                            <option value="grouped" ?selected=${this._config.tabs.mode === 'grouped'}>${t(this.hass, this._config.language, 'grouped')}</option>
+                          </select>
+                        </div>
+                        ${this._config.tabs.mode === 'grouped'
+                          ? html`<div class="form">
+                              <label for="${idGroupedBreaks}">${t(this.hass, this._config.language, 'grouped_breaks')}</label>
+                              <input id="${idGroupedBreaks}" type="text" .value=${this._config.tabs.grouped_breaks.join(',')} @input=${this._groupedBreaksChanged} />
+                            </div>`
+                          : ''}
+                        <div class="form">
+                          <input id="${idShowAllTab}" type="checkbox" .checked=${this._config.tabs.show_all_tab} @change=${this._showAllTabChanged} />
+                          <label for="${idShowAllTab}">${t(this.hass, this._config.language, 'show_all_tab')}</label>
+                        </div>
+                      `
                     : ''}
                   <div class="form">
-                    <input id="${idShowAllTab}" type="checkbox" .checked=${this._config.tabs.show_all_tab} @change=${this._showAllTabChanged} />
-                    <label for="${idShowAllTab}">${t(this.hass, this._config.language, 'show_all_tab')}</label>
+                    <label for="${idGridColumns}">${t(this.hass, this._config.language, 'grid_columns')}</label>
+                    <input id="${idGridColumns}" type="text" .value=${this._config.grid.columns} @input=${this._gridColumnsChanged} />
                   </div>
                 `
               : ''}
-            <div class="form">
-              <label for="${idGridColumns}">${t(this.hass, this._config.language, 'grid_columns')}</label>
-              <input id="${idGridColumns}" type="text" .value=${this._config.grid.columns} @input=${this._gridColumnsChanged} />
-            </div>
           `
-        : ''}
-      <details class="debug">
-        <summary>${fdT(this.hass, this._config.language, 'debug')}</summary>
-        <div class="form">
-          <label for="${idLanguage}">${fdT(this.hass, this._config.language, 'language')}</label>
-          <select id="${idLanguage}" @change=${this._languageChanged}>
-            <option value="auto" ?selected=${this._config.language === 'auto'}>${fdT(
-              this.hass,
-              this._config.language,
-              'auto'
-            )}</option>
-            <option value="de" ?selected=${this._config.language === 'de'}>${fdT(
-              this.hass,
-              this._config.language,
-              'german'
-            )}</option>
-            <option value="en" ?selected=${this._config.language === 'en'}>${fdT(
-              this.hass,
-              this._config.language,
-              'english'
-            )}</option>
-          </select>
-        </div>
-        <div class="version">${fdT(this.hass, this._config.language, 'version')}: ${CARD_VERSION}</div>
-      </details>
+        : html`
+            <div class="form">
+              <label for="${idLanguage}">${fdT(this.hass, this._config.language, 'language')}</label>
+              <select id="${idLanguage}" @change=${this._languageChanged}>
+                <option value="auto" ?selected=${this._config.language === 'auto'}>${fdT(this.hass, this._config.language, 'auto')}</option>
+                <option value="de" ?selected=${this._config.language === 'de'}>${fdT(this.hass, this._config.language, 'german')}</option>
+                <option value="en" ?selected=${this._config.language === 'en'}>${fdT(this.hass, this._config.language, 'english')}</option>
+              </select>
+            </div>
+            <div class="version">${fdT(this.hass, this._config.language, 'version')}: ${CARD_VERSION}</div>
+          `}
     `;
+  }
+
+  _selectTab(ev) {
+    this._tab = ev.target.dataset.tab;
   }
 
   _pricesChanged(ev) {
@@ -3375,29 +3340,7 @@ class TallyListFreeDrinksCardEditor extends LitElement {
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
-  static styles = css`
-    .form {
-      margin-bottom: 8px;
-    }
-    .form textarea {
-      width: 100%;
-      box-sizing: border-box;
-      min-height: 60px;
-    }
-    details.debug {
-      padding: 0 16px 16px;
-    }
-    details.debug summary {
-      cursor: pointer;
-      font-weight: bold;
-      outline: none;
-    }
-    .version {
-      padding: 0 16px 16px;
-      text-align: center;
-      color: var(--secondary-text-color);
-    }
-  `;
+  static styles = EDITOR_STYLES;
 }
 
 customElements.define('tally-list-free-drinks-card-editor', TallyListFreeDrinksCardEditor);
@@ -4398,6 +4341,9 @@ const PIN_EDITOR_STRINGS = {
     grid_columns: 'Grid columns (0 = auto)',
     shorten_user_names: 'Shorten user names',
     warning_text: 'Warning message (empty to disable)',
+    tab_general: 'General',
+    tab_users: 'Users',
+    tab_advanced: 'Advanced',
     debug: 'Debug',
     language: 'Language',
     auto: 'Auto',
@@ -4419,6 +4365,9 @@ const PIN_EDITOR_STRINGS = {
     grid_columns: 'Spalten (0 = automatisch)',
     shorten_user_names: 'Namen kürzen',
     warning_text: 'Warnhinweis (leer lassen zum Deaktivieren)',
+    tab_general: 'Allgemein',
+    tab_users: 'Benutzer',
+    tab_advanced: 'Erweitert',
     debug: 'Debug',
     language: 'Sprache',
     auto: 'Auto',
@@ -4431,11 +4380,13 @@ const PIN_EDITOR_STRINGS = {
 class TallySetPinCardEditor extends LitElement {
   static properties = {
     _config: {},
+    _tab: { type: String },
   };
 
   constructor() {
     super();
     this._uid = crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
+    this._tab = 'general';
   }
 
   _fid(key) {
@@ -4546,234 +4497,88 @@ class TallySetPinCardEditor extends LitElement {
     const idWarning = this._fid('pin-warning');
     const idLanguage = this._fid('language');
     return html`
-      <div class="form">
-        <label for="${idLock}">${translate(
-          this.hass,
-          this._config?.language,
-          PIN_EDITOR_STRINGS,
-          'lock_ms'
-        )}</label>
-        <input
-          id="${idLock}"
-          name="lock_ms"
-          type="number"
-          .value=${this._config.lock_ms}
-          @input=${this._lockChanged}
-        />
-      </div>
-      <div class="form">
-        <input
-          id="${idShortNames}"
-          name="shorten_user_names"
-          type="checkbox"
-          .checked=${this._config.shorten_user_names}
-          @change=${this._shortNamesChanged}
-        />
-        <label for="${idShortNames}">
-          ${translate(
-            this.hass,
-            this._config?.language,
-            PIN_EDITOR_STRINGS,
-            'shorten_user_names'
-          )}
-        </label>
-      </div>
-      <div class="form">
-        <label for="${idWarning}">${translate(
-          this.hass,
-          this._config?.language,
-          PIN_EDITOR_STRINGS,
-          'warning_text'
-        )}</label>
-        <textarea
-          id="${idWarning}"
-          name="pin_warning"
-          .value=${this._config.pin_warning}
-          @input=${this._warningChanged}
-        ></textarea>
-      </div>
-      <div class="form">
-        <label for="${idUserSelector}">${translate(
-          this.hass,
-          this._config?.language,
-          PIN_EDITOR_STRINGS,
-          'user_selector'
-        )}</label>
-        <select
-          id="${idUserSelector}"
-          name="user_selector"
-          @change=${this._userSelectorChanged}
-        >
-          <option
-            value="list"
-            ?selected=${this._config.user_selector === 'list'}
-            >${translate(
-              this.hass,
-              this._config?.language,
-              PIN_EDITOR_STRINGS,
-              'user_selector_list'
-            )}</option
-          >
-          <option
-            value="tabs"
-            ?selected=${this._config.user_selector === 'tabs'}
-            >${translate(
-              this.hass,
-              this._config?.language,
-              PIN_EDITOR_STRINGS,
-              'user_selector_tabs'
-            )}</option
-          >
-          <option
-            value="grid"
-            ?selected=${this._config.user_selector === 'grid'}
-            >${translate(
-              this.hass,
-              this._config?.language,
-              PIN_EDITOR_STRINGS,
-              'user_selector_grid'
-            )}</option
-          >
-        </select>
-      </div>
-      ${['tabs', 'grid'].includes(this._config.user_selector)
+      <nav class="tabs">
+        <button class=${this._tab === 'general' ? 'active' : ''} data-tab="general" @click=${this._selectTab}>
+          ${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'tab_general')}
+        </button>
+        <button class=${this._tab === 'users' ? 'active' : ''} data-tab="users" @click=${this._selectTab}>
+          ${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'tab_users')}
+        </button>
+        <button class=${this._tab === 'advanced' ? 'active' : ''} data-tab="advanced" @click=${this._selectTab}>
+          ${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'tab_advanced')}
+        </button>
+      </nav>
+      ${this._tab === 'general'
         ? html`
-            ${this._config.user_selector === 'tabs'
+            <div class="form">
+              <label for="${idLock}">${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'lock_ms')}</label>
+              <input id="${idLock}" name="lock_ms" type="number" .value=${this._config.lock_ms} @input=${this._lockChanged} />
+            </div>
+            <div class="form">
+              <label for="${idWarning}">${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'warning_text')}</label>
+              <textarea id="${idWarning}" name="pin_warning" .value=${this._config.pin_warning} @input=${this._warningChanged}></textarea>
+            </div>
+          `
+        : this._tab === 'users'
+        ? html`
+            <div class="form">
+              <input id="${idShortNames}" name="shorten_user_names" type="checkbox" .checked=${this._config.shorten_user_names} @change=${this._shortNamesChanged} />
+              <label for="${idShortNames}">${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'shorten_user_names')}</label>
+            </div>
+            <div class="form">
+              <label for="${idUserSelector}">${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'user_selector')}</label>
+              <select id="${idUserSelector}" name="user_selector" @change=${this._userSelectorChanged}>
+                <option value="list" ?selected=${this._config.user_selector === 'list'}>${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'user_selector_list')}</option>
+                <option value="tabs" ?selected=${this._config.user_selector === 'tabs'}>${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'user_selector_tabs')}</option>
+                <option value="grid" ?selected=${this._config.user_selector === 'grid'}>${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'user_selector_grid')}</option>
+              </select>
+            </div>
+            ${['tabs', 'grid'].includes(this._config.user_selector)
               ? html`
-                  <div class="form">
-                    <label for="${idTabMode}">${translate(
-                      this.hass,
-                      this._config?.language,
-                      PIN_EDITOR_STRINGS,
-                      'tab_mode'
-                    )}</label>
-                    <select
-                      id="${idTabMode}"
-                      name="tab_mode"
-                      @change=${this._tabModeChanged}
-                    >
-                      <option
-                        value="per-letter"
-                        ?selected=${this._config.tabs.mode === 'per-letter'}
-                        >${translate(
-                          this.hass,
-                          this._config?.language,
-                          PIN_EDITOR_STRINGS,
-                          'per_letter'
-                        )}</option
-                      >
-                      <option
-                        value="grouped"
-                        ?selected=${this._config.tabs.mode === 'grouped'}
-                        >${translate(
-                          this.hass,
-                          this._config?.language,
-                          PIN_EDITOR_STRINGS,
-                          'grouped'
-                        )}</option
-                      >
-                    </select>
-                  </div>
-                  ${this._config.tabs.mode === 'grouped'
-                    ? html`<div class="form">
-                        <label for="${idGroupedBreaks}">${translate(
-                          this.hass,
-                          this._config?.language,
-                          PIN_EDITOR_STRINGS,
-                          'grouped_breaks'
-                        )}</label>
-                        <input
-                          id="${idGroupedBreaks}"
-                          name="grouped_breaks"
-                          type="text"
-                          .value=${this._config.tabs.grouped_breaks.join(',')}
-                          @input=${this._groupedBreaksChanged}
-                        />
-                      </div>`
+                  ${this._config.user_selector === 'tabs'
+                    ? html`
+                        <div class="form">
+                          <label for="${idTabMode}">${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'tab_mode')}</label>
+                          <select id="${idTabMode}" name="tab_mode" @change=${this._tabModeChanged}>
+                            <option value="per-letter" ?selected=${this._config.tabs.mode === 'per-letter'}>${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'per_letter')}</option>
+                            <option value="grouped" ?selected=${this._config.tabs.mode === 'grouped'}>${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'grouped')}</option>
+                          </select>
+                        </div>
+                        ${this._config.tabs.mode === 'grouped'
+                          ? html`<div class="form">
+                              <label for="${idGroupedBreaks}">${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'grouped_breaks')}</label>
+                              <input id="${idGroupedBreaks}" name="grouped_breaks" type="text" .value=${this._config.tabs.grouped_breaks.join(',')} @input=${this._groupedBreaksChanged} />
+                            </div>`
+                          : ''}
+                        <div class="form">
+                          <input id="${idShowAllTab}" name="show_all_tab" type="checkbox" .checked=${this._config.tabs.show_all_tab} @change=${this._showAllTabChanged} />
+                          <label for="${idShowAllTab}">${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'show_all_tab')}</label>
+                        </div>
+                      `
                     : ''}
                   <div class="form">
-                    <input
-                      id="${idShowAllTab}"
-                      name="show_all_tab"
-                      type="checkbox"
-                      .checked=${this._config.tabs.show_all_tab}
-                      @change=${this._showAllTabChanged}
-                    />
-                    <label for="${idShowAllTab}">${translate(
-                      this.hass,
-                      this._config?.language,
-                      PIN_EDITOR_STRINGS,
-                      'show_all_tab'
-                    )}</label>
+                    <label for="${idGridColumns}">${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'grid_columns')}</label>
+                    <input id="${idGridColumns}" name="grid_columns" type="text" .value=${this._config.grid.columns} @input=${this._gridColumnsChanged} />
                   </div>
                 `
               : ''}
-            <div class="form">
-              <label for="${idGridColumns}">${translate(
-                this.hass,
-                this._config?.language,
-                PIN_EDITOR_STRINGS,
-                'grid_columns'
-              )}</label>
-              <input
-                id="${idGridColumns}"
-                name="grid_columns"
-                type="text"
-                .value=${this._config.grid.columns}
-                @input=${this._gridColumnsChanged}
-              />
-            </div>
           `
-        : ''}
-      <details class="debug">
-        <summary>${translate(
-          this.hass,
-          this._config?.language,
-          PIN_EDITOR_STRINGS,
-          'debug'
-        )}</summary>
-        <div class="form">
-          <label for="${idLanguage}">${translate(
-            this.hass,
-            this._config?.language,
-            PIN_EDITOR_STRINGS,
-            'language'
-          )}</label>
-          <select id="${idLanguage}" @change=${this._languageChanged}>
-            <option value="auto" ?selected=${this._config.language === 'auto'}
-              >${translate(
-                this.hass,
-                this._config?.language,
-                PIN_EDITOR_STRINGS,
-                'auto'
-              )}</option
-            >
-            <option value="de" ?selected=${this._config.language === 'de'}
-              >${translate(
-                this.hass,
-                this._config?.language,
-                PIN_EDITOR_STRINGS,
-                'german'
-              )}</option
-            >
-            <option value="en" ?selected=${this._config.language === 'en'}
-              >${translate(
-                this.hass,
-                this._config?.language,
-                PIN_EDITOR_STRINGS,
-                'english'
-              )}</option
-            >
-          </select>
-        </div>
-        <div class="version">${translate(
-          this.hass,
-          this._config?.language,
-          PIN_EDITOR_STRINGS,
-          'version'
-        )}: ${CARD_VERSION}</div>
-      </details>
+        : html`
+            <div class="form">
+              <label for="${idLanguage}">${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'language')}</label>
+              <select id="${idLanguage}" @change=${this._languageChanged}>
+                <option value="auto" ?selected=${this._config.language === 'auto'}>${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'auto')}</option>
+                <option value="de" ?selected=${this._config.language === 'de'}>${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'german')}</option>
+                <option value="en" ?selected=${this._config.language === 'en'}>${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'english')}</option>
+              </select>
+            </div>
+            <div class="version">${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'version')}: ${CARD_VERSION}</div>
+          `}
     `;
+  }
+
+  _selectTab(ev) {
+    this._tab = ev.target.dataset.tab;
   }
 
   _languageChanged(ev) {
@@ -4783,38 +4588,7 @@ class TallySetPinCardEditor extends LitElement {
     );
   }
 
-  static styles = css`
-    .form {
-      padding: 16px;
-    }
-    .form input[type='checkbox'] {
-      width: auto;
-      display: inline-block;
-      margin-right: 8px;
-    }
-    input:not([type='checkbox']),
-    select,
-    textarea {
-      width: 100%;
-      box-sizing: border-box;
-    }
-    textarea {
-      min-height: 60px;
-    }
-    details.debug {
-      padding: 0 16px 16px;
-    }
-    details.debug summary {
-      cursor: pointer;
-      font-weight: bold;
-      outline: none;
-    }
-    .version {
-      padding: 0 16px 16px;
-      text-align: center;
-      color: var(--secondary-text-color);
-    }
-  `;
+  static styles = EDITOR_STYLES;
 }
 
 customElements.define('tally-set-pin-card-editor', TallySetPinCardEditor);
