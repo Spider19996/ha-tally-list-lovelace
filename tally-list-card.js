@@ -4661,12 +4661,6 @@ class TallySetPinCard extends LitElement {
                   >${d}</button>`
             )}
           </div>
-
-          ${this._status
-            ? html`<div class="status ${
-                this._status === 'success' ? 'ok' : 'err'
-              }">${this._t(this._status)}</div>`
-            : ''}
         </div>
       </ha-card>
     `;
@@ -4796,15 +4790,6 @@ class TallySetPinCard extends LitElement {
     .keypad .key.del {
       background: var(--error-color, #b71c1c);
       color: #fff;
-    }
-    .status {
-      font-size: 0.9em;
-    }
-    .status.ok {
-      color: var(--success-color, #2e7d32);
-    }
-    .status.err {
-      color: var(--error-color);
     }
   `;
 }
