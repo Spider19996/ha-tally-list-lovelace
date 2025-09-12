@@ -2044,18 +2044,6 @@ class TallyListCardEditor extends LitElement {
                 <ha-switch .checked=${this._config.show_step_select !== false} @change=${this._stepSelectChanged}></ha-switch>
               </label>
             </div>
-            <div class="form">
-              <label class="switch">
-                ${this._t('only_self')}
-                <ha-switch .checked=${this._config.only_self} @change=${this._selfChanged}></ha-switch>
-              </label>
-            </div>
-            <div class="form">
-              <label class="switch">
-                ${this._t('shorten_user_names')}
-                <ha-switch .checked=${this._config.shorten_user_names} @change=${this._shortNamesChanged}></ha-switch>
-              </label>
-            </div>
           `
         : this._tab === 'users'
         ? html`
@@ -2098,6 +2086,18 @@ class TallyListCardEditor extends LitElement {
                   </div>
                 `
               : ''}
+            <div class="form">
+              <label class="switch">
+                ${this._t('only_self')}
+                <ha-switch .checked=${this._config.only_self} @change=${this._selfChanged}></ha-switch>
+              </label>
+            </div>
+            <div class="form">
+              <label class="switch">
+                ${this._t('shorten_user_names')}
+                <ha-switch .checked=${this._config.shorten_user_names} @change=${this._shortNamesChanged}></ha-switch>
+              </label>
+            </div>
           `
         : html`
             <div class="form">
@@ -2885,6 +2885,7 @@ class TallyDueRankingCardEditor extends LitElement {
     return html`
       <nav class="tabs">
         <button class=${this._tab === 'general' ? 'active' : ''} data-tab="general" @click=${this._selectTab}>${this._t('tab_general')}</button>
+        <button class=${this._tab === 'users' ? 'active' : ''} data-tab="users" @click=${this._selectTab}>${this._t('tab_users')}</button>
         <button class=${this._tab === 'advanced' ? 'active' : ''} data-tab="advanced" @click=${this._selectTab}>${this._t('tab_advanced')}</button>
       </nav>
       ${this._tab === 'general'
@@ -2935,6 +2936,9 @@ class TallyDueRankingCardEditor extends LitElement {
                 <ha-switch .checked=${this._config.hide_free} @change=${this._hideChanged}></ha-switch>
               </label>
             </div>
+          `
+        : this._tab === 'users'
+        ? html`
             <div class="form">
               <label class="switch">
                 ${this._t('shorten_user_names')}
@@ -3210,18 +3214,6 @@ class TallyListFreeDrinksCardEditor extends LitElement {
         : this._tab === 'users'
         ? html`
             <div class="form">
-              <label class="switch">
-                ${t(this.hass, this._config.language, 'shorten_user_names')}
-                <ha-switch .checked=${this._config.shorten_user_names} @change=${this._shortNamesChanged}></ha-switch>
-              </label>
-            </div>
-            <div class="form">
-              <label class="switch">
-                ${t(this.hass, this._config.language, 'only_self')}
-                <ha-switch .checked=${this._config.only_self} @change=${this._selfChanged}></ha-switch>
-              </label>
-            </div>
-            <div class="form">
               <label for="${idUserSelector}">${t(this.hass, this._config.language, 'user_selector')}</label>
               <select id="${idUserSelector}" @change=${this._userSelectorChanged}>
                 <option value="list" ?selected=${this._config.user_selector === 'list'}>${t(this.hass, this._config.language, 'user_selector_list')}</option>
@@ -3229,38 +3221,50 @@ class TallyListFreeDrinksCardEditor extends LitElement {
                 <option value="grid" ?selected=${this._config.user_selector === 'grid'}>${t(this.hass, this._config.language, 'user_selector_grid')}</option>
               </select>
             </div>
-            ${['tabs', 'grid'].includes(this._config.user_selector)
-              ? html`
-                  ${this._config.user_selector === 'tabs'
-                    ? html`
-                        <div class="form">
-                          <label for="${idTabMode}">${t(this.hass, this._config.language, 'tab_mode')}</label>
-                          <select id="${idTabMode}" @change=${this._tabModeChanged}>
-                            <option value="per-letter" ?selected=${this._config.tabs.mode === 'per-letter'}>${t(this.hass, this._config.language, 'per_letter')}</option>
-                            <option value="grouped" ?selected=${this._config.tabs.mode === 'grouped'}>${t(this.hass, this._config.language, 'grouped')}</option>
-                          </select>
-                        </div>
-                        ${this._config.tabs.mode === 'grouped'
-                          ? html`<div class="form">
-                              <label for="${idGroupedBreaks}">${t(this.hass, this._config.language, 'grouped_breaks')}</label>
-                              <input id="${idGroupedBreaks}" type="text" .value=${this._config.tabs.grouped_breaks.join(',')} @input=${this._groupedBreaksChanged} />
-                            </div>`
-                          : ''}
-                        <div class="form">
-                          <label class="switch">
-                            ${t(this.hass, this._config.language, 'show_all_tab')}
-                            <ha-switch .checked=${this._config.tabs.show_all_tab} @change=${this._showAllTabChanged}></ha-switch>
-                          </label>
-                        </div>
-                      `
-                    : ''}
-                  <div class="form">
-                    <label for="${idGridColumns}">${t(this.hass, this._config.language, 'grid_columns')}</label>
-                    <input id="${idGridColumns}" type="text" .value=${this._config.grid.columns} @input=${this._gridColumnsChanged} />
-                  </div>
-                `
-              : ''}
-          `
+              ${['tabs', 'grid'].includes(this._config.user_selector)
+                ? html`
+                    ${this._config.user_selector === 'tabs'
+                      ? html`
+                          <div class="form">
+                            <label for="${idTabMode}">${t(this.hass, this._config.language, 'tab_mode')}</label>
+                            <select id="${idTabMode}" @change=${this._tabModeChanged}>
+                              <option value="per-letter" ?selected=${this._config.tabs.mode === 'per-letter'}>${t(this.hass, this._config.language, 'per_letter')}</option>
+                              <option value="grouped" ?selected=${this._config.tabs.mode === 'grouped'}>${t(this.hass, this._config.language, 'grouped')}</option>
+                            </select>
+                          </div>
+                          ${this._config.tabs.mode === 'grouped'
+                            ? html`<div class="form">
+                                <label for="${idGroupedBreaks}">${t(this.hass, this._config.language, 'grouped_breaks')}</label>
+                                <input id="${idGroupedBreaks}" type="text" .value=${this._config.tabs.grouped_breaks.join(',')} @input=${this._groupedBreaksChanged} />
+                              </div>`
+                            : ''}
+                          <div class="form">
+                            <label class="switch">
+                              ${t(this.hass, this._config.language, 'show_all_tab')}
+                              <ha-switch .checked=${this._config.tabs.show_all_tab} @change=${this._showAllTabChanged}></ha-switch>
+                            </label>
+                          </div>
+                        `
+                      : ''}
+                    <div class="form">
+                      <label for="${idGridColumns}">${t(this.hass, this._config.language, 'grid_columns')}</label>
+                      <input id="${idGridColumns}" type="text" .value=${this._config.grid.columns} @input=${this._gridColumnsChanged} />
+                    </div>
+                  `
+                : ''}
+              <div class="form">
+                <label class="switch">
+                  ${t(this.hass, this._config.language, 'only_self')}
+                  <ha-switch .checked=${this._config.only_self} @change=${this._selfChanged}></ha-switch>
+                </label>
+              </div>
+              <div class="form">
+                <label class="switch">
+                  ${t(this.hass, this._config.language, 'shorten_user_names')}
+                  <ha-switch .checked=${this._config.shorten_user_names} @change=${this._shortNamesChanged}></ha-switch>
+                </label>
+              </div>
+            `
         : html`
             <div class="form">
               <label for="${idLanguage}">${fdT(this.hass, this._config.language, 'language')}</label>
@@ -4627,18 +4631,6 @@ class TallySetPinCardEditor extends LitElement {
         : this._tab === 'users'
         ? html`
             <div class="form">
-              <label class="switch">
-                ${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'shorten_user_names')}
-                <ha-switch .checked=${this._config.shorten_user_names} @change=${this._shortNamesChanged}></ha-switch>
-              </label>
-            </div>
-            <div class="form">
-              <label class="switch">
-                ${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'only_self')}
-                <ha-switch .checked=${this._config.only_self} @change=${this._selfChanged}></ha-switch>
-              </label>
-            </div>
-            <div class="form">
               <label for="${idUserSelector}">${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'user_selector')}</label>
               <select id="${idUserSelector}" name="user_selector" @change=${this._userSelectorChanged}>
                 <option value="list" ?selected=${this._config.user_selector === 'list'}>${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'user_selector_list')}</option>
@@ -4677,6 +4669,18 @@ class TallySetPinCardEditor extends LitElement {
                   </div>
                 `
               : ''}
+            <div class="form">
+              <label class="switch">
+                ${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'only_self')}
+                <ha-switch .checked=${this._config.only_self} @change=${this._selfChanged}></ha-switch>
+              </label>
+            </div>
+            <div class="form">
+              <label class="switch">
+                ${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'shorten_user_names')}
+                <ha-switch .checked=${this._config.shorten_user_names} @change=${this._shortNamesChanged}></ha-switch>
+              </label>
+            </div>
           `
         : html`
             <div class="form">
