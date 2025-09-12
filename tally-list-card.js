@@ -4888,6 +4888,23 @@ class TallySetPinCard extends LitElement {
     return users;
   }
 
+  _currentPersonSlugs() {
+    const userId = this.hass?.user?.id;
+    if (!userId) return [];
+    const slugs = [];
+    for (const [entity, state] of Object.entries(this.hass.states)) {
+      if (entity.startsWith('person.') && state.attributes.user_id === userId) {
+        const slug = entity.substring('person.'.length);
+        slugs.push(slug);
+        const alt = fdSlugify(state.attributes.friendly_name || '');
+        if (alt && alt !== slug) {
+          slugs.push(alt);
+        }
+      }
+    }
+    return slugs;
+  }
+
   _normalizeWidth(value) {
     if (!value && value !== 0) return '';
     const str = String(value).trim();
