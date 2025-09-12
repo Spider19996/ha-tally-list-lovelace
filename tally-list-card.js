@@ -101,10 +101,12 @@ const PUBLIC_SESSION = {
   _init: false,
 };
 
+// Notify all subscribed cards that the public session state changed.
 function _psNotify() {
   PUBLIC_SESSION.subs.forEach((c) => c.requestUpdate());
 }
 
+// Initialize public session state from storage and backend.
 async function _psInit(hass) {
   if (PUBLIC_SESSION._init) return;
   PUBLIC_SESSION._init = true;
@@ -132,15 +134,18 @@ async function _psInit(hass) {
   _psNotify();
 }
 
+// Track a card for public session updates and initialize if necessary.
 function _psSubscribe(card) {
   PUBLIC_SESSION.subs.add(card);
   if (card.hass) _psInit(card.hass);
 }
 
+// Remove card from public session tracking.
 function _psUnsubscribe(card) {
   PUBLIC_SESSION.subs.delete(card);
 }
 
+// Refresh session timeout when user interacts with card.
 function _psTouch(card) {
   if (PUBLIC_SESSION.sessionReady && PUBLIC_SESSION.isPublic) {
     const timeout = Number(card?.config?.session_timeout_seconds ?? 30);
@@ -148,6 +153,7 @@ function _psTouch(card) {
   }
 }
 
+// Stop the session countdown timer.
 function _psStopCountdown() {
   if (PUBLIC_SESSION.countdownTimer) {
     clearInterval(PUBLIC_SESSION.countdownTimer);
@@ -155,6 +161,7 @@ function _psStopCountdown() {
   }
 }
 
+// Start or restart countdown timer for the current session.
 function _psStartCountdown(card) {
   const timeout = Number(card.config.session_timeout_seconds ?? 30);
   PUBLIC_SESSION.sessionExpiresAt = Date.now() + timeout * 1000;
@@ -173,6 +180,7 @@ function _psStartCountdown(card) {
   }
 }
 
+// Clear PIN lock state and related timer.
 function _psStopPinLock() {
   if (PUBLIC_SESSION.pinLockTimer) {
     clearInterval(PUBLIC_SESSION.pinLockTimer);
@@ -183,6 +191,7 @@ function _psStopPinLock() {
   PUBLIC_SESSION.pinLockUntil = 0;
 }
 
+// Display a Home Assistant notification to the user.
 function _psToast(card, msg) {
   card.dispatchEvent(
     new CustomEvent('hass-notification', {
@@ -193,6 +202,7 @@ function _psToast(card, msg) {
   );
 }
 
+// Logout current public session via WebSocket and reset state.
 async function _psLogout(card) {
   try {
     await card.hass.callWS({ type: 'tally_list/logout' });
@@ -220,6 +230,7 @@ async function wsLogin(hass, userLabel, pinStr) {
   return res?.success === true;
 }
 
+// Add a digit to the PIN buffer and attempt login once full.
 function _psAddDigit(card, d) {
   if (card.loginPending || card.pinLocked) return;
   if (!card.selectedUser) return;
@@ -231,6 +242,7 @@ function _psAddDigit(card, d) {
   }
 }
 
+// Clear the current PIN entry.
 function _psBackspace(card) {
   if (card.loginPending || card.pinLocked) return;
   if (!card.selectedUser) return;
@@ -238,6 +250,7 @@ function _psBackspace(card) {
   _psNotify();
 }
 
+// Try to authenticate using the selected user and PIN.
 async function _psTryLogin(card) {
   if (card.loginPending || card.pinLocked) return;
   const users = card.config.users || card._autoUsers || [];
@@ -297,6 +310,7 @@ async function _psTryLogin(card) {
   _psNotify();
 }
 
+// Render login cover with user selector and PIN keypad.
 function renderCoverLogin(card) {
   const users = card.config.users || card._autoUsers || [];
   const mode = card.config.user_selector || 'list';
