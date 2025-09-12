@@ -99,6 +99,7 @@ Options:
 * **comment_presets** – Predefine comment prefixes. Each entry has a `label` and optional `require_comment`.
 * **session_timeout_seconds** – Time after login before automatic logout (`30` by default).
 * **pin_lock_ms** – PIN lock duration in milliseconds (`5000` by default).
+* **max_width** – Maximum card width in pixels (`500` by default).
 * **free_drinks_timer_seconds** – Auto-reset timer in seconds (`0` to disable).
 * **free_drinks_per_item_limit** – Maximum free drinks per item (`0` to disable).
 * **free_drinks_total_limit** – Maximum free drinks overall (`0` to disable).
@@ -130,6 +131,7 @@ The card uses the same user list as the main Tally List card and normally requir
 Options:
 
 * **lock_ms** – Lock duration in milliseconds after each PIN attempt (`5000` by default).
+* **max_width** – Maximum card width in pixels (`500` by default).
 * **user_selector** – User selection layout: `list`, `tabs`, or `grid` (`list` by default).
 * **shorten_user_names** – Abbreviate user names in the selector.
 * **pin_warning** – Warning text shown when opening the card. Supports line breaks and simple Markdown for _italic_, **bold**, and __underline__. Set to an empty string to hide the warning. Default: "**Do not use an important PIN (e.g., your bank card PIN).** PINs are stored encrypted, but there is no guarantee they will not fall into the wrong hands."

@@ -3135,6 +3135,7 @@ class TallyListFreeDrinksCardEditor extends LitElement {
       free_drinks_total_limit: 0,
       session_timeout_seconds: 30,
       pin_lock_ms: 5000,
+      max_width: '500px',
       language: 'auto',
       user_selector: 'list',
       shorten_user_names: false,
@@ -3158,6 +3159,7 @@ class TallyListFreeDrinksCardEditor extends LitElement {
     const idFdTimer = this._fid('fd-timer');
     const idFdPerItem = this._fid('fd-per-item');
     const idFdTotal = this._fid('fd-total');
+    const idWidth = this._fid('max-width');
     return html`
       <nav class="tabs">
         <button class=${this._tab === 'general' ? 'active' : ''} data-tab="general" @click=${this._selectTab}>${fdT(this.hass, this._config.language, 'tab_general')}</button>
@@ -3197,6 +3199,10 @@ class TallyListFreeDrinksCardEditor extends LitElement {
             <div class="form">
               <label for="${idPinLock}">${t(this.hass, this._config.language, 'pin_lock_ms')}</label>
               <input id="${idPinLock}" type="number" .value=${this._config.pin_lock_ms} @input=${this._pinLockChanged} />
+            </div>
+            <div class="form">
+              <label for="${idWidth}">${t(this.hass, this._config.language, 'max_width')}</label>
+              <input id="${idWidth}" type="number" .value=${(this._config.max_width ?? '').replace(/px$/, '')} @input=${this._widthChanged} />
             </div>
           `
         : this._tab === 'users'
@@ -3298,6 +3304,13 @@ class TallyListFreeDrinksCardEditor extends LitElement {
       ...this._config,
       pin_lock_ms: isNaN(value) ? 5000 : value,
     };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _widthChanged(ev) {
+    const raw = ev.target.value.trim();
+    const width = raw ? `${raw}px` : '';
+    this._config = { ...this._config, max_width: width };
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
@@ -3574,6 +3587,7 @@ class TallyListFreeDrinksCard extends LitElement {
     this.config = {
       show_prices: true,
       pin_lock_ms: 5000,
+      max_width: '500px',
       language: 'auto',
       user_selector: 'list',
       ...(config || {}),
@@ -3594,6 +3608,14 @@ class TallyListFreeDrinksCard extends LitElement {
       config?.free_drinks_total_limit ?? 0
     );
     this.config.pin_lock_ms = Number(config?.pin_lock_ms ?? 5000);
+    const width = this._normalizeWidth(this.config.max_width);
+    if (width) {
+      this.style.setProperty('--dcc-max-width', width);
+      this.config.max_width = width;
+    } else {
+      this.style.removeProperty('--dcc-max-width');
+      this.config.max_width = '';
+    }
     if (!this._commentType && this.config.comment_presets?.length) {
       this._commentType = this.config.comment_presets[0].label;
     }
@@ -3836,6 +3858,13 @@ class TallyListFreeDrinksCard extends LitElement {
     this.requestUpdate('_freeDrinkCounts');
   }
 
+  _normalizeWidth(value) {
+    if (!value && value !== 0) return '';
+    const str = String(value).trim();
+    if (str === '') return '';
+    return /^\d+$/.test(str) ? `${str}px` : str;
+  }
+
   _fdValidateLimitsOrThrow() {
     const total = this._getTotalCount();
     if (this._totalCap > 0 && total > this._totalCap)
@@ -3991,8 +4020,10 @@ class TallyListFreeDrinksCard extends LitElement {
   }
 
   render() {
+    const width = this._normalizeWidth(this.config.max_width);
+    const cardStyle = width ? `max-width:${width};margin:0 auto;` : '';
     const allUsers = this.config.users || this._autoUsers || [];
-    if (allUsers.length === 0) return html`<ha-card>...</ha-card>`;
+    if (allUsers.length === 0) return html`<ha-card style="${cardStyle}">...</ha-card>`;
     if (this.needsLogin()) {
       return this.renderCoverLogin();
     }
@@ -4045,7 +4076,7 @@ class TallyListFreeDrinksCard extends LitElement {
       selectedPreset?.require_comment ? 'comment' : 'comment_optional'
     );
     return html`
-      <ha-card class="free-drinks">
+      <ha-card class="free-drinks" style="${cardStyle}">
         ${userMenu}
         <table>
           <thead>
@@ -4165,7 +4196,7 @@ class TallyListFreeDrinksCard extends LitElement {
   }
 
   static getStubConfig() {
-    return { show_prices: true };
+    return { show_prices: true, max_width: '500px' };
   }
 
   static styles = [TallyListCard.styles, css`
@@ -4439,6 +4470,7 @@ class TallySetPinCardEditor extends LitElement {
     const grid = { columns: 0, ...(config?.grid || {}) };
     this._config = {
       lock_ms: 5000,
+      max_width: '500px',
       user_selector: 'list',
       language: 'auto',
       shorten_user_names: false,
@@ -4522,6 +4554,15 @@ class TallySetPinCardEditor extends LitElement {
     );
   }
 
+  _widthChanged(ev) {
+    const raw = ev.target.value.trim();
+    const width = raw ? `${raw}px` : '';
+    this._config = { ...this._config, max_width: width };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', { detail: { config: this._config } })
+    );
+  }
+
   render() {
     const idLock = this._fid('lock-ms');
     const idUserSelector = this._fid('user-selector');
@@ -4530,6 +4571,7 @@ class TallySetPinCardEditor extends LitElement {
     const idGridColumns = this._fid('grid-columns');
     const idWarning = this._fid('pin-warning');
     const idLanguage = this._fid('language');
+    const idWidth = this._fid('max-width');
     return html`
       <nav class="tabs">
         <button class=${this._tab === 'general' ? 'active' : ''} data-tab="general" @click=${this._selectTab}>
@@ -4551,6 +4593,10 @@ class TallySetPinCardEditor extends LitElement {
             <div class="form">
               <label for="${idWarning}">${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'warning_text')}</label>
               <textarea id="${idWarning}" name="pin_warning" .value=${this._config.pin_warning} @input=${this._warningChanged}></textarea>
+            </div>
+            <div class="form">
+              <label for="${idWidth}">${t(this.hass, this._config?.language, 'max_width')}</label>
+              <input id="${idWidth}" name="max_width" type="number" .value=${(this._config.max_width ?? '').replace(/px$/, '')} @input=${this._widthChanged} />
             </div>
           `
         : this._tab === 'users'
@@ -4729,6 +4775,7 @@ class TallySetPinCard extends LitElement {
     };
     this.config = {
       lock_ms: 5000,
+      max_width: '500px',
       user_selector: 'list',
       language: 'auto',
       shorten_user_names: false,
@@ -4736,6 +4783,14 @@ class TallySetPinCard extends LitElement {
     };
     this.config.tabs = tabs;
     this.config.grid = grid;
+    const width = this._normalizeWidth(this.config.max_width);
+    if (width) {
+      this.style.setProperty('--dcc-max-width', width);
+      this.config.max_width = width;
+    } else {
+      this.style.removeProperty('--dcc-max-width');
+      this.config.max_width = '';
+    }
     this._showWarn = this._warningText !== '';
   }
 
@@ -4799,6 +4854,13 @@ class TallySetPinCard extends LitElement {
       }
     }
     return users;
+  }
+
+  _normalizeWidth(value) {
+    if (!value && value !== 0) return '';
+    const str = String(value).trim();
+    if (str === '') return '';
+    return /^\d+$/.test(str) ? `${str}px` : str;
   }
 
   _addDigit(d) {
@@ -4921,6 +4983,8 @@ class TallySetPinCard extends LitElement {
   }
 
   render() {
+    const width = this._normalizeWidth(this.config.max_width);
+    const cardStyle = width ? `max-width:${width};margin:0 auto;` : '';
     const users = this._users;
     const isAdmin = this._isAdmin;
     const mode = this.config.user_selector || 'list';
@@ -4950,7 +5014,7 @@ class TallySetPinCard extends LitElement {
     );
     const warningHtml = formatWarning(this._warningText);
     return html`
-      <ha-card>
+      <ha-card style="${cardStyle}">
         ${this._showWarn && userFound
           ? this._warningText
             ? html`<div class="warn-overlay">
@@ -5016,10 +5080,13 @@ class TallySetPinCard extends LitElement {
   }
 
   static getStubConfig() {
-    return {};
+    return { max_width: '500px' };
   }
 
   static styles = css`
+    :host {
+      display: block;
+    }
     .content {
       padding: 16px;
       display: flex;
@@ -5028,6 +5095,8 @@ class TallySetPinCard extends LitElement {
     }
     ha-card {
       position: relative;
+      margin: 0 auto;
+      max-width: var(--dcc-max-width, none);
     }
     .warn-overlay {
       position: absolute;
