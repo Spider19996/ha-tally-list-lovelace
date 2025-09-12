@@ -1065,6 +1065,7 @@ class TallyListCard extends LitElement {
     }
     const userNames = [this.hass.user?.name, ...this._currentPersonNames()];
     const isAdmin = userNames.some((n) => (this._tallyAdmins || []).includes(n));
+    const showAdmin = isAdmin && !this.config.only_self;
     let limitSelf = !isAdmin || this.config.only_self;
     if (this.isPublic) limitSelf = false;
     if (limitSelf) {
@@ -1127,7 +1128,7 @@ class TallyListCard extends LitElement {
         users,
         this.selectedUser,
         mode,
-        isAdmin,
+        showAdmin,
         (id) => {
           this._setSelectedUser(id, mode);
           this.requestUpdate('selectedUser');
@@ -1158,13 +1159,13 @@ class TallyListCard extends LitElement {
       <ha-card style="${cardStyle}">
         ${this.isPublic && this.sessionReady
           ? ''
-          : mode === 'tabs' && isAdmin
+          : mode === 'tabs' && showAdmin
           ? userMenu
           : ''}
         <div class="content">
           ${this.isPublic && this.sessionReady
             ? userMenu
-            : mode === 'tabs' && isAdmin
+            : mode === 'tabs' && showAdmin
             ? ''
             : userMenu}
           <div class="container-grid">
