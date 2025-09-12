@@ -375,7 +375,7 @@ function renderCoverLogin(card) {
     </div></div></ha-card>`;
 }
 
-const CARD_VERSION = '07.09.2025';
+const CARD_VERSION = '12.09.25';
 
 const TL_STRINGS = {
   en: {
