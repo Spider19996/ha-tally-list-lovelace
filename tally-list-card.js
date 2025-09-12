@@ -4407,6 +4407,7 @@ const PIN_EDITOR_STRINGS = {
     show_all_tab: 'Show "All" tab',
     grid_columns: 'Grid columns (0 = auto)',
     shorten_user_names: 'Shorten user names',
+    only_self: 'Only show own user even for admins',
     warning_text: 'Warning message (empty to disable)',
     tab_general: 'General',
     tab_users: 'Users',
@@ -4431,6 +4432,7 @@ const PIN_EDITOR_STRINGS = {
     show_all_tab: 'Tab "Alle" anzeigen',
     grid_columns: 'Spalten (0 = automatisch)',
     shorten_user_names: 'Namen kürzen',
+    only_self: 'Trotz Admin nur eigenen Nutzer anzeigen',
     warning_text: 'Warnhinweis (leer lassen zum Deaktivieren)',
     tab_general: 'Allgemein',
     tab_users: 'Benutzer',
@@ -4474,6 +4476,7 @@ class TallySetPinCardEditor extends LitElement {
       user_selector: 'list',
       language: 'auto',
       shorten_user_names: false,
+      only_self: false,
       ...(config || {}),
       tabs,
       grid,
@@ -4502,6 +4505,13 @@ class TallySetPinCardEditor extends LitElement {
       new CustomEvent('config-changed', { detail: { config: this._config } })
     );
   }
+  _selfChanged(ev) {
+    this._config = { ...this._config, only_self: ev.target.checked };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', { detail: { config: this._config } })
+    );
+  }
+
 
   _userSelectorChanged(ev) {
     this._config = { ...this._config, user_selector: ev.target.value };
@@ -4605,6 +4615,12 @@ class TallySetPinCardEditor extends LitElement {
               <label class="switch">
                 ${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'shorten_user_names')}
                 <ha-switch .checked=${this._config.shorten_user_names} @change=${this._shortNamesChanged}></ha-switch>
+              </label>
+            </div>
+            <div class="form">
+              <label class="switch">
+                ${translate(this.hass, this._config?.language, PIN_EDITOR_STRINGS, 'only_self')}
+                <ha-switch .checked=${this._config.only_self} @change=${this._selfChanged}></ha-switch>
               </label>
             </div>
             <div class="form">
@@ -4779,6 +4795,7 @@ class TallySetPinCard extends LitElement {
       user_selector: 'list',
       language: 'auto',
       shorten_user_names: false,
+      only_self: false,
       ...(config || {}),
     };
     this.config.tabs = tabs;
@@ -4921,7 +4938,7 @@ class TallySetPinCard extends LitElement {
     }
     const users = this._users;
     let label;
-    if (this._isAdmin) {
+    if (this._isAdmin && !this.config.only_self) {
       const u = users.find(
         (u) =>
           u.user_id === this.selectedUserId ||
@@ -4985,10 +5002,22 @@ class TallySetPinCard extends LitElement {
   render() {
     const width = this._normalizeWidth(this.config.max_width);
     const cardStyle = width ? `max-width:${width};margin:0 auto;` : '';
-    const users = this._users;
-    const isAdmin = this._isAdmin;
+    let users = this._users;
     const mode = this.config.user_selector || 'list';
     const current = this.hass?.user;
+    let isAdmin = this._isAdmin;
+    if (this.config.only_self && isAdmin) {
+      users = users.filter(
+        (u) =>
+          u.user_id === current?.id ||
+          u.name === current?.name ||
+          u.slug === current?.name
+      );
+      isAdmin = false;
+    }
+    if (!this.selectedUserId && current?.id) {
+      this.selectedUserId = current.id;
+    }
     const userFound =
       isAdmin ||
       users.some(
@@ -4997,17 +5026,15 @@ class TallySetPinCard extends LitElement {
           u.name === current?.name ||
           u.slug === current?.name
       );
-    const userMenu = isAdmin
-      ? _renderUserMenu(
-          this,
-          users,
-          this.selectedUserId,
-          mode,
-          true,
-          (id) => this._handleSelect(id),
-          (u) => u.user_id
-        )
-      : null;
+    const userMenu = _renderUserMenu(
+      this,
+      users,
+      this.selectedUserId,
+      mode,
+      isAdmin,
+      (id) => this._handleSelect(id),
+      (u) => u.user_id
+    );
     const digits = [1, 2, 3, 4, 5, 6, 7, 8, 9, '⟲', 0];
     const pinMask = Array.from({ length: 4 }, (_, i) =>
       html`<span class="pin-dot ${this._buffer.length > i ? 'filled' : ''}"></span>`
@@ -5028,7 +5055,7 @@ class TallySetPinCard extends LitElement {
             : ''
           : ''}
         <div class="content">
-          ${isAdmin ? userMenu : ''}
+          ${userMenu}
           ${userFound
             ? html`
                 <div class="pin-label">

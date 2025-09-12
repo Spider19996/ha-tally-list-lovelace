@@ -139,6 +139,7 @@ Options:
 * **max_width** – Maximum card width in pixels (`500` by default).
 * **user_selector** – User selection layout: `list`, `tabs`, or `grid` (`list` by default).
 * **shorten_user_names** – Abbreviate user names in the selector.
+* **only_self** – Only show the current user even for admins.
 * **pin_warning** – Warning text shown when opening the card. Supports line breaks and simple Markdown for _italic_, **bold**, and __underline__. Set to an empty string to hide the warning. Default: "**Do not use an important PIN (e.g., your bank card PIN).** PINs are stored encrypted, but there is no guarantee they will not fall into the wrong hands."
 
 It calls the `tally_list.set_pin` service to store the new code, e.g.:
