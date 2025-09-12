@@ -11,14 +11,28 @@ A Lovelace card for Home Assistant that displays drink tallies per user and allo
   <img src="images/image4.png" width="24%" />
 </p>
 
-**Note:** This card requires the [Tally List integration](https://github.com/Spider19996/ha-tally-list).
+## Features
+
+* Shows drink counts per user and the amount owed
+* Add or remove drinks with an adjustable step size
+* Automatic user and price detection from the Tally List integration
+* English and German language support with auto detection
+* Includes additional cards:
+  * **Amount Due Ranking** – list users ordered by outstanding amount
+  * **Free Drinks** – book free drinks with a mandatory comment
+  * **PIN Set** – let users set or reset their 4-digit PIN
+
+## Requirements
+
+* Home Assistant
+* [Tally List integration](https://github.com/Spider19996/ha-tally-list)
 
 ## Installation
 
 ### Via HACS
-1. Add this repository as a **Custom Repository** in HACS (category **Lovelace**). 
+1. Add this repository as a **Custom Repository** in HACS (category **Lovelace**).
 2. Install **Tally List Card** from the HACS store.
-3. HACS keeps the files up to date. The Free Drinks Card is included automatically and requires no extra resource.
+3. HACS keeps the files up to date.
 
 ### Manual
 1. Copy `tally-list-card.js` to your Home Assistant `www` directory.
@@ -27,8 +41,6 @@ A Lovelace card for Home Assistant that displays drink tallies per user and allo
 - url: /local/tally-list-card.js
   type: module
 ```
-
-The Free Drinks Card is loaded automatically and needs no separate resource.
 
 ### Add to Lovelace
 After the resource is available, open the dashboard, choose **Add Card**, and select **Tally List Card**. The editor lets you configure options without YAML.

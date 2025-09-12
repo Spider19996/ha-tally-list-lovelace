@@ -4,16 +4,30 @@
 
 Eine Lovelace-Karte für Home Assistant, die Getränkezähler pro Nutzer anzeigt und aktualisieren lässt. Nach der Auswahl eines Namens erscheinen die Anzahl der Getränke sowie der fällige Betrag. Nutzer und Preise werden automatisch aus der Tally‑List‑Integration gelesen. Währung und Sprache folgen den Home‑Assistant‑Einstellungen (Englisch und Deutsch, manuelle Auswahl möglich).
 
-**Hinweis:** Für diese Karte wird die [Tally‑List‑Integration](https://github.com/Spider19996/ha-tally-list) benötigt.
-
 ![Screenshot der Tally List Karte](images/image1.png)
+
+## Funktionen
+
+* Zeigt Getränkeanzahl und offenen Betrag pro Nutzer
+* Getränke hinzufügen oder entfernen mit einstellbarer Schrittweite
+* Automatische Erkennung von Nutzern und Preisen über die Tally‑List‑Integration
+* Sprachunterstützung für Deutsch und Englisch
+* Enthält zusätzliche Karten:
+  * **Strichliste Rangliste** – sortiert alle Nutzer nach offenem Betrag
+  * **Strichliste Freigetränke** – bucht Freigetränke mit Kommentarpflicht
+  * **Strichliste PIN setzen** – erlaubt das Setzen oder Zurücksetzen der PIN
+
+## Voraussetzungen
+
+* Home Assistant
+* [Tally‑List‑Integration](https://github.com/Spider19996/ha-tally-list)
 
 ## Installation
 
 ### Über HACS
 1. Dieses Repository in HACS als **Custom Repository** (Kategorie **Lovelace**) hinzufügen.
 2. **Tally List Card** aus dem HACS‑Store installieren.
-3. HACS hält die Dateien aktuell. Die Karte **Strichliste Freigetränke** ist automatisch enthalten und benötigt keine zusätzliche Ressource.
+3. HACS hält die Dateien aktuell.
 
 ### Manuell
 1. `tally-list-card.js` in das `www`‑Verzeichnis von Home Assistant kopieren.
@@ -22,8 +36,6 @@ Eine Lovelace-Karte für Home Assistant, die Getränkezähler pro Nutzer anzeigt
 - url: /local/tally-list-card.js
   type: module
 ```
-
-Die Karte **Strichliste Freigetränke** wird automatisch geladen und benötigt keine separate Ressource.
 
 ### In Lovelace einbinden
 Nach dem Hinzufügen der Ressource das Dashboard öffnen, **Karte hinzufügen** wählen und **Tally List Card** auswählen. Der Editor erlaubt die Konfiguration ohne YAML.
