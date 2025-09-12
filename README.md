@@ -16,9 +16,10 @@ A Lovelace card for Home Assistant that displays drink tallies per user and allo
 ## Installation
 
 ### Via HACS
-1. Add this repository as a **Custom Repository** in HACS (category **Lovelace**). 
+1. Add this repository as a **Custom Repository** in HACS (category **Lovelace**).
 2. Install **Tally List Card** from the HACS store.
 3. HACS keeps the files up to date. The Free Drinks Card is included automatically and requires no extra resource.
+4. HACS creates the update entity `update.tally_list_card_update` (previously `update.drink_counter_card_update`). If you still see the old entity, remove and re-add the repository in HACS.
 
 ### Manual
 1. Copy `tally-list-card.js` to your Home Assistant `www` directory.

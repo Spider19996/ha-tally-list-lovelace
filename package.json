@@ -1,5 +1,5 @@
 {
-  "name": "ha-tally-list-lovelace",
+  "name": "tally-list-card",
   "version": "12.09.25",
   "description": "A simple Lovelace card for showing and updating tally counts per user",
   "main": "tally-list-card.js",

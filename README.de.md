@@ -14,6 +14,7 @@ Eine Lovelace-Karte für Home Assistant, die Getränkezähler pro Nutzer anzeigt
 1. Dieses Repository in HACS als **Custom Repository** (Kategorie **Lovelace**) hinzufügen.
 2. **Tally List Card** aus dem HACS‑Store installieren.
 3. HACS hält die Dateien aktuell. Die Karte **Strichliste Freigetränke** ist automatisch enthalten und benötigt keine zusätzliche Ressource.
+4. HACS erstellt die Update-Entität `update.tally_list_card_update` (zuvor `update.drink_counter_card_update`). Falls weiterhin die alte Entität erscheint, Repository in HACS entfernen und neu hinzufügen.
 
 ### Manuell
 1. `tally-list-card.js` in das `www`‑Verzeichnis von Home Assistant kopieren.
