@@ -102,6 +102,7 @@ Optionen:
 * **free_drinks_timer_seconds** – Auto-Reset-Timer in Sekunden (`0` = aus).
 * **free_drinks_per_item_limit** – Limit je Getränk (`0` = aus).
 * **free_drinks_total_limit** – Gesamtlimit (`0` = aus).
+* **only_self** – Nur den eigenen Nutzer anzeigen, auch für Admins.
 * **Namen kürzen** – Namen in der Auswahl abkürzen.
 
 Beispiel:

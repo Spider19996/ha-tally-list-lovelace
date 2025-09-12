@@ -108,6 +108,7 @@ Options:
 * **free_drinks_timer_seconds** – Auto-reset timer in seconds (`0` to disable).
 * **free_drinks_per_item_limit** – Maximum free drinks per item (`0` to disable).
 * **free_drinks_total_limit** – Maximum free drinks overall (`0` to disable).
+* **only_self** – Only show the current user even for admins.
 * **shorten_user_names** – Abbreviate user names in the selector.
 
 Example:

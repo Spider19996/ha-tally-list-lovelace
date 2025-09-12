@@ -3139,6 +3139,7 @@ class TallyListFreeDrinksCardEditor extends LitElement {
       max_width: '500px',
       language: 'auto',
       user_selector: 'list',
+      only_self: false,
       shorten_user_names: false,
       ...(config || {}),
       comment_presets: presets,
@@ -3212,6 +3213,12 @@ class TallyListFreeDrinksCardEditor extends LitElement {
               <label class="switch">
                 ${t(this.hass, this._config.language, 'shorten_user_names')}
                 <ha-switch .checked=${this._config.shorten_user_names} @change=${this._shortNamesChanged}></ha-switch>
+              </label>
+            </div>
+            <div class="form">
+              <label class="switch">
+                ${t(this.hass, this._config.language, 'only_self')}
+                <ha-switch .checked=${this._config.only_self} @change=${this._selfChanged}></ha-switch>
               </label>
             </div>
             <div class="form">
@@ -3373,6 +3380,11 @@ class TallyListFreeDrinksCardEditor extends LitElement {
       ...this._config,
       free_drinks_total_limit: isNaN(value) ? 0 : value,
     };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _selfChanged(ev) {
+    this._config = { ...this._config, only_self: ev.target.checked };
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
@@ -3591,6 +3603,7 @@ class TallyListFreeDrinksCard extends LitElement {
       max_width: '500px',
       language: 'auto',
       user_selector: 'list',
+      only_self: false,
       ...(config || {}),
       comment_presets: presets,
       tabs,
@@ -4036,9 +4049,10 @@ class TallyListFreeDrinksCard extends LitElement {
     const showPrices = this.config.show_prices !== false;
     const mode = this.config.user_selector || 'list';
     const isAdmin = this._isAdmin;
+    const showAdmin = isAdmin && !this.config.only_self;
     const visibleUsers = this.isPublic
       ? allUsers
-      : isAdmin
+      : showAdmin
       ? allUsers
       : allUsers.filter((u) => u.user_id === this.hass?.user?.id);
     if (this.isPublic && this.sessionReady) {
@@ -4053,7 +4067,7 @@ class TallyListFreeDrinksCard extends LitElement {
         users: visibleUsers,
         selectedUserId: selected,
         layout: mode,
-        isAdmin,
+        isAdmin: showAdmin,
         onSelect: (id) => this._onUserSelect(id),
       });
     }
