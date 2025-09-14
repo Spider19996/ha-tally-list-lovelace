@@ -441,7 +441,6 @@ const TL_STRINGS = {
     hide_free: 'Hide people without amount',
     show_step_select: 'Show step selection',
     show_credit: 'Show credit line',
-    show_icons: 'Show drink icons',
     copy_table: 'Copy table',
     copied: 'Copied!',
     reset_all: 'Reset all tallies',
@@ -517,7 +516,6 @@ const TL_STRINGS = {
     hide_free: 'Personen ohne Betrag ausblenden',
     show_step_select: 'Schrittweiten-Auswahl anzeigen',
     show_credit: 'Guthaben/Schulden anzeigen',
-    show_icons: 'Icons anzeigen',
     copy_table: 'Tabelle kopieren',
     copied: 'Kopiert!',
     reset_all: 'Alle Striche zurücksetzen',
@@ -967,7 +965,6 @@ class TallyListCard extends LitElement {
       user_selector: 'list',
       show_step_select: true,
       show_credit: true,
-      show_icons: false,
       ...config,
     };
     this.config.tabs = tabs;
@@ -1041,8 +1038,7 @@ class TallyListCard extends LitElement {
         const cost = count * price;
         total += cost;
         const costStr = this._formatPrice(cost) + ` ${this._currency}`;
-        const icon = stateObj?.attributes?.icon;
-        rows.push({ drink, entity, count, priceStr, costStr, isAvailable, icon, display: drink.charAt(0).toUpperCase() + drink.slice(1) });
+        rows.push({ drink, entity, count, priceStr, costStr, isAvailable, display: drink.charAt(0).toUpperCase() + drink.slice(1) });
       });
 
     if (user.amount_due_entity) deps.add(user.amount_due_entity);
@@ -1209,10 +1205,7 @@ class TallyListCard extends LitElement {
               <td>
                 <button class="action-btn plus plus-btn" data-drink="${r.drink}" @pointerdown=${this._onAddDrink} ?disabled=${this._disabled || !r.isAvailable}>+${this.selectedCount}</button>
               </td>
-              <td class="drink">
-                ${this.config.show_icons && r.icon ? html`<ha-icon icon="${r.icon}"></ha-icon>` : ''}
-                ${r.display}
-              </td>
+              <td>${r.display}</td>
               <td>${r.count}</td>
               <td>${r.priceStr}</td>
               <td>${r.costStr}</td>
@@ -1980,15 +1973,6 @@ class TallyListCard extends LitElement {
       border-bottom: 1px solid var(--divider-color);
       text-align: center;
     }
-    td.drink {
-      text-align: left;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    td.drink ha-icon {
-      --mdc-icon-size: 20px;
-    }
     button {
       padding: 4px;
     }
@@ -2039,7 +2023,6 @@ class TallyListCardEditor extends LitElement {
       only_self: false,
       show_step_select: true,
       show_credit: true,
-      show_icons: false,
       show_all_users: false,
       show_inactive_drinks: false,
       shorten_user_names: false,
@@ -2097,12 +2080,6 @@ class TallyListCardEditor extends LitElement {
               <label class="switch">
                 ${this._t('show_credit')}
                 <ha-switch .checked=${this._config.show_credit !== false} @change=${this._creditChanged}></ha-switch>
-              </label>
-            </div>
-            <div class="form">
-              <label class="switch">
-                ${this._t('show_icons')}
-                <ha-switch .checked=${this._config.show_icons} @change=${this._iconsChanged}></ha-switch>
               </label>
             </div>
           `
@@ -2229,11 +2206,6 @@ class TallyListCardEditor extends LitElement {
 
   _creditChanged(ev) {
     this._config = { ...this._config, show_credit: ev.target.checked };
-    fireEvent(this, 'config-changed', { config: this._config });
-  }
-
-  _iconsChanged(ev) {
-    this._config = { ...this._config, show_icons: ev.target.checked };
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
@@ -3109,7 +3081,6 @@ customElements.define('tally-due-ranking-card-editor', TallyDueRankingCardEditor
 const FD_STRINGS = {
   en: {
     show_prices: 'Show prices',
-    show_icons: 'Show drink icons',
     version: 'Version',
     card_name: 'Free Drinks Card',
     card_desc: 'Book free drinks with a required comment.',
@@ -3135,7 +3106,6 @@ const FD_STRINGS = {
   },
   de: {
     show_prices: 'Preise anzeigen',
-    show_icons: 'Icons anzeigen',
     version: 'Version',
     card_name: 'Strichliste Freigetränke',
     card_desc: 'Freigetränke mit Pflichtkommentar buchen.',
@@ -3208,7 +3178,6 @@ class TallyListFreeDrinksCardEditor extends LitElement {
     const grid = { columns: 0, ...(config?.grid || {}) };
     this._config = {
       show_prices: true,
-      show_icons: false,
       free_drinks_timer_seconds: 0,
       free_drinks_per_item_limit: 0,
       free_drinks_total_limit: 0,
@@ -3252,12 +3221,6 @@ class TallyListFreeDrinksCardEditor extends LitElement {
               <label class="switch">
                 ${fdT(this.hass, this._config.language, 'show_prices')}
                 <ha-switch .checked=${this._config.show_prices !== false} @change=${this._pricesChanged}></ha-switch>
-              </label>
-            </div>
-            <div class="form">
-              <label class="switch">
-                ${fdT(this.hass, this._config.language, 'show_icons')}
-                <ha-switch .checked=${this._config.show_icons} @change=${this._iconsChanged}></ha-switch>
               </label>
             </div>
             <div class="form">
@@ -3365,11 +3328,6 @@ class TallyListFreeDrinksCardEditor extends LitElement {
 
   _pricesChanged(ev) {
     this._config = { ...this._config, show_prices: ev.target.checked };
-    fireEvent(this, 'config-changed', { config: this._config });
-  }
-
-  _iconsChanged(ev) {
-    this._config = { ...this._config, show_icons: ev.target.checked };
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
@@ -3688,7 +3646,6 @@ class TallyListFreeDrinksCard extends LitElement {
     const grid = { columns: 0, ...(config?.grid || {}) };
     this.config = {
       show_prices: true,
-      show_icons: false,
       pin_lock_ms: 5000,
       max_width: '500px',
       language: 'auto',
@@ -4169,7 +4126,7 @@ class TallyListFreeDrinksCard extends LitElement {
           (this._drinkNames[drink] || drink)
             .replace(/_/g, ' ')
             .replace(/\b\w/g, (c) => c.toUpperCase());
-        drinks.push({ drink, name, entity: user.drinks[drink] });
+        drinks.push({ drink, name });
       }
     }
     drinks.sort((a, b) => a.name.localeCompare(b.name));
@@ -4201,12 +4158,8 @@ class TallyListFreeDrinksCard extends LitElement {
                 const atPerItemCap = this._perItemCap > 0 && count >= this._perItemCap;
                 const atTotalCap = this._totalCap > 0 && total >= this._totalCap;
                 const disablePlus = atPerItemCap || atTotalCap;
-                const icon = this.config.show_icons ? this.hass.states[d.entity]?.attributes?.icon : null;
                 return html`<tr>
-                  <td class="drink">
-                    ${this.config.show_icons && icon ? html`<ha-icon icon="${icon}"></ha-icon>` : ''}
-                    ${d.name}
-                  </td>
+                  <td>${d.name}</td>
                   ${showPrices
                     ? html`<td>${this._formatPrice(prices[d.drink])} ${this._currency}</td>`
                     : ''}
