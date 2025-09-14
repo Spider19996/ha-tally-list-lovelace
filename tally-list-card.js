@@ -5478,9 +5478,9 @@ const CREDIT_STRINGS = {
     card_name: 'Credit Card',
     card_desc: 'Adjust user credit',
     amount: 'Amount',
-    add_credit: 'Add credit',
-    remove_credit: 'Remove credit',
-    set_credit: 'Set credit',
+    add_credit: 'Add',
+    remove_credit: 'Remove',
+    set_credit: 'Set',
     no_admin: 'Admins only',
     no_public: 'Unavailable on public devices',
     success: 'Credit updated',
@@ -5491,9 +5491,9 @@ const CREDIT_STRINGS = {
     card_name: 'Guthaben Karte',
     card_desc: 'Guthaben eines Nutzers anpassen',
     amount: 'Betrag',
-    add_credit: 'Guthaben hinzufügen',
-    remove_credit: 'Guthaben entfernen',
-    set_credit: 'Guthaben setzen',
+    add_credit: 'Hinzufügen',
+    remove_credit: 'Entfernen',
+    set_credit: 'Setzen',
     no_admin: 'Nur für Administratoren',
     no_public: 'Auf öffentlichen Geräten nicht verfügbar',
     success: 'Guthaben aktualisiert',
@@ -5883,6 +5883,7 @@ class TallyCreditCard extends LitElement {
       background: var(--primary-color);
       color: var(--text-primary-color, #fff);
       padding: 0 16px;
+      font-weight: 700;
     }
     .action-btn.add {
       background: var(--success-color, #2e7d32);
