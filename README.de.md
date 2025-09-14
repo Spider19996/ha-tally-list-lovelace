@@ -8,7 +8,7 @@ Eine Lovelace-Karte für Home Assistant, die Getränkezähler pro Nutzer anzeigt
 
 ## Funktionen
 
-* Zeigt Getränkeanzahl und offenen Betrag pro Nutzer
+* Zeigt Getränkeanzahl, offenen Betrag und Guthaben/Schulden pro Nutzer
 * Getränke hinzufügen oder entfernen mit einstellbarer Schrittweite
 * Automatische Erkennung von Nutzern und Preisen über die Tally‑List‑Integration
 * Sprachunterstützung für Deutsch und Englisch
@@ -71,6 +71,7 @@ Folgende Optionen stehen im UI zur Verfügung:
 * **Maximale Breite (px)** – Begrenzung der Kartenbreite. Standard `500`.
 * **Entfernen-Menü anzeigen** – Ein-/Ausblenden des Menüs zum Entfernen.
 * **Schrittweiten-Auswahl anzeigen** – Schaltflächen zur Auswahl der Schrittweite (1, 3, 5, 10) anzeigen.
+* **Guthaben/Schulden anzeigen** – Zeile mit bereits gezahltem Betrag ein- oder ausblenden.
 * **Nur sich selbst zeigen** – Auswahl auch für Admins auf den eingeloggten Nutzer beschränken.
 * **Namen kürzen** – Namen in der Auswahl abkürzen, bei Bedarf mit weiteren Buchstaben eindeutig halten.
 * **Sprache** – **Auto**, **Deutsch** oder **English** erzwingen.

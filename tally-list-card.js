@@ -389,7 +389,7 @@ function renderCoverLogin(card) {
     </div></div></ha-card>`;
 }
 
-const CARD_VERSION = '12.09.25';
+const CARD_VERSION = '14.09.25';
 
 const TL_STRINGS = {
   en: {
@@ -409,6 +409,7 @@ const TL_STRINGS = {
     sum: 'Sum',
     total: 'Total',
     free_amount: 'Free amount',
+    credit: 'Credit',
     amount_due: 'Amount due',
     lock_ms: 'Lock duration (ms)',
     pin_lock_ms: 'PIN lock duration (ms)',
@@ -439,6 +440,7 @@ const TL_STRINGS = {
     show_total: 'Show total amount',
     hide_free: 'Hide people without amount',
     show_step_select: 'Show step selection',
+    show_credit: 'Show credit line',
     copy_table: 'Copy table',
     copied: 'Copied!',
     reset_all: 'Reset all tallies',
@@ -482,6 +484,7 @@ const TL_STRINGS = {
     sum: 'Summe',
     total: 'Gesamt',
     free_amount: 'Freibetrag',
+    credit: 'Guthaben/Schulden',
     amount_due: 'Zu zahlen',
     lock_ms: 'Sperrzeit (ms)',
     pin_lock_ms: 'PIN-Sperrzeit (ms)',
@@ -512,6 +515,7 @@ const TL_STRINGS = {
     show_total: 'Gesamtsumme anzeigen',
     hide_free: 'Personen ohne Betrag ausblenden',
     show_step_select: 'Schrittweiten-Auswahl anzeigen',
+    show_credit: 'Guthaben/Schulden anzeigen',
     copy_table: 'Tabelle kopieren',
     copied: 'Kopiert!',
     reset_all: 'Alle Striche zurücksetzen',
@@ -960,6 +964,7 @@ class TallyListCard extends LitElement {
       language: 'auto',
       user_selector: 'list',
       show_step_select: true,
+      show_credit: true,
       ...config,
     };
     this.config.tabs = tabs;
@@ -1037,6 +1042,8 @@ class TallyListCard extends LitElement {
       });
 
     if (user.amount_due_entity) deps.add(user.amount_due_entity);
+    const creditEntity = `sensor.${user.slug}_credit`;
+    deps.add(creditEntity);
     this._deps = deps;
 
     const drinks = drinkEntries.map(([d]) => d).sort((a, b) => a.localeCompare(b));
@@ -1052,8 +1059,15 @@ class TallyListCard extends LitElement {
       due = Math.max(total - freeAmount, 0);
     }
     const dueStr = this._formatPrice(due) + ` ${this._currency}`;
+    const creditState = this.hass.states[creditEntity];
+    const creditVal = parseFloat(creditState?.state);
+    const credit = isNaN(creditVal) ? 0 : creditVal;
+    const creditStr =
+      (credit > 0 ? '+ ' : credit < 0 ? '- ' : '') +
+      this._formatPrice(Math.abs(credit)) +
+      ` ${this._currency}`;
 
-    const data = { rows, drinks, totalStr, freeAmountStr, dueStr, total, freeAmount, due };
+    const data = { rows, drinks, totalStr, freeAmountStr, dueStr, creditStr, total, freeAmount, due, credit };
     this._tableCache = { user, drinks: user.drinks, prices, localeKey, currency: this._currency, data };
     return data;
   }
@@ -1129,6 +1143,8 @@ class TallyListCard extends LitElement {
     const totalStr = table.totalStr;
     const freeAmountStr = table.freeAmountStr;
     const dueStr = table.dueStr;
+    const creditStr = table.creditStr;
+    const credit = table.credit;
     const freeAmount = table.freeAmount;
     const width = this._normalizeWidth(this.config.max_width);
     const cardStyle = width ? `max-width:${width};margin:0 auto;` : '';
@@ -1197,8 +1213,9 @@ class TallyListCard extends LitElement {
             </tbody>
             <tfoot>
               <tr><td colspan="4"><b>${this._t('total')}</b></td><td>${totalStr}</td></tr>
-              ${freeAmount > 0 ? html`
-                <tr><td colspan="4"><b>${this._t('free_amount')}</b></td><td>- ${freeAmountStr}</td></tr>
+              ${freeAmount > 0 || (this.config.show_credit !== false && credit !== 0) ? html`
+                ${freeAmount > 0 ? html`<tr><td colspan="4"><b>${this._t('free_amount')}</b></td><td>- ${freeAmountStr}</td></tr>` : ''}
+                ${this.config.show_credit !== false && credit !== 0 ? html`<tr><td colspan="4"><b>${this._t('credit')}</b></td><td>${creditStr}</td></tr>` : ''}
                 <tr><td colspan="4"><b>${this._t('amount_due')}</b></td><td>${dueStr}</td></tr>
               ` : ''}
             </tfoot>
@@ -2005,6 +2022,7 @@ class TallyListCardEditor extends LitElement {
       show_remove: true,
       only_self: false,
       show_step_select: true,
+      show_credit: true,
       show_all_users: false,
       show_inactive_drinks: false,
       shorten_user_names: false,
@@ -2056,6 +2074,12 @@ class TallyListCardEditor extends LitElement {
               <label class="switch">
                 ${this._t('show_step_select')}
                 <ha-switch .checked=${this._config.show_step_select !== false} @change=${this._stepSelectChanged}></ha-switch>
+              </label>
+            </div>
+            <div class="form">
+              <label class="switch">
+                ${this._t('show_credit')}
+                <ha-switch .checked=${this._config.show_credit !== false} @change=${this._creditChanged}></ha-switch>
               </label>
             </div>
           `
@@ -2177,6 +2201,11 @@ class TallyListCardEditor extends LitElement {
 
   _stepSelectChanged(ev) {
     this._config = { ...this._config, show_step_select: ev.target.checked };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  _creditChanged(ev) {
+    this._config = { ...this._config, show_credit: ev.target.checked };
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
