@@ -77,6 +77,7 @@ Folgende Optionen stehen im UI zur Verfügung:
 * **Entfernen-Menü anzeigen** – Ein-/Ausblenden des Menüs zum Entfernen.
 * **Schrittweiten-Auswahl anzeigen** – Schaltflächen zur Auswahl der Schrittweite (1, 3, 5, 10) anzeigen.
 * **Guthaben/Schulden anzeigen** – Zeile mit bereits gezahltem Betrag ein- oder ausblenden.
+* **Icons anzeigen** – Sensor-Icon neben dem Getränkenamen anzeigen.
 * **Nur sich selbst zeigen** – Auswahl auch für Admins auf den eingeloggten Nutzer beschränken.
 * **Namen kürzen** – Namen in der Auswahl abkürzen, bei Bedarf mit weiteren Buchstaben eindeutig halten.
 * **Sprache** – **Auto**, **Deutsch** oder **English** erzwingen.
@@ -113,6 +114,7 @@ type: custom:tally-list-free-drinks-card
 Optionen:
 
 * **show_prices** – Preise anzeigen (`true` standardmäßig).
+* **show_icons** – Sensor-Icon neben dem Getränkenamen anzeigen.
 * **comment_presets** – Vordefinierte Kommentarpräfixe. Jedes Element hat `label` und optional `require_comment`.
 * **session_timeout_seconds** – Zeit bis zum automatischen Logout nach dem Login (`30` standardmäßig).
 * **pin_lock_ms** – PIN-Sperrzeit in Millisekunden (`5000` standardmäßig).
