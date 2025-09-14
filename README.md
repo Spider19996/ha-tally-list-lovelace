@@ -77,6 +77,7 @@ The card offers the following options in the UI:
 * **Show remove menu** – Enable/disable the remove-drink dropdown.
 * **Show step selection** – Show buttons to select the step size (1, 3, 5, 10).
 * **Show credit** – Display a line with the amount already paid or owed.
+* **Show icons** – Display the drink sensor icon next to the name.
 * **Only show self** – Limit selection to the logged‑in user even for admins.
 * **Shorten user names** – Abbreviate names in the selector while keeping them unique.
 * **User selector** – Choose between **list**, **tabs**, or **grid** for selecting users.
@@ -114,6 +115,7 @@ type: custom:tally-list-free-drinks-card
 Options:
 
 * **show_prices** – Display drink prices (`true` by default).
+* **show_icons** – Display the drink sensor icon next to the name.
 * **comment_presets** – Predefine comment prefixes. Each entry has a `label` and optional `require_comment`.
 * **session_timeout_seconds** – Time after login before automatic logout (`30` by default).
 * **pin_lock_ms** – PIN lock duration in milliseconds (`5000` by default).
