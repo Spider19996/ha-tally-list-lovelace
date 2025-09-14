@@ -276,22 +276,6 @@ content: |
   {% endfor %}
 ```
 
-## Credit Card
-
-Adjust a user's credit. Only administrators can use this card and it is disabled on public devices.
-
-```yaml
- type: custom:tally-credit-card
-```
-
-Options:
-
-* **max_width** – Maximum card width in pixels (`500` by default).
-* **user_selector** – `list`, `tabs`, or `grid`.
-* **shorten_user_names** – Abbreviate user names in the selector.
-* **only_self** – Only show the current user even for admins.
-* **language** – Force **Auto**, **Deutsch**, or **English**.
-
 ## Free Drink Feed Markdown Card
 
 Display recent free drink bookings from the free drink feed sensor in a Markdown card.
