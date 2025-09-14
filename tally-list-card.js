@@ -5188,7 +5188,7 @@ class TallySetPinCard extends LitElement {
             : ''
           : ''}
         <div class="content">
-          ${userMenu}
+          ${userFound ? userMenu : ''}
           ${userFound
             ? html`
                 <div class="pin-label">
