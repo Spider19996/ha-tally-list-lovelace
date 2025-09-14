@@ -159,3 +159,112 @@ data:
   pin: "1234"
 ```
 
+## Protokoll-Karte
+
+Zeigt die letzten Aktionen des Protokoll-Sensors in einer Markdown-Karte.
+
+```yaml
+type: markdown
+content: |
+  {% set all_entries = state_attr('sensor.price_list_feed','entries') | default([], true) %}
+  {% set sorted = all_entries | sort(attribute='time_local') %}
+  {% set entries = sorted[-50:] | list | reverse %}
+
+  {% set action_map = {
+    'add_drink': 'Getränk gebucht',
+    'add_free_drink': 'Freigetränke hinzugefügt',
+    'remove_drink': 'Getränk entfernt',
+    'edit_drink': 'Getränk bearbeitet',
+    'set_drink': 'Getränk gesetzt',
+    'set_pin': 'PIN gesetzt',
+    'add_drink_type': 'Getränketyp hinzugefügt',
+    'remove_drink_type': 'Getränketyp entfernt',
+    'enable_logging': 'Protokollierung aktiviert',
+    'disable_logging': 'Protokollierung deaktiviert',
+    'enable_log_drinks': 'Protokollierung Getränke aktiviert',
+    'disable_log_drinks': 'Protokollierung Getränke deaktiviert',
+    'enable_log_price_changes': 'Protokollierung Preisänderungen aktiviert',
+    'disable_log_price_changes': 'Protokollierung Preisänderungen deaktiviert',
+    'enable_log_free_drinks': 'Protokollierung Freigetränke aktiviert',
+    'disable_log_free_drinks': 'Protokollierung Freigetränke deaktiviert',
+    'enable_log_pin_set': 'Protokollierung PIN-Änderungen aktiviert',
+    'disable_log_pin_set': 'Protokollierung PIN-Änderungen deaktiviert',
+    'authorize_public': 'Öffentliches Gerät hinzugefügt',
+    'unauthorize_public': 'Öffentliches Gerät entfernt',
+    'grant_admin': 'Admin-Rechte vergeben',
+    'revoke_admin': 'Admin-Rechte entzogen',
+    'include_user': 'Nutzer hinzugefügt',
+    'exclude_user': 'Nutzer ausgeschlossen',
+    'set_free_amount': 'Freibetrag gesetzt',
+    'set_credit': 'Guthaben gesetzt'
+  } %}
+
+  {% set module_map = {
+    'log_drinks': 'Getränke',
+    'log_price_changes': 'Preisänderungen',
+    'log_free_drinks': 'Freigetränke',
+    'log_pin_set': 'PIN-Änderungen',
+    'log_settings': 'Berechtigungen'
+  } %}
+
+  {% for e in entries %}
+  {% set raw = e.details | string %}
+  {% set date = as_timestamp(as_datetime(e.time_local)) | timestamp_custom("%d.%m.%Y %H:%M") %}
+  {% set base = "**" ~ date ~ "** — " ~ e.user ~ ": " ~ action_map.get(e.action, e.action) %}
+
+  {% if e.action == "set_pin" %}
+  {{ base }} → {{ raw | regex_replace(':set$','') }}
+
+  {% elif e.action in ["enable_logging", "disable_logging"] %}
+  {% set parts = raw.split(',') %}
+  {% if parts and parts[0] != "logging" %}
+  {{ base }} → {{ parts | map('replace','log_drinks', module_map['log_drinks'])
+                   | map('replace','log_price_changes', module_map['log_price_changes'])
+                   | map('replace','log_free_drinks', module_map['log_free_drinks'])
+                   | map('replace','log_pin_set', module_map['log_pin_set'])
+                   | map('replace','log_settings', module_map['log_settings'])
+                   | join(', ') }}
+  {% else %}
+  {{ base }}
+  {% endif %}
+
+  {% elif e.action in [
+    "enable_log_drinks","disable_log_drinks",
+    "enable_log_price_changes","disable_log_price_changes",
+    "enable_log_free_drinks","disable_log_free_drinks",
+    "enable_log_pin_set","disable_log_pin_set",
+    "authorize_public","unauthorize_public",
+    "grant_admin","revoke_admin",
+    "include_user","exclude_user"
+  ] %}
+  {{ base }} → {{ raw }}
+
+  {% elif e.action == "edit_drink" %}
+  {% set drink = raw.split(':')[0] %}
+  {% set changes = raw.split(':')[-1] %}
+  {% set parts = changes.split('->') %}
+  {{ base }} → {{ drink }}: {{ "%.2f"|format(parts[0]|float) | replace('.',',') }} € → {{ "%.2f"|format(parts[1]|float) | replace('.',',') }} €
+
+  {% elif e.action == "set_free_amount" %}
+  {% set parts = raw.split('->') %}
+  {{ base }} → {{ "%.2f"|format(parts[0]|float) | replace('.',',') }} € → {{ "%.2f"|format(parts[1]|float) | replace('.',',') }} €
+
+  {% elif e.action == "set_credit" %}
+  {% set parts = raw.split(':') %}
+  {{ base }} → {{ parts[0] }}: {{ "%.2f"|format(parts[1]|float) | replace('.',',') }} €
+
+  {% elif e.action in ["set_drink","add_drink_type"] %}
+  {% set details = raw.split(':')[-1] %}
+  {% set parts = details.split('=') %}
+  {{ base }} → {{ parts[0] }} = {{ "%.2f"|format(parts[1]|float) | replace('.',',') }} €
+
+  {% elif e.action == "remove_drink_type" %}
+  {{ base }} → {{ raw.split(':')[-1] }}
+
+  {% else %}
+  {% set parts = raw.split(',') %}
+  {{ base }} → {% for p in parts %}{{ p | replace(':',': ') }}{{ ', ' if not loop.last else '' }}{% endfor %}
+  {% endif %}
+  {% endfor %}
+```
+
