@@ -5673,15 +5673,29 @@ class TallyCreditCard extends LitElement {
     if (!this._isAdmin) {
       return html`<ha-card style="${cardStyle}"><div class="no-access">${this._t('no_admin')}</div></ha-card>`;
     }
-    const users = this._users;
-    _umEnsureBuckets(this, users);
+    let users = this._users;
     const mode = this.config.user_selector || 'list';
+    const current = this.hass?.user;
+    let isAdmin = this._isAdmin;
+    if (this.config.only_self && isAdmin) {
+      users = users.filter(
+        (u) =>
+          u.user_id === current?.id ||
+          u.name === current?.name ||
+          u.slug === current?.name
+      );
+      isAdmin = false;
+      if (current?.id) {
+        this.selectedUserId = current.id;
+      }
+    }
+    _umEnsureBuckets(this, users);
     const userMenu = _renderUserMenu(
       this,
       users,
       this.selectedUserId,
       mode,
-      true,
+      isAdmin,
       (id) => this._handleSelect(id),
       (u) => u.user_id
     );
