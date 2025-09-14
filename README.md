@@ -13,7 +13,7 @@ A Lovelace card for Home Assistant that displays drink tallies per user and allo
 
 ## Features
 
-* Shows drink counts per user and the amount owed
+* Shows drink counts per user, the amount owed, and current credit
 * Add or remove drinks with an adjustable step size
 * Automatic user and price detection from the Tally List integration
 * English and German language support with auto detection
@@ -76,6 +76,7 @@ The card offers the following options in the UI:
 * **Maximum width (px)** – Limit card width. Default `500`.
 * **Show remove menu** – Enable/disable the remove-drink dropdown.
 * **Show step selection** – Show buttons to select the step size (1, 3, 5, 10).
+* **Show credit** – Display a line with the amount already paid or owed.
 * **Only show self** – Limit selection to the logged‑in user even for admins.
 * **Shorten user names** – Abbreviate names in the selector while keeping them unique.
 * **User selector** – Choose between **list**, **tabs**, or **grid** for selecting users.
