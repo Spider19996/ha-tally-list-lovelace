@@ -165,3 +165,112 @@ data:
   pin: "1234"
 ```
 
+## Log Feed Markdown Card
+
+Display recent actions from the log feed sensor in a Markdown card.
+
+```yaml
+type: markdown
+content: |
+  {% set all_entries = state_attr('sensor.price_list_feed','entries') | default([], true) %}
+  {% set sorted = all_entries | sort(attribute='time_local') %}
+  {% set entries = sorted[-50:] | list | reverse %}
+
+  {% set action_map = {
+    'add_drink': 'Drink booked',
+    'add_free_drink': 'Free drinks added',
+    'remove_drink': 'Drink removed',
+    'edit_drink': 'Drink edited',
+    'set_drink': 'Drink set',
+    'set_pin': 'PIN set',
+    'add_drink_type': 'Drink type added',
+    'remove_drink_type': 'Drink type removed',
+    'enable_logging': 'Logging enabled',
+    'disable_logging': 'Logging disabled',
+    'enable_log_drinks': 'Drink logging enabled',
+    'disable_log_drinks': 'Drink logging disabled',
+    'enable_log_price_changes': 'Price change logging enabled',
+    'disable_log_price_changes': 'Price change logging disabled',
+    'enable_log_free_drinks': 'Free drink logging enabled',
+    'disable_log_free_drinks': 'Free drink logging disabled',
+    'enable_log_pin_set': 'PIN change logging enabled',
+    'disable_log_pin_set': 'PIN change logging disabled',
+    'authorize_public': 'Public device authorized',
+    'unauthorize_public': 'Public device removed',
+    'grant_admin': 'Admin rights granted',
+    'revoke_admin': 'Admin rights revoked',
+    'include_user': 'User included',
+    'exclude_user': 'User excluded',
+    'set_free_amount': 'Free amount set',
+    'set_credit': 'Credit set'
+  } %}
+
+  {% set module_map = {
+    'log_drinks': 'Drinks',
+    'log_price_changes': 'Price changes',
+    'log_free_drinks': 'Free drinks',
+    'log_pin_set': 'PIN changes',
+    'log_settings': 'Permissions'
+  } %}
+
+  {% for e in entries %}
+  {% set raw = e.details | string %}
+  {% set date = as_timestamp(as_datetime(e.time_local)) | timestamp_custom("%d.%m.%Y %H:%M") %}
+  {% set base = "**" ~ date ~ "** — " ~ e.user ~ ": " ~ action_map.get(e.action, e.action) %}
+
+  {% if e.action == "set_pin" %}
+  {{ base }} → {{ raw | regex_replace(':set$','') }}
+
+  {% elif e.action in ["enable_logging", "disable_logging"] %}
+  {% set parts = raw.split(',') %}
+  {% if parts and parts[0] != "logging" %}
+  {{ base }} → {{ parts | map('replace','log_drinks', module_map['log_drinks'])
+                   | map('replace','log_price_changes', module_map['log_price_changes'])
+                   | map('replace','log_free_drinks', module_map['log_free_drinks'])
+                   | map('replace','log_pin_set', module_map['log_pin_set'])
+                   | map('replace','log_settings', module_map['log_settings'])
+                   | join(', ') }}
+  {% else %}
+  {{ base }}
+  {% endif %}
+
+  {% elif e.action in [
+    "enable_log_drinks","disable_log_drinks",
+    "enable_log_price_changes","disable_log_price_changes",
+    "enable_log_free_drinks","disable_log_free_drinks",
+    "enable_log_pin_set","disable_log_pin_set",
+    "authorize_public","unauthorize_public",
+    "grant_admin","revoke_admin",
+    "include_user","exclude_user"
+  ] %}
+  {{ base }} → {{ raw }}
+
+  {% elif e.action == "edit_drink" %}
+  {% set drink = raw.split(':')[0] %}
+  {% set changes = raw.split(':')[-1] %}
+  {% set parts = changes.split('->') %}
+  {{ base }} → {{ drink }}: {{ "%.2f"|format(parts[0]|float) }} € → {{ "%.2f"|format(parts[1]|float) }} €
+
+  {% elif e.action == "set_free_amount" %}
+  {% set parts = raw.split('->') %}
+  {{ base }} → {{ "%.2f"|format(parts[0]|float) }} € → {{ "%.2f"|format(parts[1]|float) }} €
+
+  {% elif e.action == "set_credit" %}
+  {% set parts = raw.split(':') %}
+  {{ base }} → {{ parts[0] }}: {{ "%.2f"|format(parts[1]|float) }} €
+
+  {% elif e.action in ["set_drink","add_drink_type"] %}
+  {% set details = raw.split(':')[-1] %}
+  {% set parts = details.split('=') %}
+  {{ base }} → {{ parts[0] }} = {{ "%.2f"|format(parts[1]|float) }} €
+
+  {% elif e.action == "remove_drink_type" %}
+  {{ base }} → {{ raw.split(':')[-1] }}
+
+  {% else %}
+  {% set parts = raw.split(',') %}
+  {{ base }} → {% for p in parts %}{{ p | replace(':',': ') }}{{ ', ' if not loop.last else '' }}{% endfor %}
+  {% endif %}
+  {% endfor %}
+``` 
+
