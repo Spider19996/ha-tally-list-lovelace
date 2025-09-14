@@ -5473,3 +5473,759 @@ class TallySetPinCard extends LitElement {
 
 customElements.define('tally-set-pin-card', TallySetPinCard);
 
+const CREDIT_STRINGS = {
+  en: {
+    card_name: 'Credit Card',
+    card_desc: 'Adjust user credit',
+    amount: 'Amount',
+    add_credit: 'Add credit',
+    remove_credit: 'Remove credit',
+    set_credit: 'Set credit',
+    no_admin: 'Admins only',
+    no_public: 'Unavailable on public devices',
+    success: 'Credit updated',
+    invalid_amount: 'Enter a valid amount',
+    user_not_found: 'User not found',
+  },
+  de: {
+    card_name: 'Guthaben Karte',
+    card_desc: 'Guthaben eines Nutzers anpassen',
+    amount: 'Betrag',
+    add_credit: 'Guthaben hinzufügen',
+    remove_credit: 'Guthaben entfernen',
+    set_credit: 'Guthaben setzen',
+    no_admin: 'Nur für Administratoren',
+    no_public: 'Auf öffentlichen Geräten nicht verfügbar',
+    success: 'Guthaben aktualisiert',
+    invalid_amount: 'Gültigen Betrag eingeben',
+    user_not_found: 'Benutzer nicht gefunden',
+  },
+};
+
+const creditNavLang = detectLang();
+window.customCards.push({
+  type: 'tally-credit-card',
+  name: CREDIT_STRINGS[creditNavLang].card_name,
+  preview: true,
+  description: CREDIT_STRINGS[creditNavLang].card_desc,
+});
+
+class TallyCreditCard extends LitElement {
+  static properties = {
+    hass: {},
+    config: {},
+    selectedUserId: { type: String },
+    _amount: { state: true },
+    _autoUsers: { state: true },
+  };
+
+  constructor() {
+    super();
+    this._uid = crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
+    this.selectedUserId = '';
+    this._amount = '';
+    this._autoUsers = [];
+    this._buckets = new Map();
+    this._tabs = [];
+    this._visibleUsers = [];
+    this._currentTab = 'all';
+    this._sortedUsers = [];
+    this._usersKey = '';
+  }
+
+  setConfig(config) {
+    const tabs = {
+      mode: 'per-letter',
+      grouped_breaks: ['A–E', 'F–J', 'K–O', 'P–T', 'U–Z'],
+      show_all_tab: true,
+      ...(config?.tabs || {}),
+    };
+    const grid = { columns: 0, ...(config?.grid || {}) };
+    this.config = {
+      max_width: '500px',
+      user_selector: 'list',
+      language: 'auto',
+      shorten_user_names: false,
+      only_self: false,
+      ...(config || {}),
+    };
+    this.config.tabs = tabs;
+    this.config.grid = grid;
+    const width = this._normalizeWidth(this.config.max_width);
+    if (width) {
+      this.style.setProperty('--dcc-max-width', width);
+      this.config.max_width = width;
+    } else {
+      this.style.removeProperty('--dcc-max-width');
+      this.config.max_width = '';
+    }
+  }
+
+  _t(key) {
+    return translate(this.hass, this.config.language, CREDIT_STRINGS, key);
+  }
+
+  get _users() {
+    return this.config.users || this._autoUsers || [];
+  }
+
+  get _isAdmin() {
+    return this.hass?.user?.is_admin;
+  }
+
+  _fid(key) {
+    return `tally-${this._uid}-${key}`;
+  }
+
+  _handleSelect(id) {
+    if (id) this.selectedUserId = id;
+  }
+
+  updated(changedProps) {
+    if (changedProps.has('hass')) {
+      if (!this.config.users) {
+        this._autoUsers = this._gatherUsers();
+      }
+      if (this._isAdmin && !this.selectedUserId) {
+        const ownId = this.hass?.user?.id;
+        if (ownId) this.selectedUserId = ownId;
+      }
+    }
+  }
+
+  _gatherUsers() {
+    const users = [];
+    const states = this.hass?.states || {};
+    for (const [entity, state] of Object.entries(states)) {
+      const match = entity.match(/^sensor\.([a-z0-9_]+)_amount_due$/);
+      if (match) {
+        const slug = match[1];
+        if (slug === 'free_drinks') continue;
+        const sensorName = (state.attributes.friendly_name || '')
+          .replace(' Amount Due', '')
+          .replace(' Offener Betrag', '');
+        const person = states[`person.${slug}`];
+        const user_id = person?.attributes?.user_id || null;
+        const name = person?.attributes?.friendly_name || sensorName || slug;
+        users.push({ name, slug, user_id });
+      }
+    }
+    return users;
+  }
+
+  _currentPersonSlugs() {
+    const userId = this.hass?.user?.id;
+    if (!userId) return [];
+    const slugs = [];
+    for (const [entity, state] of Object.entries(this.hass.states)) {
+      if (entity.startsWith('person.') && state.attributes.user_id === userId) {
+        const slug = entity.substring('person.'.length);
+        slugs.push(slug);
+        const alt = fdSlugify(state.attributes.friendly_name || '');
+        if (alt && alt !== slug) slugs.push(alt);
+      }
+    }
+    return slugs;
+  }
+
+  _normalizeWidth(value) {
+    if (!value && value !== 0) return '';
+    const str = String(value).trim();
+    if (str === '') return '';
+    return /^\d+$/.test(str) ? `${str}px` : str;
+  }
+
+  _amountChanged(ev) {
+    this._amount = ev.target.value;
+  }
+
+  async _call(action) {
+    const amt = parseFloat(this._amount);
+    if (isNaN(amt)) {
+      _psToast(this, this._t('invalid_amount'));
+      return;
+    }
+    const users = this._users;
+    const u = users.find(
+      (u) => u.user_id === this.selectedUserId || u.slug === this.selectedUserId || u.name === this.selectedUserId
+    );
+    const user = u?.name || u?.slug;
+    if (!user) {
+      _psToast(this, this._t('user_not_found'));
+      return;
+    }
+    try {
+      await this.hass.callService('tally_list', action, { user: String(user), amount: amt });
+      _psToast(this, this._t('success'));
+      this._amount = '';
+    } catch (e) {
+      const code = e?.error?.code || e?.code || 'error';
+      _psToast(this, String(code));
+    }
+  }
+
+  render() {
+    const width = this._normalizeWidth(this.config.max_width);
+    const cardStyle = width ? `max-width:${width};margin:0 auto;` : '';
+    if (PUBLIC_SESSION.isPublic) {
+      return html`<ha-card style="${cardStyle}"><div class="no-access">${this._t('no_public')}</div></ha-card>`;
+    }
+    if (!this._isAdmin) {
+      return html`<ha-card style="${cardStyle}"><div class="no-access">${this._t('no_admin')}</div></ha-card>`;
+    }
+    const users = this._users;
+    _umEnsureBuckets(this, users);
+    const mode = this.config.user_selector || 'list';
+    const userMenu = _renderUserMenu(
+      this,
+      users,
+      this.selectedUserId,
+      mode,
+      true,
+      (id) => this._handleSelect(id),
+      (u) => u.user_id
+    );
+    const idAmt = this._fid('amt');
+    return html`
+      <ha-card style="${cardStyle}">
+        <div class="content">
+          ${userMenu}
+          <div class="form">
+            <label for="${idAmt}">${this._t('amount')}</label>
+            <input
+              id="${idAmt}"
+              type="number"
+              inputmode="decimal"
+              step="0.01"
+              .value=${this._amount}
+              @input=${this._amountChanged}
+            />
+            <div class="btn-row">
+              <button class="action-btn add" @click=${() => this._call('add_credit')}>
+                ${this._t('add_credit')}
+              </button>
+              <button class="action-btn remove" @click=${() => this._call('remove_credit')}>
+                ${this._t('remove_credit')}
+              </button>
+              <button class="action-btn set" @click=${() => this._call('set_credit')}>
+                ${this._t('set_credit')}
+              </button>
+            </div>
+          </div>
+        </div>
+      </ha-card>
+    `;
+  }
+
+  static getConfigElement() {
+    return document.createElement('tally-credit-card-editor');
+  }
+
+  static getStubConfig() {
+    return { max_width: "500px" };
+  }
+
+  static styles = css`
+    :host {
+      display: block;
+    }
+    .content {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    ha-card {
+      margin: 0 auto;
+      max-width: var(--dcc-max-width, none);
+    }
+    .user-select {
+      text-align: left;
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      gap: 8px;
+    }
+    .user-actions {
+      border: 1px solid var(--ha-card-border-color, var(--divider-color));
+      border-radius: 14px;
+      background: var(--ha-card-background, #1e1e1e);
+      overflow: hidden;
+    }
+    .alpha-tabs {
+      border-bottom: 1px solid var(--ha-card-border-color, var(--divider-color));
+    }
+    .tabs {
+      display: flex;
+      overflow-x: auto;
+    }
+    .tab {
+      flex: 0 0 auto;
+      padding: 0 12px;
+      height: 44px;
+      background: #2b2b2b;
+      color: #ddd;
+      border: none;
+      border-right: 1px solid var(--ha-card-border-color, var(--divider-color));
+      border-bottom: 1px solid var(--ha-card-border-color, var(--divider-color));
+      font-size: 14px;
+    }
+    .tab:first-child {
+      border-top-left-radius: 14px;
+    }
+    .tab:last-child {
+      border-top-right-radius: 14px;
+      border-right: none;
+    }
+    .alpha-tabs .tab.active {
+      background: var(--success-color, #2e7d32);
+      color: #fff;
+      border-bottom: none;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+    .user-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 12px 16px;
+      margin-top: -1px;
+      border-top: 1px solid var(--ha-card-border-color, var(--divider-color));
+    }
+    .user-chip {
+      position: relative;
+      border-radius: 12px;
+      background: #2b2b2b;
+      color: #ddd;
+      border: none;
+      padding: 0 12px;
+      height: 32px;
+    }
+    .user-chip.active {
+      background: var(--success-color, #2e7d32);
+      color: #fff;
+    }
+    .user-chip.inactive {
+      background: #2b2b2b;
+      color: #ddd;
+    }
+    .user-chip::before {
+      display: none;
+    }
+    .tab:focus,
+    .action-btn:focus,
+    .user-chip:focus {
+      outline: 2px solid rgba(255, 255, 255, 0.25);
+    }
+    .tab:hover,
+    .tab:focus,
+    .action-btn:hover,
+    .action-btn:focus,
+    .user-chip:hover,
+    .user-chip:focus {
+      filter: brightness(1.1);
+    }
+    .user-select select {
+      padding: 0 12px;
+      min-width: 120px;
+      font-size: 14px;
+      height: 44px;
+      line-height: 44px;
+      box-sizing: border-box;
+      border-radius: 12px;
+      border: 1px solid var(--ha-card-border-color);
+      background: var(--btn-neutral, #2b2b2b);
+      color: var(--primary-text-color, #fff);
+      appearance: none;
+    }
+    .form {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .form input {
+      width: 100%;
+      padding: 0 12px;
+      font-size: 16px;
+      height: 44px;
+      line-height: 44px;
+      box-sizing: border-box;
+      border-radius: 12px;
+      border: 1px solid var(--ha-card-border-color);
+      background: var(--btn-neutral, #2b2b2b);
+      color: var(--primary-text-color, #fff);
+    }
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .action-btn {
+      height: 40px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      background: var(--primary-color);
+      color: var(--text-primary-color, #fff);
+      padding: 0 16px;
+    }
+    .action-btn.add {
+      background: var(--success-color, #2e7d32);
+    }
+    .action-btn.remove {
+      background: var(--error-color, #c62828);
+    }
+    .action-btn.set {
+      background: var(--primary-color);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .no-access {
+      padding: 16px;
+      text-align: center;
+    }
+  `;
+}
+
+customElements.define('tally-credit-card', TallyCreditCard);
+
+class TallyCreditCardEditor extends LitElement {
+  static properties = {
+    _config: {},
+    _tab: { type: String },
+  };
+
+  constructor() {
+    super();
+    this._tab = 'general';
+    this._uid = crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
+  }
+
+  _fid(key) {
+    return `tally-${this._uid}-${key}`;
+  }
+
+  setConfig(config) {
+    const tabs = {
+      mode: 'per-letter',
+      grouped_breaks: ['A–E', 'F–J', 'K–O', 'P–T', 'U–Z'],
+      show_all_tab: true,
+      ...(config?.tabs || {}),
+    };
+    const grid = { columns: 0, ...(config?.grid || {}) };
+    this._config = {
+      max_width: '500px',
+      user_selector: 'list',
+      language: 'auto',
+      shorten_user_names: false,
+      only_self: false,
+      ...(config || {}),
+      tabs,
+      grid,
+    };
+  }
+
+  _widthChanged(ev) {
+    const raw = ev.target.value.trim();
+    const width = raw ? `${raw}px` : '';
+    this._config = { ...this._config, max_width: width };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', { detail: { config: this._config } })
+    );
+  }
+
+  _userSelectorChanged(ev) {
+    this._config = { ...this._config, user_selector: ev.target.value };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', { detail: { config: this._config } })
+    );
+  }
+
+  _tabModeChanged(ev) {
+    const tabs = { ...this._config.tabs, mode: ev.target.value };
+    this._config = { ...this._config, tabs };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', { detail: { config: this._config } })
+    );
+  }
+
+  _groupedBreaksChanged(ev) {
+    const arr = ev.target.value
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s);
+    const tabs = { ...this._config.tabs, grouped_breaks: arr };
+    this._config = { ...this._config, tabs };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', { detail: { config: this._config } })
+    );
+  }
+
+  _showAllTabChanged(ev) {
+    const tabs = { ...this._config.tabs, show_all_tab: ev.target.checked };
+    this._config = { ...this._config, tabs };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', { detail: { config: this._config } })
+    );
+  }
+
+  _gridColumnsChanged(ev) {
+    const val = Number(ev.target.value);
+    const grid = { ...this._config.grid, columns: isNaN(val) ? 0 : val };
+    this._config = { ...this._config, grid };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', { detail: { config: this._config } })
+    );
+  }
+
+  _selfChanged(ev) {
+    this._config = { ...this._config, only_self: ev.target.checked };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', { detail: { config: this._config } })
+    );
+  }
+
+  _shortNamesChanged(ev) {
+    this._config = { ...this._config, shorten_user_names: ev.target.checked };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', { detail: { config: this._config } })
+    );
+  }
+
+  _languageChanged(ev) {
+    this._config = { ...this._config, language: ev.target.value };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', { detail: { config: this._config } })
+    );
+  }
+
+  _selectTab(ev) {
+    this._tab = ev.target.dataset.tab;
+  }
+
+  render() {
+    if (!this._config) return html``;
+    const idUserSelector = this._fid('user-selector');
+    const idTabMode = this._fid('tab-mode');
+    const idGroupedBreaks = this._fid('grouped-breaks');
+    const idGridColumns = this._fid('grid-columns');
+    const idLanguage = this._fid('language');
+    const idWidth = this._fid('max-width');
+    return html`
+      <nav class="tabs">
+        <button
+          class=${this._tab === 'general' ? 'active' : ''}
+          data-tab="general"
+          @click=${this._selectTab}
+        >
+          ${t(this.hass, this._config?.language, 'tab_general')}
+        </button>
+        <button
+          class=${this._tab === 'users' ? 'active' : ''}
+          data-tab="users"
+          @click=${this._selectTab}
+        >
+          ${t(this.hass, this._config?.language, 'tab_users')}
+        </button>
+        <button
+          class=${this._tab === 'advanced' ? 'active' : ''}
+          data-tab="advanced"
+          @click=${this._selectTab}
+        >
+          ${t(this.hass, this._config?.language, 'tab_advanced')}
+        </button>
+      </nav>
+      ${this._tab === 'general'
+        ? html`
+            <div class="form">
+              <label for="${idWidth}">${t(
+                this.hass,
+                this._config?.language,
+                'max_width'
+              )}</label>
+              <input
+                id="${idWidth}"
+                name="max_width"
+                type="number"
+                .value=${(this._config.max_width ?? '').replace(/px$/, '')}
+                @input=${this._widthChanged}
+              />
+            </div>
+          `
+        : this._tab === 'users'
+        ? html`
+            <div class="form">
+              <label for="${idUserSelector}">${t(
+                this.hass,
+                this._config?.language,
+                'user_selector'
+              )}</label>
+              <select
+                id="${idUserSelector}"
+                name="user_selector"
+                @change=${this._userSelectorChanged}
+              >
+                <option
+                  value="list"
+                  ?selected=${this._config.user_selector === 'list'}
+                >
+                  ${t(this.hass, this._config?.language, 'user_selector_list')}
+                </option>
+                <option
+                  value="tabs"
+                  ?selected=${this._config.user_selector === 'tabs'}
+                >
+                  ${t(this.hass, this._config?.language, 'user_selector_tabs')}
+                </option>
+                <option
+                  value="grid"
+                  ?selected=${this._config.user_selector === 'grid'}
+                >
+                  ${t(this.hass, this._config?.language, 'user_selector_grid')}
+                </option>
+              </select>
+            </div>
+            ${['tabs', 'grid'].includes(this._config.user_selector)
+              ? html`
+                  ${this._config.user_selector === 'tabs'
+                    ? html`
+                        <div class="form">
+                          <label for="${idTabMode}">${t(
+                            this.hass,
+                            this._config?.language,
+                            'tab_mode'
+                          )}</label>
+                          <select
+                            id="${idTabMode}"
+                            name="tab_mode"
+                            @change=${this._tabModeChanged}
+                          >
+                            <option
+                              value="per-letter"
+                              ?selected=${
+                                this._config.tabs.mode === 'per-letter'
+                              }
+                            >
+                              ${t(this.hass, this._config?.language, 'per_letter')}
+                            </option>
+                            <option
+                              value="grouped"
+                              ?selected=${
+                                this._config.tabs.mode === 'grouped'
+                              }
+                            >
+                              ${t(this.hass, this._config?.language, 'grouped')}
+                            </option>
+                          </select>
+                        </div>
+                        ${this._config.tabs.mode === 'grouped'
+                          ? html`<div class="form">
+                              <label for="${idGroupedBreaks}">${t(
+                                this.hass,
+                                this._config?.language,
+                                'grouped_breaks'
+                              )}</label>
+                              <input
+                                id="${idGroupedBreaks}"
+                                name="grouped_breaks"
+                                type="text"
+                                .value=${this._config.tabs.grouped_breaks.join(',')}
+                                @input=${this._groupedBreaksChanged}
+                              />
+                            </div>`
+                          : ''}
+                        <div class="form">
+                          <label class="switch">
+                            ${t(
+                              this.hass,
+                              this._config?.language,
+                              'show_all_tab'
+                            )}
+                            <ha-switch
+                              .checked=${this._config.tabs.show_all_tab}
+                              @change=${this._showAllTabChanged}
+                            ></ha-switch>
+                          </label>
+                        </div>
+                      `
+                    : ''}
+                  <div class="form">
+                    <label for="${idGridColumns}">${t(
+                      this.hass,
+                      this._config?.language,
+                      'grid_columns'
+                    )}</label>
+                    <input
+                      id="${idGridColumns}"
+                      name="grid_columns"
+                      type="text"
+                      .value=${this._config.grid.columns}
+                      @input=${this._gridColumnsChanged}
+                    />
+                  </div>
+                `
+              : ''}
+            <div class="form">
+              <label class="switch">
+                ${t(this.hass, this._config?.language, 'only_self')}
+                <ha-switch
+                  .checked=${this._config.only_self}
+                  @change=${this._selfChanged}
+                ></ha-switch>
+              </label>
+            </div>
+            <div class="form">
+              <label class="switch">
+                ${t(
+                  this.hass,
+                  this._config?.language,
+                  'shorten_user_names'
+                )}
+                <ha-switch
+                  .checked=${this._config.shorten_user_names}
+                  @change=${this._shortNamesChanged}
+                ></ha-switch>
+              </label>
+            </div>
+          `
+        : html`
+            <div class="form">
+              <label for="${idLanguage}">${t(
+                this.hass,
+                this._config?.language,
+                'language'
+              )}</label>
+              <select id="${idLanguage}" @change=${this._languageChanged}>
+                <option
+                  value="auto"
+                  ?selected=${this._config.language === 'auto'}
+                >
+                  ${t(this.hass, this._config?.language, 'auto')}
+                </option>
+                <option
+                  value="de"
+                  ?selected=${this._config.language === 'de'}
+                >
+                  ${t(this.hass, this._config?.language, 'german')}
+                </option>
+                <option
+                  value="en"
+                  ?selected=${this._config.language === 'en'}
+                >
+                  ${t(this.hass, this._config?.language, 'english')}
+                </option>
+              </select>
+            </div>
+            <div class="version">
+              ${t(this.hass, this._config?.language, 'version')}: ${CARD_VERSION}
+            </div>
+          `}
+    `;
+  }
+
+  static styles = EDITOR_STYLES;
+}
+
+customElements.define('tally-credit-card-editor', TallyCreditCardEditor);
