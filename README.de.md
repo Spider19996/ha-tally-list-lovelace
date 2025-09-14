@@ -275,6 +275,22 @@ content: |
   {% endfor %}
 ```
 
+## Guthaben-Karte
+
+Passe das Guthaben eines Nutzers an. Nur Administratoren können diese Karte benutzen; auf öffentlichen Geräten ist sie deaktiviert.
+
+```yaml
+ type: custom:tally-credit-card
+```
+
+Optionen:
+
+* **max_width** – Maximale Kartenbreite in Pixeln (`500` Standard).
+* **user_selector** – `list`, `tabs` oder `grid`.
+* **shorten_user_names** – Namen in der Auswahl abkürzen.
+* **only_self** – Trotz Admin nur den eigenen Nutzer anzeigen.
+* **language** – Sprache erzwingen: **auto**, **de** oder **en**.
+
 ## Freigetränke-Feed Markdown-Karte
 
 Zeigt die letzten Einträge des Freigetränke-Feeds in einer Markdown-Karte.
