@@ -1210,9 +1210,7 @@ class TallyListCard extends LitElement {
                 <button class="action-btn plus plus-btn" data-drink="${r.drink}" @pointerdown=${this._onAddDrink} ?disabled=${this._disabled || !r.isAvailable}>+${this.selectedCount}</button>
               </td>
               <td class="drink">
-                <span class="drink-content">
-                  ${this.config.show_icons && r.icon ? html`<ha-icon icon="${r.icon}"></ha-icon>` : ''}${r.display}
-                </span>
+                ${this.config.show_icons && r.icon ? html`<ha-icon icon="${r.icon}"></ha-icon>` : ''}${r.display}
               </td>
               <td>${r.count}</td>
               <td>${r.priceStr}</td>
@@ -1984,13 +1982,10 @@ class TallyListCard extends LitElement {
     td.drink {
       text-align: left;
     }
-    td.drink .drink-content {
-      display: inline-flex;
-      align-items: center;
-    }
     td.drink ha-icon {
       --mdc-icon-size: 20px;
       margin-right: 4px;
+      vertical-align: middle;
     }
     button {
       padding: 4px;
@@ -4207,9 +4202,7 @@ class TallyListFreeDrinksCard extends LitElement {
                 const icon = this.config.show_icons ? this.hass.states[d.entity]?.attributes?.icon : null;
                 return html`<tr>
                   <td class="drink">
-                    <span class="drink-content">
-                      ${this.config.show_icons && icon ? html`<ha-icon icon="${icon}"></ha-icon>` : ''}${d.name}
-                    </span>
+                    ${this.config.show_icons && icon ? html`<ha-icon icon="${icon}"></ha-icon>` : ''}${d.name}
                   </td>
                   ${showPrices
                     ? html`<td>${this._formatPrice(prices[d.drink])} ${this._currency}</td>`
