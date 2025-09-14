@@ -5691,12 +5691,13 @@ class TallyCreditCard extends LitElement {
         <div class="content">
           ${userMenu}
           <div class="form">
-            <label for="${idAmt}">${this._t('amount')}</label>
             <input
               id="${idAmt}"
               type="number"
               inputmode="decimal"
               step="0.01"
+              placeholder="${this._t('amount')}"
+              aria-label="${this._t('amount')}"
               .value=${this._amount}
               @input=${this._amountChanged}
             />
