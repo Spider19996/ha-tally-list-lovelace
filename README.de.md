@@ -268,3 +268,19 @@ content: |
   {% endfor %}
 ```
 
+## Freigetränke-Feed Markdown-Karte
+
+Zeigt die letzten Einträge des Freigetränke-Feeds in einer Markdown-Karte.
+
+```yaml
+type: markdown
+content: |
+  {% set all_entries = state_attr('sensor.free_drink_feed','entries') | default([], true) %}
+  {% set entries = all_entries[-5:] | list | reverse %}
+
+  {% for e in entries %}
+  {% set date = as_timestamp(as_datetime(e.time_local)) | timestamp_custom("%d.%m.%Y %H:%M") %}
+  **{{ date }}** — {{ e.name }}: Freigetränke gebucht → {{ e.drinks }} _(„{{ e.comment }}“)_
+  {% endfor %}
+```
+

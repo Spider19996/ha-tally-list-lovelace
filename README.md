@@ -272,5 +272,21 @@ content: |
   {{ base }} → {% for p in parts %}{{ p | replace(':',': ') }}{{ ', ' if not loop.last else '' }}{% endfor %}
   {% endif %}
   {% endfor %}
-``` 
+```
+
+## Free Drink Feed Markdown Card
+
+Display recent free drink bookings from the free drink feed sensor in a Markdown card.
+
+```yaml
+type: markdown
+content: |
+  {% set all_entries = state_attr('sensor.free_drink_feed','entries') | default([], true) %}
+  {% set entries = all_entries[-5:] | list | reverse %}
+
+  {% for e in entries %}
+  {% set date = as_timestamp(as_datetime(e.time_local)) | timestamp_custom("%d.%m.%Y %H:%M") %}
+  **{{ date }}** — {{ e.name }}: Free drinks booked → {{ e.drinks }} _("{{ e.comment }}")_
+  {% endfor %}
+```
 
