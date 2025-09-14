@@ -1985,7 +1985,7 @@ class TallyListCard extends LitElement {
     td.drink ha-icon {
       --mdc-icon-size: 20px;
       margin-right: 4px;
-      vertical-align: middle;
+      vertical-align: -0.15em;
     }
     button {
       padding: 4px;
