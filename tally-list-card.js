@@ -1981,12 +1981,11 @@ class TallyListCard extends LitElement {
     }
     td.drink {
       text-align: left;
-      display: flex;
-      align-items: center;
     }
     td.drink ha-icon {
       --mdc-icon-size: 20px;
       margin-right: 4px;
+      vertical-align: middle;
     }
     button {
       padding: 4px;
@@ -4324,15 +4323,6 @@ class TallyListFreeDrinksCard extends LitElement {
       padding: 4px;
       border-bottom: 1px solid var(--divider-color);
       text-align: center;
-    }
-    td.drink {
-      text-align: left;
-      display: flex;
-      align-items: center;
-    }
-    td.drink ha-icon {
-      --mdc-icon-size: 20px;
-      margin-right: 4px;
     }
     .actions {
       display: flex;
