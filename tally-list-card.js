@@ -5659,8 +5659,13 @@ class TallyCreditCard extends LitElement {
       _psToast(this, this._t('success'));
       this._amount = '';
     } catch (e) {
-      const code = e?.error?.code || e?.code || 'error';
-      _psToast(this, String(code));
+      const msg =
+        e?.error?.message ??
+        e?.message ??
+        e?.error?.code ??
+        e?.code ??
+        'error';
+      _psToast(this, String(msg));
     }
   }
 
