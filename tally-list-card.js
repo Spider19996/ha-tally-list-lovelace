@@ -5336,6 +5336,8 @@ class TallySetPinCard extends LitElement {
       position: relative;
       margin: 0 auto;
       max-width: var(--dcc-max-width, none);
+      border-radius: var(--ha-card-border-radius, 12px);
+      overflow: hidden;
     }
     .warn-overlay {
       position: absolute;
@@ -5350,6 +5352,7 @@ class TallySetPinCard extends LitElement {
       padding: 16px;
       box-sizing: border-box;
       z-index: 2;
+      border-radius: inherit;
     }
     .warn-box {
       background: var(--card-background-color);
