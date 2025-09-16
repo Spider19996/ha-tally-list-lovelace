@@ -389,7 +389,7 @@ function renderCoverLogin(card) {
     </div></div></ha-card>`;
 }
 
-const CARD_VERSION = '14.09.25';
+const CARD_VERSION = '16.09.25';
 
 const TL_STRINGS = {
   en: {
@@ -712,7 +712,69 @@ function _umRenderTabHeader(card) {
   </div>`;
 }
 
-function _umRenderChips(card, list, selected, onSelect, getVal = (u) => u.name || u.slug) {
+function _umValue(user, getVal) {
+  if (!user) return '';
+  const preferred = getVal ? getVal(user) : undefined;
+  const hasPreferred =
+    preferred !== undefined && preferred !== null && preferred !== '';
+  const raw = hasPreferred
+    ? preferred
+    : user.user_id || user.slug || user.name || '';
+  return raw === undefined || raw === null ? '' : String(raw);
+}
+
+function _resolveUserEntry(users, key) {
+  if (!Array.isArray(users) || users.length === 0) return null;
+  if (key === undefined || key === null) return null;
+  const str = String(key).trim();
+  if (!str) return null;
+  const direct = users.find((u) => {
+    const id = u?.user_id;
+    const slug = u?.slug;
+    const name = u?.name;
+    return (
+      (id !== undefined && id !== null && String(id) === str) ||
+      (slug !== undefined && slug !== null && String(slug) === str) ||
+      (name !== undefined && name !== null && String(name) === str)
+    );
+  });
+  if (direct) return direct;
+  const slugKey = fdSlugify(str);
+  if (!slugKey) return null;
+  return (
+    users.find((u) => {
+      const slug = u?.slug ? fdSlugify(String(u.slug)) : '';
+      const name = u?.name ? fdSlugify(String(u.name)) : '';
+      return slug === slugKey || name === slugKey;
+    }) || null
+  );
+}
+
+function _resolveUserFromCandidates(users, candidates) {
+  if (!Array.isArray(users) || users.length === 0) return null;
+  for (const key of candidates || []) {
+    const found = _resolveUserEntry(users, key);
+    if (found) return found;
+  }
+  return null;
+}
+
+function _userLabel(user) {
+  if (!user) return '';
+  const name = user.name !== undefined && user.name !== null ? String(user.name).trim() : '';
+  if (name) return name;
+  const slug = user.slug !== undefined && user.slug !== null ? String(user.slug).trim() : '';
+  return slug;
+}
+
+function _umRenderChips(
+  card,
+  list,
+  selected,
+  onSelect,
+  getVal = (u) => u.name || u.slug
+) {
+  const selectedKey = selected == null ? '' : String(selected);
   return repeat(
     list,
     (u) => u.user_id || u.slug,
@@ -721,30 +783,31 @@ function _umRenderChips(card, list, selected, onSelect, getVal = (u) => u.name |
         card.config.shorten_user_names && card._shortNames
           ? card._shortNames.get(u)
           : u.name || u.slug;
-      const val = getVal(u);
-      const cls = `user-chip ${val === selected ? 'active' : 'inactive'}`;
-      return html`<button class="${cls}" role="tab" aria-selected=${val === selected} @click=${() => onSelect(val)} @keydown=${(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(val)}>${name}</button>`;
+      const val = _umValue(u, getVal);
+      const cls = `user-chip ${val === selectedKey ? 'active' : 'inactive'}`;
+      return html`<button class="${cls}" role="tab" aria-selected=${val === selectedKey} @click=${() => onSelect(val)} @keydown=${(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(val)}>${name}</button>`;
     }
   );
 }
 
 function _renderUserMenu(card, users, selectedId, layout, isAdmin, onSelect, getVal) {
-  const valFn = getVal || ((u) => u.name || u.slug);
+  const selectedKey = selectedId == null ? '' : String(selectedId);
+  const valFn = (u) => _umValue(u, getVal);
   _umEnsureBuckets(card, users);
   if (!isAdmin) {
-    const own = users.find((u) => valFn(u) === selectedId) || users[0];
+    const own = users.find((u) => valFn(u) === selectedKey) || users[0];
     const name = card.config.shorten_user_names && card._shortNames
       ? card._shortNames.get(own)
       : own?.name || own?.slug || '';
     return html`<div class="user-label">${name}</div>`;
   }
   if (layout === 'grid') {
-    const chips = _umRenderChips(card, card._sortedUsers, selectedId, onSelect, valFn);
+    const chips = _umRenderChips(card, card._sortedUsers, selectedKey, onSelect, getVal);
     return html`<div class="user-actions"><div class="user-list">${chips}</div></div>`;
   }
   if (layout === 'tabs') {
     const header = _umRenderTabHeader(card);
-    const chips = _umRenderChips(card, card._visibleUsers, selectedId, onSelect, valFn);
+    const chips = _umRenderChips(card, card._visibleUsers, selectedKey, onSelect, getVal);
     return html`<div class="user-actions"><div class="alpha-tabs">${header}</div><div class="user-list">${chips}</div></div>`;
   }
   const idUser = card._fid ? card._fid('user') : 'user';
@@ -755,7 +818,8 @@ function _renderUserMenu(card, users, selectedId, layout, isAdmin, onSelect, get
       const name = card.config.shorten_user_names && card._shortNames
         ? card._shortNames.get(u)
         : u.name;
-      return html`<option value="${valFn(u)}" ?selected=${valFn(u) === selectedId}>${name}</option>`;
+      const val = valFn(u);
+      return html`<option value="${val}" ?selected=${val === selectedKey}>${name}</option>`;
     }
   )}</select></div>`;
 }
@@ -4980,9 +5044,21 @@ class TallySetPinCard extends LitElement {
         const sensorName = (state.attributes.friendly_name || '')
           .replace(' Amount Due', '')
           .replace(' Offener Betrag', '');
-        const person = states[`person.${slug}`];
+        let person = states[`person.${slug}`];
+        if (!person) {
+          for (const [pEntity, pState] of Object.entries(states)) {
+            if (
+              pEntity.startsWith('person.') &&
+              fdSlugify(pState.attributes?.friendly_name || '') === slug
+            ) {
+              person = pState;
+              break;
+            }
+          }
+        }
         const user_id = person?.attributes?.user_id || null;
-        const name = person?.attributes?.friendly_name || sensorName || slug;
+        const personName = person?.attributes?.friendly_name;
+        const name = personName || sensorName || slug;
         users.push({ name, slug, user_id });
       }
     }
@@ -5004,6 +5080,23 @@ class TallySetPinCard extends LitElement {
       }
     }
     return slugs;
+  }
+
+  _resolveSelectedUser(users) {
+    return _resolveUserEntry(users, this.selectedUserId);
+  }
+
+  _resolveSelfUser(users) {
+    if (!Array.isArray(users) || users.length === 0) return null;
+    const current = this.hass?.user;
+    if (!current) return null;
+    const slugList = this._currentPersonSlugs ? this._currentPersonSlugs() : [];
+    const candidates = [current.id, current.name, ...slugList];
+    if (current.name) {
+      const alt = fdSlugify(current.name);
+      if (alt) candidates.push(alt);
+    }
+    return _resolveUserFromCandidates(users, candidates);
   }
 
   _normalizeWidth(value) {
@@ -5070,31 +5163,17 @@ class TallySetPinCard extends LitElement {
       return;
     }
     const users = this._users;
-    let label;
-    if (this._isAdmin && !this.config.only_self) {
-      const u = users.find(
-        (u) =>
-          u.user_id === this.selectedUserId ||
-          u.name === this.selectedUserId ||
-          u.slug === this.selectedUserId
-      );
-      label = u?.name || u?.slug;
-    } else {
-      const current = this.hass?.user;
-      const u = users.find(
-        (u) =>
-          u.user_id === current?.id ||
-          u.name === current?.name ||
-          u.slug === current?.name
-      );
-      if (!u) {
-        this._status = 'user_not_found';
-        return;
-      }
-      label = u.name || u.slug;
-    }
+    const target =
+      this._isAdmin && !this.config.only_self
+        ? this._resolveSelectedUser(users)
+        : this._resolveSelfUser(users);
+    const label = _userLabel(target);
     if (!label) {
-      this._status = 'invalid';
+      this._status = 'user_not_found';
+      this._pin1 = '';
+      this._pin2 = '';
+      this._buffer = '';
+      this._stage = 1;
       return;
     }
     try {
@@ -5604,9 +5683,21 @@ class TallyCreditCard extends LitElement {
         const sensorName = (state.attributes.friendly_name || '')
           .replace(' Amount Due', '')
           .replace(' Offener Betrag', '');
-        const person = states[`person.${slug}`];
+        let person = states[`person.${slug}`];
+        if (!person) {
+          for (const [pEntity, pState] of Object.entries(states)) {
+            if (
+              pEntity.startsWith('person.') &&
+              fdSlugify(pState.attributes?.friendly_name || '') === slug
+            ) {
+              person = pState;
+              break;
+            }
+          }
+        }
         const user_id = person?.attributes?.user_id || null;
-        const name = person?.attributes?.friendly_name || sensorName || slug;
+        const personName = person?.attributes?.friendly_name;
+        const name = personName || sensorName || slug;
         users.push({ name, slug, user_id });
       }
     }
@@ -5646,16 +5737,17 @@ class TallyCreditCard extends LitElement {
       return;
     }
     const users = this._users;
-    const u = users.find(
-      (u) => u.user_id === this.selectedUserId || u.slug === this.selectedUserId || u.name === this.selectedUserId
-    );
-    const user = u?.name || u?.slug;
+    const target = _resolveUserEntry(users, this.selectedUserId);
+    const user = _userLabel(target);
     if (!user) {
       _psToast(this, this._t('user_not_found'));
       return;
     }
     try {
-      await this.hass.callService('tally_list', action, { user: String(user), amount: amt });
+      await this.hass.callService('tally_list', action, {
+        user: String(user),
+        amount: amt,
+      });
       _psToast(this, this._t('success'));
       this._amount = '';
     } catch (e) {
