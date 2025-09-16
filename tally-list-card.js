@@ -389,7 +389,7 @@ function renderCoverLogin(card) {
     </div></div></ha-card>`;
 }
 
-const CARD_VERSION = '16.09.25';
+const CARD_VERSION = '14.09.25';
 
 const TL_STRINGS = {
   en: {
@@ -712,25 +712,7 @@ function _umRenderTabHeader(card) {
   </div>`;
 }
 
-function _umValue(user, getVal) {
-  if (!user) return '';
-  const preferred = getVal ? getVal(user) : undefined;
-  const hasPreferred =
-    preferred !== undefined && preferred !== null && preferred !== '';
-  const raw = hasPreferred
-    ? preferred
-    : user.user_id || user.slug || user.name || '';
-  return raw === undefined || raw === null ? '' : String(raw);
-}
-
-function _umRenderChips(
-  card,
-  list,
-  selected,
-  onSelect,
-  getVal = (u) => u.name || u.slug
-) {
-  const selectedKey = selected == null ? '' : String(selected);
+function _umRenderChips(card, list, selected, onSelect, getVal = (u) => u.name || u.slug) {
   return repeat(
     list,
     (u) => u.user_id || u.slug,
@@ -739,31 +721,30 @@ function _umRenderChips(
         card.config.shorten_user_names && card._shortNames
           ? card._shortNames.get(u)
           : u.name || u.slug;
-      const val = _umValue(u, getVal);
-      const cls = `user-chip ${val === selectedKey ? 'active' : 'inactive'}`;
-      return html`<button class="${cls}" role="tab" aria-selected=${val === selectedKey} @click=${() => onSelect(val)} @keydown=${(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(val)}>${name}</button>`;
+      const val = getVal(u);
+      const cls = `user-chip ${val === selected ? 'active' : 'inactive'}`;
+      return html`<button class="${cls}" role="tab" aria-selected=${val === selected} @click=${() => onSelect(val)} @keydown=${(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(val)}>${name}</button>`;
     }
   );
 }
 
 function _renderUserMenu(card, users, selectedId, layout, isAdmin, onSelect, getVal) {
-  const selectedKey = selectedId == null ? '' : String(selectedId);
-  const valFn = (u) => _umValue(u, getVal);
+  const valFn = getVal || ((u) => u.name || u.slug);
   _umEnsureBuckets(card, users);
   if (!isAdmin) {
-    const own = users.find((u) => valFn(u) === selectedKey) || users[0];
+    const own = users.find((u) => valFn(u) === selectedId) || users[0];
     const name = card.config.shorten_user_names && card._shortNames
       ? card._shortNames.get(own)
       : own?.name || own?.slug || '';
     return html`<div class="user-label">${name}</div>`;
   }
   if (layout === 'grid') {
-    const chips = _umRenderChips(card, card._sortedUsers, selectedKey, onSelect, getVal);
+    const chips = _umRenderChips(card, card._sortedUsers, selectedId, onSelect, valFn);
     return html`<div class="user-actions"><div class="user-list">${chips}</div></div>`;
   }
   if (layout === 'tabs') {
     const header = _umRenderTabHeader(card);
-    const chips = _umRenderChips(card, card._visibleUsers, selectedKey, onSelect, getVal);
+    const chips = _umRenderChips(card, card._visibleUsers, selectedId, onSelect, valFn);
     return html`<div class="user-actions"><div class="alpha-tabs">${header}</div><div class="user-list">${chips}</div></div>`;
   }
   const idUser = card._fid ? card._fid('user') : 'user';
@@ -774,8 +755,7 @@ function _renderUserMenu(card, users, selectedId, layout, isAdmin, onSelect, get
       const name = card.config.shorten_user_names && card._shortNames
         ? card._shortNames.get(u)
         : u.name;
-      const val = valFn(u);
-      return html`<option value="${val}" ?selected=${val === selectedKey}>${name}</option>`;
+      return html`<option value="${valFn(u)}" ?selected=${valFn(u) === selectedId}>${name}</option>`;
     }
   )}</select></div>`;
 }
