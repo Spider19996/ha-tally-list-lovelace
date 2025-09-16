@@ -723,6 +723,50 @@ function _umValue(user, getVal) {
   return raw === undefined || raw === null ? '' : String(raw);
 }
 
+function _resolveUserEntry(users, key) {
+  if (!Array.isArray(users) || users.length === 0) return null;
+  if (key === undefined || key === null) return null;
+  const str = String(key).trim();
+  if (!str) return null;
+  const direct = users.find((u) => {
+    const id = u?.user_id;
+    const slug = u?.slug;
+    const name = u?.name;
+    return (
+      (id !== undefined && id !== null && String(id) === str) ||
+      (slug !== undefined && slug !== null && String(slug) === str) ||
+      (name !== undefined && name !== null && String(name) === str)
+    );
+  });
+  if (direct) return direct;
+  const slugKey = fdSlugify(str);
+  if (!slugKey) return null;
+  return (
+    users.find((u) => {
+      const slug = u?.slug ? fdSlugify(String(u.slug)) : '';
+      const name = u?.name ? fdSlugify(String(u.name)) : '';
+      return slug === slugKey || name === slugKey;
+    }) || null
+  );
+}
+
+function _resolveUserFromCandidates(users, candidates) {
+  if (!Array.isArray(users) || users.length === 0) return null;
+  for (const key of candidates || []) {
+    const found = _resolveUserEntry(users, key);
+    if (found) return found;
+  }
+  return null;
+}
+
+function _userLabel(user) {
+  if (!user) return '';
+  const name = user.name !== undefined && user.name !== null ? String(user.name).trim() : '';
+  if (name) return name;
+  const slug = user.slug !== undefined && user.slug !== null ? String(user.slug).trim() : '';
+  return slug;
+}
+
 function _umRenderChips(
   card,
   list,
@@ -5000,9 +5044,21 @@ class TallySetPinCard extends LitElement {
         const sensorName = (state.attributes.friendly_name || '')
           .replace(' Amount Due', '')
           .replace(' Offener Betrag', '');
-        const person = states[`person.${slug}`];
+        let person = states[`person.${slug}`];
+        if (!person) {
+          for (const [pEntity, pState] of Object.entries(states)) {
+            if (
+              pEntity.startsWith('person.') &&
+              fdSlugify(pState.attributes?.friendly_name || '') === slug
+            ) {
+              person = pState;
+              break;
+            }
+          }
+        }
         const user_id = person?.attributes?.user_id || null;
-        const name = person?.attributes?.friendly_name || sensorName || slug;
+        const personName = person?.attributes?.friendly_name;
+        const name = personName || sensorName || slug;
         users.push({ name, slug, user_id });
       }
     }
@@ -5027,50 +5083,20 @@ class TallySetPinCard extends LitElement {
   }
 
   _resolveSelectedUser(users) {
-    if (!Array.isArray(users) || users.length === 0) return null;
-    if (!this.selectedUserId) return null;
-    const key = String(this.selectedUserId);
-    const slugKey = fdSlugify(key);
-    const direct = users.find(
-      (u) =>
-        (u.user_id && u.user_id === key) ||
-        (u.name && u.name === key) ||
-        (u.slug && u.slug === key)
-    );
-    if (direct) return direct;
-    if (!slugKey) return null;
-    return (
-      users.find(
-        (u) =>
-          (u.name && fdSlugify(u.name) === slugKey) ||
-          (u.slug && fdSlugify(u.slug) === slugKey)
-      ) || null
-    );
+    return _resolveUserEntry(users, this.selectedUserId);
   }
 
   _resolveSelfUser(users) {
     if (!Array.isArray(users) || users.length === 0) return null;
     const current = this.hass?.user;
     if (!current) return null;
-    const direct = users.find(
-      (u) =>
-        (u.user_id && u.user_id === current.id) ||
-        (u.name && current.name && u.name === current.name) ||
-        (u.slug && current.name && u.slug === current.name)
-    );
-    if (direct) return direct;
     const slugList = this._currentPersonSlugs ? this._currentPersonSlugs() : [];
-    const slugSet = new Set(slugList.filter((s) => s));
+    const candidates = [current.id, current.name, ...slugList];
     if (current.name) {
       const alt = fdSlugify(current.name);
-      if (alt) slugSet.add(alt);
+      if (alt) candidates.push(alt);
     }
-    if (slugSet.size === 0) return null;
-    const bySlug = users.find((u) => u.slug && slugSet.has(u.slug));
-    if (bySlug) return bySlug;
-    return (
-      users.find((u) => u.name && slugSet.has(fdSlugify(u.name))) || null
-    );
+    return _resolveUserFromCandidates(users, candidates);
   }
 
   _normalizeWidth(value) {
@@ -5141,7 +5167,7 @@ class TallySetPinCard extends LitElement {
       this._isAdmin && !this.config.only_self
         ? this._resolveSelectedUser(users)
         : this._resolveSelfUser(users);
-    const label = target?.name ? String(target.name).trim() : '';
+    const label = _userLabel(target);
     if (!label) {
       this._status = 'user_not_found';
       this._pin1 = '';
@@ -5657,9 +5683,21 @@ class TallyCreditCard extends LitElement {
         const sensorName = (state.attributes.friendly_name || '')
           .replace(' Amount Due', '')
           .replace(' Offener Betrag', '');
-        const person = states[`person.${slug}`];
+        let person = states[`person.${slug}`];
+        if (!person) {
+          for (const [pEntity, pState] of Object.entries(states)) {
+            if (
+              pEntity.startsWith('person.') &&
+              fdSlugify(pState.attributes?.friendly_name || '') === slug
+            ) {
+              person = pState;
+              break;
+            }
+          }
+        }
         const user_id = person?.attributes?.user_id || null;
-        const name = person?.attributes?.friendly_name || sensorName || slug;
+        const personName = person?.attributes?.friendly_name;
+        const name = personName || sensorName || slug;
         users.push({ name, slug, user_id });
       }
     }
@@ -5699,16 +5737,17 @@ class TallyCreditCard extends LitElement {
       return;
     }
     const users = this._users;
-    const u = users.find(
-      (u) => u.user_id === this.selectedUserId || u.slug === this.selectedUserId || u.name === this.selectedUserId
-    );
-    const user = u?.name || u?.slug;
+    const target = _resolveUserEntry(users, this.selectedUserId);
+    const user = _userLabel(target);
     if (!user) {
       _psToast(this, this._t('user_not_found'));
       return;
     }
     try {
-      await this.hass.callService('tally_list', action, { user: String(user), amount: amt });
+      await this.hass.callService('tally_list', action, {
+        user: String(user),
+        amount: amt,
+      });
       _psToast(this, this._t('success'));
       this._amount = '';
     } catch (e) {
