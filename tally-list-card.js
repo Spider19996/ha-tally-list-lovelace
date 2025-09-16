@@ -5026,6 +5026,53 @@ class TallySetPinCard extends LitElement {
     return slugs;
   }
 
+  _resolveSelectedUser(users) {
+    if (!Array.isArray(users) || users.length === 0) return null;
+    if (!this.selectedUserId) return null;
+    const key = String(this.selectedUserId);
+    const slugKey = fdSlugify(key);
+    const direct = users.find(
+      (u) =>
+        (u.user_id && u.user_id === key) ||
+        (u.name && u.name === key) ||
+        (u.slug && u.slug === key)
+    );
+    if (direct) return direct;
+    if (!slugKey) return null;
+    return (
+      users.find(
+        (u) =>
+          (u.name && fdSlugify(u.name) === slugKey) ||
+          (u.slug && fdSlugify(u.slug) === slugKey)
+      ) || null
+    );
+  }
+
+  _resolveSelfUser(users) {
+    if (!Array.isArray(users) || users.length === 0) return null;
+    const current = this.hass?.user;
+    if (!current) return null;
+    const direct = users.find(
+      (u) =>
+        (u.user_id && u.user_id === current.id) ||
+        (u.name && current.name && u.name === current.name) ||
+        (u.slug && current.name && u.slug === current.name)
+    );
+    if (direct) return direct;
+    const slugList = this._currentPersonSlugs ? this._currentPersonSlugs() : [];
+    const slugSet = new Set(slugList.filter((s) => s));
+    if (current.name) {
+      const alt = fdSlugify(current.name);
+      if (alt) slugSet.add(alt);
+    }
+    if (slugSet.size === 0) return null;
+    const bySlug = users.find((u) => u.slug && slugSet.has(u.slug));
+    if (bySlug) return bySlug;
+    return (
+      users.find((u) => u.name && slugSet.has(fdSlugify(u.name))) || null
+    );
+  }
+
   _normalizeWidth(value) {
     if (!value && value !== 0) return '';
     const str = String(value).trim();
@@ -5090,43 +5137,11 @@ class TallySetPinCard extends LitElement {
       return;
     }
     const users = this._users;
-    let label = '';
-    if (this._isAdmin && !this.config.only_self) {
-      const u = users.find(
-        (u) =>
-          u.user_id === this.selectedUserId ||
-          u.name === this.selectedUserId ||
-          u.slug === this.selectedUserId
-      );
-      if (u) {
-        label = u.name || u.slug || this.selectedUserId || '';
-      } else if (this.selectedUserId) {
-        label = this.selectedUserId;
-      }
-    } else {
-      const current = this.hass?.user;
-      const slugs = this._currentPersonSlugs ? this._currentPersonSlugs() : [];
-      if (current?.name) {
-        const altSlug = fdSlugify(current.name);
-        if (altSlug && !slugs.includes(altSlug)) {
-          slugs.push(altSlug);
-        }
-      }
-      const u = users.find((u) => {
-        if (current?.id && u.user_id === current.id) return true;
-        if (current?.name && (u.name === current.name || u.slug === current.name)) {
-          return true;
-        }
-        return slugs.length > 0 && !!u.slug && slugs.includes(u.slug);
-      });
-      if (u) {
-        label = u.name || current?.name || u.slug || '';
-      } else if (current?.name) {
-        label = current.name;
-      } else if (slugs.length) {
-        label = slugs[0];
-      }
-    }
+    const target =
+      this._isAdmin && !this.config.only_self
+        ? this._resolveSelectedUser(users)
+        : this._resolveSelfUser(users);
+    const label = target?.name ? String(target.name).trim() : '';
     if (!label) {
       this._status = 'user_not_found';
       this._pin1 = '';
