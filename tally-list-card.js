@@ -389,7 +389,7 @@ function renderCoverLogin(card) {
     </div></div></ha-card>`;
 }
 
-const CARD_VERSION = '14.09.25';
+const CARD_VERSION = '16.09.25';
 
 const TL_STRINGS = {
   en: {
@@ -712,7 +712,25 @@ function _umRenderTabHeader(card) {
   </div>`;
 }
 
-function _umRenderChips(card, list, selected, onSelect, getVal = (u) => u.name || u.slug) {
+function _umValue(user, getVal) {
+  if (!user) return '';
+  const preferred = getVal ? getVal(user) : undefined;
+  const hasPreferred =
+    preferred !== undefined && preferred !== null && preferred !== '';
+  const raw = hasPreferred
+    ? preferred
+    : user.user_id || user.slug || user.name || '';
+  return raw === undefined || raw === null ? '' : String(raw);
+}
+
+function _umRenderChips(
+  card,
+  list,
+  selected,
+  onSelect,
+  getVal = (u) => u.name || u.slug
+) {
+  const selectedKey = selected == null ? '' : String(selected);
   return repeat(
     list,
     (u) => u.user_id || u.slug,
@@ -721,30 +739,31 @@ function _umRenderChips(card, list, selected, onSelect, getVal = (u) => u.name |
         card.config.shorten_user_names && card._shortNames
           ? card._shortNames.get(u)
           : u.name || u.slug;
-      const val = getVal(u);
-      const cls = `user-chip ${val === selected ? 'active' : 'inactive'}`;
-      return html`<button class="${cls}" role="tab" aria-selected=${val === selected} @click=${() => onSelect(val)} @keydown=${(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(val)}>${name}</button>`;
+      const val = _umValue(u, getVal);
+      const cls = `user-chip ${val === selectedKey ? 'active' : 'inactive'}`;
+      return html`<button class="${cls}" role="tab" aria-selected=${val === selectedKey} @click=${() => onSelect(val)} @keydown=${(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(val)}>${name}</button>`;
     }
   );
 }
 
 function _renderUserMenu(card, users, selectedId, layout, isAdmin, onSelect, getVal) {
-  const valFn = getVal || ((u) => u.name || u.slug);
+  const selectedKey = selectedId == null ? '' : String(selectedId);
+  const valFn = (u) => _umValue(u, getVal);
   _umEnsureBuckets(card, users);
   if (!isAdmin) {
-    const own = users.find((u) => valFn(u) === selectedId) || users[0];
+    const own = users.find((u) => valFn(u) === selectedKey) || users[0];
     const name = card.config.shorten_user_names && card._shortNames
       ? card._shortNames.get(own)
       : own?.name || own?.slug || '';
     return html`<div class="user-label">${name}</div>`;
   }
   if (layout === 'grid') {
-    const chips = _umRenderChips(card, card._sortedUsers, selectedId, onSelect, valFn);
+    const chips = _umRenderChips(card, card._sortedUsers, selectedKey, onSelect, getVal);
     return html`<div class="user-actions"><div class="user-list">${chips}</div></div>`;
   }
   if (layout === 'tabs') {
     const header = _umRenderTabHeader(card);
-    const chips = _umRenderChips(card, card._visibleUsers, selectedId, onSelect, valFn);
+    const chips = _umRenderChips(card, card._visibleUsers, selectedKey, onSelect, getVal);
     return html`<div class="user-actions"><div class="alpha-tabs">${header}</div><div class="user-list">${chips}</div></div>`;
   }
   const idUser = card._fid ? card._fid('user') : 'user';
@@ -755,7 +774,8 @@ function _renderUserMenu(card, users, selectedId, layout, isAdmin, onSelect, get
       const name = card.config.shorten_user_names && card._shortNames
         ? card._shortNames.get(u)
         : u.name;
-      return html`<option value="${valFn(u)}" ?selected=${valFn(u) === selectedId}>${name}</option>`;
+      const val = valFn(u);
+      return html`<option value="${val}" ?selected=${val === selectedKey}>${name}</option>`;
     }
   )}</select></div>`;
 }
@@ -5070,7 +5090,7 @@ class TallySetPinCard extends LitElement {
       return;
     }
     const users = this._users;
-    let label;
+    let label = '';
     if (this._isAdmin && !this.config.only_self) {
       const u = users.find(
         (u) =>
@@ -5078,23 +5098,41 @@ class TallySetPinCard extends LitElement {
           u.name === this.selectedUserId ||
           u.slug === this.selectedUserId
       );
-      label = u?.name || u?.slug;
+      if (u) {
+        label = u.name || u.slug || this.selectedUserId || '';
+      } else if (this.selectedUserId) {
+        label = this.selectedUserId;
+      }
     } else {
       const current = this.hass?.user;
-      const u = users.find(
-        (u) =>
-          u.user_id === current?.id ||
-          u.name === current?.name ||
-          u.slug === current?.name
-      );
-      if (!u) {
-        this._status = 'user_not_found';
-        return;
+      const slugs = this._currentPersonSlugs ? this._currentPersonSlugs() : [];
+      if (current?.name) {
+        const altSlug = fdSlugify(current.name);
+        if (altSlug && !slugs.includes(altSlug)) {
+          slugs.push(altSlug);
+        }
       }
-      label = u.name || u.slug;
+      const u = users.find((u) => {
+        if (current?.id && u.user_id === current.id) return true;
+        if (current?.name && (u.name === current.name || u.slug === current.name)) {
+          return true;
+        }
+        return slugs.length > 0 && !!u.slug && slugs.includes(u.slug);
+      });
+      if (u) {
+        label = u.name || current?.name || u.slug || '';
+      } else if (current?.name) {
+        label = current.name;
+      } else if (slugs.length) {
+        label = slugs[0];
+      }
     }
     if (!label) {
-      this._status = 'invalid';
+      this._status = 'user_not_found';
+      this._pin1 = '';
+      this._pin2 = '';
+      this._buffer = '';
+      this._stage = 1;
       return;
     }
     try {
