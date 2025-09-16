@@ -389,7 +389,7 @@ function renderCoverLogin(card) {
     </div></div></ha-card>`;
 }
 
-const CARD_VERSION = '14.09.25';
+const CARD_VERSION = '16.09.25';
 
 const TL_STRINGS = {
   en: {
