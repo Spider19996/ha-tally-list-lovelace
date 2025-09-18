@@ -4933,7 +4933,10 @@ class TallySetPinCard extends LitElement {
     _locked: { state: true },
     _lockUntil: { state: true },
     _lockRemainingMs: { state: true },
+    _tallyAdmins: { state: true },
   };
+
+  _tallyAdmins = [];
 
   constructor() {
     super();
@@ -4956,6 +4959,12 @@ class TallySetPinCard extends LitElement {
     this._currentTab = 'all';
     this._sortedUsers = [];
     this._usersKey = '';
+    try {
+      const stored = window.localStorage.getItem('tally-list-admins');
+      this._tallyAdmins = stored ? JSON.parse(stored) : [];
+    } catch (_) {
+      this._tallyAdmins = [];
+    }
   }
 
   setConfig(config) {
@@ -5006,7 +5015,8 @@ class TallySetPinCard extends LitElement {
   }
 
   get _isAdmin() {
-    return this.hass?.user?.is_admin;
+    const userNames = [this.hass?.user?.name, ...this._currentPersonNames()];
+    return userNames.some((n) => (this._tallyAdmins || []).includes(n));
   }
 
   _fid(key) {
@@ -5024,6 +5034,7 @@ class TallySetPinCard extends LitElement {
       if (!this.config.users) {
         this._autoUsers = this._gatherUsers();
       }
+      this._fetchTallyAdmins();
       if (this._isAdmin && !this.selectedUserId) {
         const ownId = this.hass?.user?.id;
         if (ownId) {
@@ -5065,6 +5076,17 @@ class TallySetPinCard extends LitElement {
     return users;
   }
 
+  async _fetchTallyAdmins() {
+    if (!this.hass?.connection) return;
+    try {
+      const resp = await this.hass.connection.sendMessagePromise({ type: 'tally_list/get_admins' });
+      this._tallyAdmins = Array.isArray(resp?.admins) ? resp.admins : [];
+      window.localStorage.setItem('tally-list-admins', JSON.stringify(this._tallyAdmins));
+    } catch (_) {
+      this._tallyAdmins = [];
+    }
+  }
+
   _currentPersonSlugs() {
     const userId = this.hass?.user?.id;
     if (!userId) return [];
@@ -5080,6 +5102,19 @@ class TallySetPinCard extends LitElement {
       }
     }
     return slugs;
+  }
+
+  _currentPersonNames() {
+    const userId = this.hass?.user?.id;
+    if (!userId) return [];
+    const names = [];
+    for (const [entity, state] of Object.entries(this.hass.states || {})) {
+      if (entity.startsWith('person.') && state.attributes?.user_id === userId) {
+        const friendly = state.attributes?.friendly_name;
+        if (friendly) names.push(friendly);
+      }
+    }
+    return names;
   }
 
   _resolveSelectedUser(users) {
@@ -5599,7 +5634,10 @@ class TallyCreditCard extends LitElement {
     selectedUserId: { type: String },
     _amount: { state: true },
     _autoUsers: { state: true },
+    _tallyAdmins: { state: true },
   };
+
+  _tallyAdmins = [];
 
   constructor() {
     super();
@@ -5613,6 +5651,12 @@ class TallyCreditCard extends LitElement {
     this._currentTab = 'all';
     this._sortedUsers = [];
     this._usersKey = '';
+    try {
+      const stored = window.localStorage.getItem('tally-list-admins');
+      this._tallyAdmins = stored ? JSON.parse(stored) : [];
+    } catch (_) {
+      this._tallyAdmins = [];
+    }
   }
 
   setConfig(config) {
@@ -5652,7 +5696,8 @@ class TallyCreditCard extends LitElement {
   }
 
   get _isAdmin() {
-    return this.hass?.user?.is_admin;
+    const userNames = [this.hass?.user?.name, ...this._currentPersonNames()];
+    return userNames.some((n) => (this._tallyAdmins || []).includes(n));
   }
 
   _fid(key) {
@@ -5668,6 +5713,7 @@ class TallyCreditCard extends LitElement {
       if (!this.config.users) {
         this._autoUsers = this._gatherUsers();
       }
+      this._fetchTallyAdmins();
       if (this._isAdmin && !this.selectedUserId) {
         const ownId = this.hass?.user?.id;
         if (ownId) this.selectedUserId = ownId;
@@ -5707,6 +5753,17 @@ class TallyCreditCard extends LitElement {
     return users;
   }
 
+  async _fetchTallyAdmins() {
+    if (!this.hass?.connection) return;
+    try {
+      const resp = await this.hass.connection.sendMessagePromise({ type: 'tally_list/get_admins' });
+      this._tallyAdmins = Array.isArray(resp?.admins) ? resp.admins : [];
+      window.localStorage.setItem('tally-list-admins', JSON.stringify(this._tallyAdmins));
+    } catch (_) {
+      this._tallyAdmins = [];
+    }
+  }
+
   _currentPersonSlugs() {
     const userId = this.hass?.user?.id;
     if (!userId) return [];
@@ -5720,6 +5777,19 @@ class TallyCreditCard extends LitElement {
       }
     }
     return slugs;
+  }
+
+  _currentPersonNames() {
+    const userId = this.hass?.user?.id;
+    if (!userId) return [];
+    const names = [];
+    for (const [entity, state] of Object.entries(this.hass.states || {})) {
+      if (entity.startsWith('person.') && state.attributes?.user_id === userId) {
+        const friendly = state.attributes?.friendly_name;
+        if (friendly) names.push(friendly);
+      }
+    }
+    return names;
   }
 
   _normalizeWidth(value) {
