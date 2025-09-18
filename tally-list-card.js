@@ -389,7 +389,7 @@ function renderCoverLogin(card) {
     </div></div></ha-card>`;
 }
 
-const CARD_VERSION = '16.09.25';
+const CARD_VERSION = '18.09.25';
 
 const TL_STRINGS = {
   en: {
@@ -1591,12 +1591,20 @@ class TallyListCard extends LitElement {
 
   async _fetchTallyAdmins() {
     if (!this.hass?.connection) return;
+    const previous = Array.isArray(this._tallyAdmins)
+      ? [...this._tallyAdmins]
+      : [];
     try {
       const resp = await this.hass.connection.sendMessagePromise({ type: 'tally_list/get_admins' });
-      this._tallyAdmins = Array.isArray(resp?.admins) ? resp.admins : [];
-      window.localStorage.setItem('tally-list-admins', JSON.stringify(this._tallyAdmins));
+      const next = Array.isArray(resp?.admins) ? resp.admins : previous;
+      this._tallyAdmins = next;
+      try {
+        window.localStorage.setItem('tally-list-admins', JSON.stringify(next));
+      } catch (_) {
+        // ignore storage errors
+      }
     } catch (err) {
-      this._tallyAdmins = [];
+      this._tallyAdmins = previous;
     }
   }
 
@@ -2774,12 +2782,20 @@ class TallyDueRankingCard extends LitElement {
 
   async _fetchTallyAdmins() {
     if (!this.hass?.connection) return;
+    const previous = Array.isArray(this._tallyAdmins)
+      ? [...this._tallyAdmins]
+      : [];
     try {
       const resp = await this.hass.connection.sendMessagePromise({ type: 'tally_list/get_admins' });
-      this._tallyAdmins = Array.isArray(resp?.admins) ? resp.admins : [];
-      window.localStorage.setItem('tally-list-admins', JSON.stringify(this._tallyAdmins));
+      const next = Array.isArray(resp?.admins) ? resp.admins : previous;
+      this._tallyAdmins = next;
+      try {
+        window.localStorage.setItem('tally-list-admins', JSON.stringify(next));
+      } catch (_) {
+        // ignore storage errors
+      }
     } catch (err) {
-      this._tallyAdmins = [];
+      this._tallyAdmins = previous;
     }
   }
 
@@ -5078,12 +5094,20 @@ class TallySetPinCard extends LitElement {
 
   async _fetchTallyAdmins() {
     if (!this.hass?.connection) return;
+    const previous = Array.isArray(this._tallyAdmins)
+      ? [...this._tallyAdmins]
+      : [];
     try {
       const resp = await this.hass.connection.sendMessagePromise({ type: 'tally_list/get_admins' });
-      this._tallyAdmins = Array.isArray(resp?.admins) ? resp.admins : [];
-      window.localStorage.setItem('tally-list-admins', JSON.stringify(this._tallyAdmins));
+      const next = Array.isArray(resp?.admins) ? resp.admins : previous;
+      this._tallyAdmins = next;
+      try {
+        window.localStorage.setItem('tally-list-admins', JSON.stringify(next));
+      } catch (_) {
+        // ignore storage errors
+      }
     } catch (_) {
-      this._tallyAdmins = [];
+      this._tallyAdmins = previous;
     }
   }
 
@@ -5755,12 +5779,20 @@ class TallyCreditCard extends LitElement {
 
   async _fetchTallyAdmins() {
     if (!this.hass?.connection) return;
+    const previous = Array.isArray(this._tallyAdmins)
+      ? [...this._tallyAdmins]
+      : [];
     try {
       const resp = await this.hass.connection.sendMessagePromise({ type: 'tally_list/get_admins' });
-      this._tallyAdmins = Array.isArray(resp?.admins) ? resp.admins : [];
-      window.localStorage.setItem('tally-list-admins', JSON.stringify(this._tallyAdmins));
+      const next = Array.isArray(resp?.admins) ? resp.admins : previous;
+      this._tallyAdmins = next;
+      try {
+        window.localStorage.setItem('tally-list-admins', JSON.stringify(next));
+      } catch (_) {
+        // ignore storage errors
+      }
     } catch (_) {
-      this._tallyAdmins = [];
+      this._tallyAdmins = previous;
     }
   }
 
